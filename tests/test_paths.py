@@ -71,7 +71,7 @@ class TestGetPluginSourceDir:
 class TestConstants:
     def test_plugin_name(self):
         from lightroom_sdk.paths import PLUGIN_NAME
-        assert PLUGIN_NAME == "lightroom-python-bridge.lrdevplugin"
+        assert PLUGIN_NAME == "lightroom-cli-bridge.lrdevplugin"
 
 
 class TestSocketBridgeUsesPathsModule:

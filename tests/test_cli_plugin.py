@@ -2,6 +2,7 @@ import pytest
 from pathlib import Path
 from click.testing import CliRunner
 from cli.main import cli
+from lightroom_sdk.paths import PLUGIN_NAME
 
 
 @pytest.fixture
@@ -16,7 +17,7 @@ class TestPluginInstall:
         result = runner.invoke(cli, ["plugin", "install"])
         assert result.exit_code == 0
         assert "installed" in result.output.lower() or "Plugin installed" in result.output
-        dest = modules_dir / "lightroom-python-bridge.lrdevplugin"
+        dest = modules_dir / PLUGIN_NAME
         assert dest.exists()
         assert not dest.is_symlink()
         assert (dest / "Info.lua").exists()
@@ -27,7 +28,7 @@ class TestPluginInstall:
         result = runner.invoke(cli, ["plugin", "install", "--dev"])
         assert result.exit_code == 0
         assert "symlink" in result.output.lower()
-        dest = modules_dir / "lightroom-python-bridge.lrdevplugin"
+        dest = modules_dir / PLUGIN_NAME
         assert dest.is_symlink()
 
     def test_install_overwrites_existing(self, tmp_path, monkeypatch, runner):
@@ -53,7 +54,7 @@ class TestPluginUninstall:
         result = runner.invoke(cli, ["plugin", "uninstall"])
         assert result.exit_code == 0
         assert "uninstalled" in result.output.lower()
-        dest = modules_dir / "lightroom-python-bridge.lrdevplugin"
+        dest = modules_dir / PLUGIN_NAME
         assert not dest.exists()
 
     def test_uninstall_symlink(self, tmp_path, monkeypatch, runner):
@@ -62,7 +63,7 @@ class TestPluginUninstall:
         runner.invoke(cli, ["plugin", "install", "--dev"])
         result = runner.invoke(cli, ["plugin", "uninstall"])
         assert result.exit_code == 0
-        dest = modules_dir / "lightroom-python-bridge.lrdevplugin"
+        dest = modules_dir / PLUGIN_NAME
         assert not dest.exists()
 
     def test_uninstall_not_installed(self, tmp_path, monkeypatch, runner):

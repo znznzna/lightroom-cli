@@ -3,9 +3,9 @@ return {
 	LrSdkVersion = 5.0,
 	LrSdkMinimumVersion = 5.0,
 
-	LrToolkitIdentifier = 'com.example.lightroom.pythonbridge',
+	LrToolkitIdentifier = 'com.znznzna.lightroom.cli-bridge',
 
-	LrPluginName = "Lightroom Python Bridge",
+	LrPluginName = "Lightroom CLI Bridge",
 
 	LrInitPlugin = "PluginInit.lua",
 	LrForceInitPlugin = true,
