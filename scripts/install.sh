@@ -17,7 +17,7 @@ fi
 # pip install -e .
 echo "Installing lightroom-cli..."
 cd "$PROJECT_DIR"
-pip install -e ".[dev]"
+python3 -m pip install -e ".[dev]"
 
 # Lua プラグインのシンボリックリンク作成
 "$SCRIPT_DIR/install-plugin.sh"

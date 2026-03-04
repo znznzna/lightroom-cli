@@ -14,8 +14,16 @@ fi
 
 mkdir -p "$LR_MODULES"
 
-if [ -L "$PLUGIN_DEST" ] || [ -e "$PLUGIN_DEST" ]; then
-    echo "Plugin already exists at $PLUGIN_DEST"
+if [ -L "$PLUGIN_DEST" ]; then
+    CURRENT_TARGET="$(readlink "$PLUGIN_DEST")"
+    if [ "$CURRENT_TARGET" = "$PLUGIN_SRC" ]; then
+        echo "Plugin symlink already correct: $PLUGIN_DEST -> $PLUGIN_SRC"
+        exit 0
+    fi
+    echo "Updating stale symlink (was -> $CURRENT_TARGET)"
+    rm "$PLUGIN_DEST"
+elif [ -e "$PLUGIN_DEST" ]; then
+    echo "Plugin already exists at $PLUGIN_DEST (not a symlink)"
     echo "Remove it first if you want to reinstall."
     exit 0
 fi
