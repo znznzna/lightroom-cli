@@ -22,7 +22,7 @@ def test_develop_curve_get(mock_get_bridge, runner):
     result = runner.invoke(cli, ["develop", "curve", "get"])
     assert result.exit_code == 0
     mock_bridge.send_command.assert_called_once_with(
-        "develop.getCurvePoints", {"channel": "RGB"}, timeout=30.0
+        "develop.getCurvePoints", {"param": "ToneCurvePV2012"}, timeout=30.0
     )
 
 
@@ -39,7 +39,7 @@ def test_develop_curve_set(mock_get_bridge, runner):
     result = runner.invoke(cli, ["develop", "curve", "set", "--points", "[[0,0],[128,140],[255,255]]"])
     assert result.exit_code == 0
     mock_bridge.send_command.assert_called_once_with(
-        "develop.setCurvePoints", {"channel": "RGB", "points": [[0, 0], [128, 140], [255, 255]]}, timeout=30.0
+        "develop.setCurvePoints", {"param": "ToneCurvePV2012", "points": [{"x": 0, "y": 0}, {"x": 128, "y": 140}, {"x": 255, "y": 255}]}, timeout=30.0
     )
 
 
@@ -56,7 +56,7 @@ def test_develop_curve_linear(mock_get_bridge, runner):
     result = runner.invoke(cli, ["develop", "curve", "linear"])
     assert result.exit_code == 0
     mock_bridge.send_command.assert_called_once_with(
-        "develop.setCurveLinear", {"channel": "RGB"}, timeout=30.0
+        "develop.setCurveLinear", {"param": "ToneCurvePV2012"}, timeout=30.0
     )
 
 
@@ -73,7 +73,7 @@ def test_develop_curve_s_curve(mock_get_bridge, runner):
     result = runner.invoke(cli, ["develop", "curve", "s-curve"])
     assert result.exit_code == 0
     mock_bridge.send_command.assert_called_once_with(
-        "develop.setCurveSCurve", {"channel": "RGB"}, timeout=30.0
+        "develop.setCurveSCurve", {"param": "ToneCurvePV2012"}, timeout=30.0
     )
 
 
@@ -90,7 +90,7 @@ def test_develop_curve_add_point(mock_get_bridge, runner):
     result = runner.invoke(cli, ["develop", "curve", "add-point", "128", "140"])
     assert result.exit_code == 0
     mock_bridge.send_command.assert_called_once_with(
-        "develop.addCurvePoint", {"channel": "RGB", "x": 128.0, "y": 140.0}, timeout=30.0
+        "develop.addCurvePoint", {"param": "ToneCurvePV2012", "x": 128.0, "y": 140.0}, timeout=30.0
     )
 
 
@@ -107,5 +107,5 @@ def test_develop_curve_remove_point(mock_get_bridge, runner):
     result = runner.invoke(cli, ["develop", "curve", "remove-point", "1"])
     assert result.exit_code == 0
     mock_bridge.send_command.assert_called_once_with(
-        "develop.removeCurvePoint", {"channel": "RGB", "index": 1}, timeout=30.0
+        "develop.removeCurvePoint", {"param": "ToneCurvePV2012", "index": 1}, timeout=30.0
     )

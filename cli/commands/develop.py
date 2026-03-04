@@ -313,6 +313,14 @@ def paste_settings(ctx):
     run_async(_run())
 
 
+CHANNEL_TO_PARAM = {
+    "RGB": "ToneCurvePV2012",
+    "Red": "ToneCurvePV2012Red",
+    "Green": "ToneCurvePV2012Green",
+    "Blue": "ToneCurvePV2012Blue",
+}
+
+
 @develop.group()
 def curve():
     """Tone curve commands"""
@@ -331,7 +339,7 @@ def curve_get(ctx, channel):
         bridge = get_bridge()
         try:
             result = await bridge.send_command(
-                "develop.getCurvePoints", {"channel": channel}, timeout=timeout
+                "develop.getCurvePoints", {"param": CHANNEL_TO_PARAM.get(channel, channel)}, timeout=timeout
             )
             click.echo(OutputFormatter.format(result.get("result", result), fmt))
         except Exception as e:
@@ -363,7 +371,7 @@ def curve_set(ctx, points, channel):
         bridge = get_bridge()
         try:
             result = await bridge.send_command(
-                "develop.setCurvePoints", {"channel": channel, "points": parsed}, timeout=timeout
+                "develop.setCurvePoints", {"param": CHANNEL_TO_PARAM.get(channel, channel), "points": [{"x": p[0], "y": p[1]} if isinstance(p, list) else p for p in parsed]}, timeout=timeout
             )
             click.echo(OutputFormatter.format(result.get("result", result), fmt))
         except Exception as e:
@@ -386,7 +394,7 @@ def curve_linear(ctx, channel):
         bridge = get_bridge()
         try:
             result = await bridge.send_command(
-                "develop.setCurveLinear", {"channel": channel}, timeout=timeout
+                "develop.setCurveLinear", {"param": CHANNEL_TO_PARAM.get(channel, channel)}, timeout=timeout
             )
             click.echo(OutputFormatter.format(result.get("result", result), fmt))
         except Exception as e:
@@ -409,7 +417,7 @@ def curve_s_curve(ctx, channel):
         bridge = get_bridge()
         try:
             result = await bridge.send_command(
-                "develop.setCurveSCurve", {"channel": channel}, timeout=timeout
+                "develop.setCurveSCurve", {"param": CHANNEL_TO_PARAM.get(channel, channel)}, timeout=timeout
             )
             click.echo(OutputFormatter.format(result.get("result", result), fmt))
         except Exception as e:
@@ -434,7 +442,7 @@ def curve_add_point(ctx, x, y, channel):
         bridge = get_bridge()
         try:
             result = await bridge.send_command(
-                "develop.addCurvePoint", {"channel": channel, "x": x, "y": y}, timeout=timeout
+                "develop.addCurvePoint", {"param": CHANNEL_TO_PARAM.get(channel, channel), "x": x, "y": y}, timeout=timeout
             )
             click.echo(OutputFormatter.format(result.get("result", result), fmt))
         except Exception as e:
@@ -458,7 +466,7 @@ def curve_remove_point(ctx, index, channel):
         bridge = get_bridge()
         try:
             result = await bridge.send_command(
-                "develop.removeCurvePoint", {"channel": channel, "index": index}, timeout=timeout
+                "develop.removeCurvePoint", {"param": CHANNEL_TO_PARAM.get(channel, channel), "index": index}, timeout=timeout
             )
             click.echo(OutputFormatter.format(result.get("result", result), fmt))
         except Exception as e:
