@@ -55,4 +55,5 @@ asyncio_default_fixture_loop_scope = "function"
 markers = [
     "integration: marks tests as integration tests requiring Lightroom",
     "unit: marks tests as unit tests",
+    "e2e: marks tests as E2E tests requiring Lightroom Classic",
 ]
