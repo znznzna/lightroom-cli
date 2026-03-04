@@ -525,3 +525,30 @@ def create_virtual_copy(ctx):
             await bridge.disconnect()
 
     run_async(_run())
+
+
+@catalog.command("set-metadata")
+@click.argument("photo_id")
+@click.argument("key")
+@click.argument("value")
+@click.pass_context
+def set_metadata(ctx, photo_id, key, value):
+    """Set arbitrary metadata key/value for a photo"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command(
+                "catalog.setMetadata",
+                {"photoId": photo_id, "key": key, "value": value},
+                timeout=timeout
+            )
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())

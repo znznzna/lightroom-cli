@@ -358,6 +358,7 @@ local function registerApiCommands()
     router:register("catalog.rotateLeft", CatalogModule.rotateLeft, "sync")
     router:register("catalog.rotateRight", CatalogModule.rotateRight, "sync")
     router:register("catalog.createVirtualCopy", CatalogModule.createVirtualCopy, "sync")
+    router:register("catalog.setMetadata", CatalogModule.setMetadata, "sync")
 
     -- Preview module commands (registered as sync for catalog API access)
     Logger:info("Registering preview commands...")

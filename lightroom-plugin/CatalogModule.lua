@@ -1339,4 +1339,37 @@ function CatalogModule.createVirtualCopy(params, callback)
     end
 end
 
+function CatalogModule.setMetadata(params, callback)
+    ensureLrModules()
+    local photoId = params.photoId
+    local key = params.key
+    local value = params.value
+
+    if not photoId then
+        callback(ErrorUtils.createError("MISSING_PARAM", "Photo ID is required"))
+        return
+    end
+    if not key then
+        callback(ErrorUtils.createError("MISSING_PARAM", "Metadata key is required"))
+        return
+    end
+
+    local catalog = LrApplication.activeCatalog()
+    catalog:withWriteAccessDo("Set Metadata", function()
+        local photo = catalog:getPhotoByLocalId(tonumber(photoId))
+        if not photo then
+            callback(ErrorUtils.createError("PHOTO_NOT_FOUND", "Photo with ID " .. photoId .. " not found"))
+            return
+        end
+        local success, err = ErrorUtils.safeCall(function()
+            photo:setRawMetadata(key, value)
+        end)
+        if success then
+            callback(ErrorUtils.createSuccess({ photoId = photoId, key = key, value = value, message = "Metadata set" }))
+        else
+            callback(ErrorUtils.createError("OPERATION_FAILED", "Failed to set metadata: " .. tostring(err)))
+        end
+    end, { timeout = 10 })
+end
+
 return CatalogModule

@@ -228,3 +228,22 @@ def test_catalog_create_virtual_copy(mock_get_bridge, runner):
     result = runner.invoke(cli, ["catalog", "create-virtual-copy"])
     assert result.exit_code == 0
     mock_bridge.send_command.assert_called_once_with("catalog.createVirtualCopy", {}, timeout=30.0)
+
+
+@patch("cli.commands.catalog.get_bridge")
+def test_catalog_set_metadata(mock_get_bridge, runner):
+    """lr catalog set-metadata が汎用メタデータを設定する"""
+    mock_bridge = AsyncMock()
+    mock_bridge.send_command.return_value = {
+        "id": "30", "success": True,
+        "result": {"photoId": "123", "key": "copyright", "value": "2026 Photographer"},
+    }
+    mock_get_bridge.return_value = mock_bridge
+
+    result = runner.invoke(cli, ["catalog", "set-metadata", "123", "copyright", "2026 Photographer"])
+    assert result.exit_code == 0
+    mock_bridge.send_command.assert_called_once_with(
+        "catalog.setMetadata",
+        {"photoId": "123", "key": "copyright", "value": "2026 Photographer"},
+        timeout=30.0
+    )
