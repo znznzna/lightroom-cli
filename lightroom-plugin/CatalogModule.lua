@@ -139,10 +139,11 @@ function CatalogModule.searchPhotos(params, callback)
                 photoData.path = photo:getRawMetadata("path")
                 photoData.captureTime = photo:getFormattedMetadata("dateTimeOriginal")
                 photoData.rating = photo:getRawMetadata("rating")
+                photoData.pickStatus = photo:getRawMetadata("pickStatus")
                 photoData.fileFormat = photo:getRawMetadata("fileFormat")
                 photoData.isVirtualCopy = photo:getRawMetadata("isVirtualCopy")
             end)
-            
+
             -- Get keywords
             ErrorUtils.safeCall(function()
                 local keywords = photo:getRawMetadata("keywords")
@@ -279,6 +280,7 @@ function CatalogModule.getPhotoMetadata(params, callback)
             -- Lightroom specific
             rating = rawRating or 0,  -- Default to 0 if nil
             colorLabel = photo:getRawMetadata("colorNameForLabel"),
+            pickStatus = photo:getRawMetadata("pickStatus"),
             isVirtualCopy = photo:getRawMetadata("isVirtualCopy"),
             stackPosition = photo:getRawMetadata("stackPositionInFolder"),
             
@@ -367,10 +369,11 @@ function CatalogModule.getSelectedPhotos(params, callback)
                 photoData.path = photo:getRawMetadata("path")
                 photoData.captureTime = photo:getFormattedMetadata("dateTimeOriginal")
                 photoData.rating = photo:getRawMetadata("rating")
+                photoData.pickStatus = photo:getRawMetadata("pickStatus")
                 photoData.fileFormat = photo:getRawMetadata("fileFormat")
                 photoData.isVirtualCopy = photo:getRawMetadata("isVirtualCopy")
             end)
-            
+
             table.insert(results, photoData)
         end
         
@@ -489,7 +492,8 @@ function CatalogModule.getAllPhotos(params, callback)
                 path = photo:getRawMetadata("path"),
                 captureTime = photo:getFormattedMetadata("dateTimeOriginal"),
                 fileFormat = photo:getRawMetadata("fileFormat"),
-                rating = photo:getRawMetadata("rating")
+                rating = photo:getRawMetadata("rating"),
+                pickStatus = photo:getRawMetadata("pickStatus")
             })
         end
         
