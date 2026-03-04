@@ -87,3 +87,26 @@ def generate_batch(ctx):
             await bridge.disconnect()
 
     run_async(_run())
+
+
+@preview.command("info")
+@click.argument("photo_id")
+@click.pass_context
+def preview_info(ctx, photo_id):
+    """Get preview info for a photo"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command(
+                "preview.getPreviewInfo", {"photoId": photo_id}, timeout=timeout
+            )
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())

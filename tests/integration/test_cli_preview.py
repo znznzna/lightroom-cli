@@ -60,6 +60,23 @@ def test_preview_generate_batch(mock_get_bridge, runner):
     )
 
 
+@patch("cli.commands.preview.get_bridge")
+def test_preview_info(mock_get_bridge, runner):
+    """lr preview info <photo_id> がプレビュー情報を返す"""
+    mock_bridge = AsyncMock()
+    mock_bridge.send_command.return_value = {
+        "id": "1", "success": True,
+        "result": {"photoId": "123", "width": 1024, "height": 768},
+    }
+    mock_get_bridge.return_value = mock_bridge
+
+    result = runner.invoke(cli, ["preview", "info", "123"])
+    assert result.exit_code == 0
+    mock_bridge.send_command.assert_called_once_with(
+        "preview.getPreviewInfo", {"photoId": "123"}, timeout=30.0
+    )
+
+
 def test_complete_develop_param():
     """タブ補完がパラメータ候補を返す"""
     from cli.completions import complete_develop_param
