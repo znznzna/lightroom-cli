@@ -20,7 +20,7 @@ def run_async(coro):
 
 @click.group()
 def catalog():
-    """Catalog commands (list, search, find, get-selected, get-info, set-rating, add-keywords, set-flag, get-flag)"""
+    """Catalog commands (list, search, find, get-selected, get-info, set-rating, add-keywords, set-flag, get-flag, select, find-by-path, collections, keywords, folders)"""
     pass
 
 
@@ -246,6 +246,119 @@ def find_photos(ctx, flag, rating, rating_op, color_label, camera, limit, offset
                 "catalog.findPhotos",
                 {"searchDesc": search_desc, "limit": limit, "offset": offset},
                 timeout=timeout,
+            )
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
+@catalog.command("select")
+@click.argument("photo_ids", nargs=-1, required=True)
+@click.pass_context
+def select_photos(ctx, photo_ids):
+    """Select photos by ID"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command(
+                "catalog.setSelectedPhotos", {"photoIds": list(photo_ids)}, timeout=timeout
+            )
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
+@catalog.command("find-by-path")
+@click.argument("path")
+@click.pass_context
+def find_by_path(ctx, path):
+    """Find photo by file path"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command(
+                "catalog.findPhotoByPath", {"path": path}, timeout=timeout
+            )
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
+@catalog.command("collections")
+@click.pass_context
+def collections(ctx):
+    """List collections in catalog"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command(
+                "catalog.getCollections", {}, timeout=timeout
+            )
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
+@catalog.command("keywords")
+@click.pass_context
+def keywords(ctx):
+    """List keywords in catalog"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command(
+                "catalog.getKeywords", {}, timeout=timeout
+            )
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
+@catalog.command("folders")
+@click.option("--recursive", is_flag=True, help="Include subfolders")
+@click.pass_context
+def folders(ctx, recursive):
+    """List folders in catalog"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command(
+                "catalog.getFolders", {"includeSubfolders": recursive}, timeout=timeout
             )
             click.echo(OutputFormatter.format(result.get("result", result), fmt))
         except Exception as e:
