@@ -109,3 +109,33 @@ def test_selection_color_label(mock_get_bridge, runner):
     mock_bridge.send_command.assert_called_once_with(
         "selection.setColorLabel", {"label": "red"}, timeout=30.0
     )
+
+
+@patch("cli.commands.selection.get_bridge")
+def test_selection_select_all(mock_get_bridge, runner):
+    mock_bridge = AsyncMock()
+    mock_bridge.send_command.return_value = {"id": "7", "success": True, "result": {"message": "All selected"}}
+    mock_get_bridge.return_value = mock_bridge
+    result = runner.invoke(cli, ["selection", "select-all"])
+    assert result.exit_code == 0
+    mock_bridge.send_command.assert_called_once_with("selection.selectAll", {}, timeout=30.0)
+
+
+@patch("cli.commands.selection.get_bridge")
+def test_selection_select_none(mock_get_bridge, runner):
+    mock_bridge = AsyncMock()
+    mock_bridge.send_command.return_value = {"id": "8", "success": True, "result": {"message": "None selected"}}
+    mock_get_bridge.return_value = mock_bridge
+    result = runner.invoke(cli, ["selection", "select-none"])
+    assert result.exit_code == 0
+    mock_bridge.send_command.assert_called_once_with("selection.selectNone", {}, timeout=30.0)
+
+
+@patch("cli.commands.selection.get_bridge")
+def test_selection_select_inverse(mock_get_bridge, runner):
+    mock_bridge = AsyncMock()
+    mock_bridge.send_command.return_value = {"id": "9", "success": True, "result": {"message": "Selection inverted"}}
+    mock_get_bridge.return_value = mock_bridge
+    result = runner.invoke(cli, ["selection", "select-inverse"])
+    assert result.exit_code == 0
+    mock_bridge.send_command.assert_called_once_with("selection.selectInverse", {}, timeout=30.0)

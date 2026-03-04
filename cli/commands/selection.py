@@ -145,3 +145,63 @@ def set_color_label(ctx, label):
             await bridge.disconnect()
 
     run_async(_run())
+
+
+@selection.command("select-all")
+@click.pass_context
+def select_all(ctx):
+    """Select all photos"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command("selection.selectAll", {}, timeout=timeout)
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
+@selection.command("select-none")
+@click.pass_context
+def select_none(ctx):
+    """Deselect all photos"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command("selection.selectNone", {}, timeout=timeout)
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
+@selection.command("select-inverse")
+@click.pass_context
+def select_inverse(ctx):
+    """Invert the current selection"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command("selection.selectInverse", {}, timeout=timeout)
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
