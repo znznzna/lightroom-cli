@@ -2,9 +2,10 @@
 """Lightroom接続チェックスクリプト"""
 import asyncio
 import sys
-from pathlib import Path
 
-PORT_FILE = Path("/tmp/lightroom_ports.txt")
+from lightroom_sdk.paths import get_port_file
+
+PORT_FILE = get_port_file()
 
 
 def main():

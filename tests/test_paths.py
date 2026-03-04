@@ -72,3 +72,28 @@ class TestConstants:
     def test_plugin_name(self):
         from lightroom_sdk.paths import PLUGIN_NAME
         assert PLUGIN_NAME == "lightroom-python-bridge.lrdevplugin"
+
+
+class TestSocketBridgeUsesPathsModule:
+    def test_default_port_file_matches_paths(self):
+        from lightroom_sdk.paths import get_port_file
+        from lightroom_sdk.socket_bridge import SocketBridge
+        bridge = SocketBridge()
+        assert bridge.port_file == get_port_file()
+
+
+class TestResilientBridgeUsesPathsModule:
+    def test_default_port_file_matches_paths(self):
+        from lightroom_sdk.paths import get_port_file
+        from lightroom_sdk.resilient_bridge import ResilientSocketBridge
+        bridge = ResilientSocketBridge()
+        assert bridge._port_file == str(get_port_file())
+
+
+class TestSystemCommandUsesPathsModule:
+    def test_get_bridge_default_uses_paths(self):
+        import inspect
+        from cli.commands.system import get_bridge
+        sig = inspect.signature(get_bridge)
+        default = sig.parameters["port_file"].default
+        assert default is None

@@ -4,7 +4,7 @@ from pathlib import Path
 from cli.output import OutputFormatter
 
 
-def get_bridge(port_file: str = "/tmp/lightroom_ports.txt"):
+def get_bridge(port_file: str | None = None):
     """ResilientSocketBridgeインスタンスを取得（遅延import）"""
     from lightroom_sdk.resilient_bridge import ResilientSocketBridge
     return ResilientSocketBridge(port_file=port_file)
@@ -83,11 +83,15 @@ def reconnect():
 
 
 @system.command("check-connection")
-@click.option("--port-file", default="/tmp/lightroom_ports.txt")
+@click.option("--port-file", default=None, help="Path to port file (default: auto-detect)")
 @click.pass_context
 def check_connection(ctx, port_file):
     """Check if Lightroom is available"""
-    port_path = Path(port_file)
+    if port_file is None:
+        from lightroom_sdk.paths import get_port_file
+        port_path = get_port_file()
+    else:
+        port_path = Path(port_file)
     if not port_path.exists():
         click.echo("Lightroom connection unavailable: port file not found")
         return
