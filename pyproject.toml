@@ -4,8 +4,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lightroom-cli"
-version = "0.2.0"
-description = "CLI tool for Adobe Lightroom Classic"
+version = "2.0.0"
+description = "CLI tool for Adobe Lightroom Classic — 107 commands for full Lightroom control"
+readme = "README.md"
+license = {text = "MIT"}
 requires-python = ">=3.10"
 dependencies = [
     "click>=8.1",

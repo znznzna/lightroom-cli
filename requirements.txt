@@ -1,0 +1,17 @@
+# Core MCP framework
+fastmcp
+
+# HTTP client for Lightroom communication  
+httpx
+
+# Data validation
+pydantic
+pydantic-settings
+
+# Image processing and analysis
+Pillow
+numpy
+
+# Testing
+pytest
+pytest-asyncio

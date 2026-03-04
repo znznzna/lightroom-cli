@@ -37,3 +37,10 @@ mcp.json.*
 .vscode/
 .idea/
 *.swp
+
+# Session files
+HANDOVER*.md
+CLAUDE.md
+
+# Claude
+.claude/
