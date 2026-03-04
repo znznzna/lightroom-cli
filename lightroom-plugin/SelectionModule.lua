@@ -228,4 +228,102 @@ function SelectionModule.decreaseRating(params, callback)
     end
 end
 
+function SelectionModule.toggleRedLabel(params, callback)
+    ensureLrSelection()
+    local success, err = ErrorUtils.safeCall(function()
+        LrSelection.toggleRedLabel()
+    end)
+    if success then
+        callback(ErrorUtils.createSuccess({ message = "Red label toggled" }))
+    else
+        callback(ErrorUtils.createError("OPERATION_FAILED", tostring(err)))
+    end
+end
+
+function SelectionModule.toggleYellowLabel(params, callback)
+    ensureLrSelection()
+    local success, err = ErrorUtils.safeCall(function()
+        LrSelection.toggleYellowLabel()
+    end)
+    if success then
+        callback(ErrorUtils.createSuccess({ message = "Yellow label toggled" }))
+    else
+        callback(ErrorUtils.createError("OPERATION_FAILED", tostring(err)))
+    end
+end
+
+function SelectionModule.toggleGreenLabel(params, callback)
+    ensureLrSelection()
+    local success, err = ErrorUtils.safeCall(function()
+        LrSelection.toggleGreenLabel()
+    end)
+    if success then
+        callback(ErrorUtils.createSuccess({ message = "Green label toggled" }))
+    else
+        callback(ErrorUtils.createError("OPERATION_FAILED", tostring(err)))
+    end
+end
+
+function SelectionModule.toggleBlueLabel(params, callback)
+    ensureLrSelection()
+    local success, err = ErrorUtils.safeCall(function()
+        LrSelection.toggleBlueLabel()
+    end)
+    if success then
+        callback(ErrorUtils.createSuccess({ message = "Blue label toggled" }))
+    else
+        callback(ErrorUtils.createError("OPERATION_FAILED", tostring(err)))
+    end
+end
+
+function SelectionModule.togglePurpleLabel(params, callback)
+    ensureLrSelection()
+    local success, err = ErrorUtils.safeCall(function()
+        LrSelection.togglePurpleLabel()
+    end)
+    if success then
+        callback(ErrorUtils.createSuccess({ message = "Purple label toggled" }))
+    else
+        callback(ErrorUtils.createError("OPERATION_FAILED", tostring(err)))
+    end
+end
+
+function SelectionModule.extendSelection(params, callback)
+    ensureLrSelection()
+    local direction = params.direction or "right"
+    local amount = params.amount or 1
+    local success, err = ErrorUtils.safeCall(function()
+        LrSelection.extendSelection(direction, amount)
+    end)
+    if success then
+        callback(ErrorUtils.createSuccess({ message = "Selection extended " .. direction .. " by " .. amount }))
+    else
+        callback(ErrorUtils.createError("OPERATION_FAILED", tostring(err)))
+    end
+end
+
+function SelectionModule.deselectActive(params, callback)
+    ensureLrSelection()
+    local success, err = ErrorUtils.safeCall(function()
+        LrSelection.deselectActive()
+    end)
+    if success then
+        callback(ErrorUtils.createSuccess({ message = "Active photo deselected" }))
+    else
+        callback(ErrorUtils.createError("OPERATION_FAILED", tostring(err)))
+    end
+end
+
+function SelectionModule.deselectOthers(params, callback)
+    ensureLrSelection()
+    local success, err = ErrorUtils.safeCall(function()
+        LrSelection.deselectOthers()
+    end)
+    if success then
+        callback(ErrorUtils.createSuccess({ message = "Others deselected" }))
+    else
+        callback(ErrorUtils.createError("OPERATION_FAILED", tostring(err)))
+    end
+end
+
 return SelectionModule

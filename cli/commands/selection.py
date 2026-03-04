@@ -245,3 +245,98 @@ def decrease_rating(ctx):
             await bridge.disconnect()
 
     run_async(_run())
+
+
+TOGGLE_LABEL_COMMANDS = {
+    "red": "selection.toggleRedLabel",
+    "yellow": "selection.toggleYellowLabel",
+    "green": "selection.toggleGreenLabel",
+    "blue": "selection.toggleBlueLabel",
+    "purple": "selection.togglePurpleLabel",
+}
+
+
+@selection.command("toggle-label")
+@click.argument("color", type=click.Choice(["red", "yellow", "green", "blue", "purple"]))
+@click.pass_context
+def toggle_label(ctx, color):
+    """Toggle color label for selected photo(s)"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+    cmd = TOGGLE_LABEL_COMMANDS[color]
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command(cmd, {}, timeout=timeout)
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
+@selection.command("extend")
+@click.option("--direction", default="right", type=click.Choice(["left", "right"]))
+@click.option("--amount", default=1, type=int)
+@click.pass_context
+def extend_selection(ctx, direction, amount):
+    """Extend selection in a direction"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command(
+                "selection.extendSelection", {"direction": direction, "amount": amount}, timeout=timeout
+            )
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
+@selection.command("deselect-active")
+@click.pass_context
+def deselect_active(ctx):
+    """Deselect the active photo"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command("selection.deselectActive", {}, timeout=timeout)
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
+@selection.command("deselect-others")
+@click.pass_context
+def deselect_others(ctx):
+    """Deselect all except active photo"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command("selection.deselectOthers", {}, timeout=timeout)
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())

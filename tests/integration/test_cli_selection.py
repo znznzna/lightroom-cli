@@ -159,3 +159,53 @@ def test_selection_decrease_rating(mock_get_bridge, runner):
     result = runner.invoke(cli, ["selection", "decrease-rating"])
     assert result.exit_code == 0
     mock_bridge.send_command.assert_called_once_with("selection.decreaseRating", {}, timeout=30.0)
+
+
+@patch("cli.commands.selection.get_bridge")
+def test_selection_toggle_label_red(mock_get_bridge, runner):
+    mock_bridge = AsyncMock()
+    mock_bridge.send_command.return_value = {"id": "12", "success": True, "result": {"message": "Red label toggled"}}
+    mock_get_bridge.return_value = mock_bridge
+    result = runner.invoke(cli, ["selection", "toggle-label", "red"])
+    assert result.exit_code == 0
+    mock_bridge.send_command.assert_called_once_with("selection.toggleRedLabel", {}, timeout=30.0)
+
+
+@patch("cli.commands.selection.get_bridge")
+def test_selection_toggle_label_blue(mock_get_bridge, runner):
+    mock_bridge = AsyncMock()
+    mock_bridge.send_command.return_value = {"id": "13", "success": True, "result": {"message": "Blue label toggled"}}
+    mock_get_bridge.return_value = mock_bridge
+    result = runner.invoke(cli, ["selection", "toggle-label", "blue"])
+    assert result.exit_code == 0
+    mock_bridge.send_command.assert_called_once_with("selection.toggleBlueLabel", {}, timeout=30.0)
+
+
+@patch("cli.commands.selection.get_bridge")
+def test_selection_extend(mock_get_bridge, runner):
+    mock_bridge = AsyncMock()
+    mock_bridge.send_command.return_value = {"id": "14", "success": True, "result": {"message": "Selection extended"}}
+    mock_get_bridge.return_value = mock_bridge
+    result = runner.invoke(cli, ["selection", "extend", "--direction", "right", "--amount", "2"])
+    assert result.exit_code == 0
+    mock_bridge.send_command.assert_called_once_with("selection.extendSelection", {"direction": "right", "amount": 2}, timeout=30.0)
+
+
+@patch("cli.commands.selection.get_bridge")
+def test_selection_deselect_active(mock_get_bridge, runner):
+    mock_bridge = AsyncMock()
+    mock_bridge.send_command.return_value = {"id": "15", "success": True, "result": {"message": "Deselected"}}
+    mock_get_bridge.return_value = mock_bridge
+    result = runner.invoke(cli, ["selection", "deselect-active"])
+    assert result.exit_code == 0
+    mock_bridge.send_command.assert_called_once_with("selection.deselectActive", {}, timeout=30.0)
+
+
+@patch("cli.commands.selection.get_bridge")
+def test_selection_deselect_others(mock_get_bridge, runner):
+    mock_bridge = AsyncMock()
+    mock_bridge.send_command.return_value = {"id": "16", "success": True, "result": {"message": "Others deselected"}}
+    mock_get_bridge.return_value = mock_bridge
+    result = runner.invoke(cli, ["selection", "deselect-others"])
+    assert result.exit_code == 0
+    mock_bridge.send_command.assert_called_once_with("selection.deselectOthers", {}, timeout=30.0)
