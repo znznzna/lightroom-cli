@@ -562,7 +562,7 @@ function CatalogModule.findPhotos(params, callback)
     local logger = getLogger()
     local searchDesc = params.searchDesc or {}
     local limit = params.limit or 100
-    local offset = params.offset or 0
+    local offset = math.max(params.offset or 0, 0)
 
     logger:debug("Finding photos with search criteria")
 
