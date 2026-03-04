@@ -5,6 +5,7 @@ local LrSocket = import 'LrSocket'
 local LrTasks = import 'LrTasks'
 local LrFunctionContext = import 'LrFunctionContext'
 local LrDialogs = import 'LrDialogs'
+local PlatformPaths = require("PlatformPaths")
 
 -- Module-level variables for Phase 3
 local commandRouter = nil
@@ -68,7 +69,7 @@ end
 local function writePortFile(senderPort, receiverPort)
     local logger = getLogger()
     local success, err = LrTasks.pcall(function()
-        local file = io.open("/tmp/lightroom_ports.txt", "w")
+        local file = io.open(PlatformPaths.getPortFilePath(), "w")
         if file then
             file:write(string.format("%d,%d", senderPort, receiverPort))
             file:close()
@@ -335,8 +336,9 @@ local function startSocketServer()
             -- Remove port file
             pcall(function()
                 local LrFileUtils = import 'LrFileUtils'
-                if LrFileUtils.exists("/tmp/lightroom_ports.txt") then
-                    LrFileUtils.delete("/tmp/lightroom_ports.txt")
+                local portFile = PlatformPaths.getPortFilePath()
+                if LrFileUtils.exists(portFile) then
+                    LrFileUtils.delete(portFile)
                 end
             end)
 
@@ -435,8 +437,9 @@ local function stopSocketServer()
     -- Remove port file immediately
     pcall(function()
         local LrFileUtils = import 'LrFileUtils'
-        if LrFileUtils.exists("/tmp/lightroom_ports.txt") then
-            LrFileUtils.delete("/tmp/lightroom_ports.txt")
+        local portFile = PlatformPaths.getPortFilePath()
+        if LrFileUtils.exists(portFile) then
+            LrFileUtils.delete(portFile)
             logger:info("Port file removed")
         end
     end)
