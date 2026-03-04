@@ -4,52 +4,60 @@
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-**Adobe Lightroom Classic をコマンドラインから完全操作するCLIツール。**
+[Japanese / 日本語](README.ja.md)
 
-現像パラメータ調整、マスキング、トーンカーブ、カタログ管理、セレクション操作など **107コマンド** を提供します。バッチ処理やスクリプト自動化に最適です。
+**Full command-line control for Adobe Lightroom Classic — 107 commands.**
+
+Develop parameter adjustment, masking, tone curves, catalog management, selection operations, and more. Ideal for batch processing and scripted automation.
 
 ## Architecture
 
 ```
-┌─────────────────────┐     TCP Socket (JSON-RPC)     ┌──────────────┐
-│  Lightroom Classic   │◄────────────────────────────►│  Python SDK  │
-│  (Lua Plugin)        │   Dual socket: send/receive   │              │
-└─────────────────────┘                                └──────┬───────┘
-                                                              │
-                                                       ┌──────┴───────┐
-                                                       │   CLI (lr)   │
-                                                       │   Click app  │
-                                                       └──────────────┘
++---------------------+     TCP Socket (JSON-RPC)     +--------------+
+|  Lightroom Classic  |<----------------------------->|  Python SDK  |
+|  (Lua Plugin)       |   Dual socket: send/receive   |              |
++---------------------+                               +------+-------+
+                                                              |
+                                                       +------+-------+
+                                                       |   CLI (lr)   |
+                                                       |   Click app  |
+                                                       +--------------+
 ```
 
-Lua プラグインが Lightroom Classic 内で動作し、デュアル TCP ソケット（送信用/受信用）で Python SDK と JSON-RPC 通信します。CLI は `lr` コマンドとして動作し、SDK 経由で Lightroom を操作します。
+A Lua plugin runs inside Lightroom Classic and communicates with the Python SDK via dual TCP sockets (one for sending, one for receiving) using JSON-RPC. The CLI operates as the `lr` command and controls Lightroom through the SDK.
 
 ## Quick Start
 
 ### Prerequisites
 
 - **Python 3.10+**
-- **Adobe Lightroom Classic** (デスクトップ版)
-- macOS (Windows は未テスト)
+- **Adobe Lightroom Classic** (desktop version)
+- macOS (Windows untested)
 
 ### Installation
+
+#### From Source (Development)
 
 ```bash
 git clone https://github.com/znznzna/lightroom-cli.git
 cd lightroom-cli
-./scripts/install.sh
+pip install -e ".[dev]"
+lr plugin install --dev
 ```
 
-`install.sh` は以下を自動で実行します:
-1. Python パッケージをインストール (`pip install -e .`)
-2. Lua プラグインを Lightroom のプラグインディレクトリにシンボリックリンク
-
-### 接続確認
+#### Via pip
 
 ```bash
-# Lightroom Classic を起動した状態で
+pip install lightroom-cli
+lr plugin install
+```
+
+### Verify Connection
+
+```bash
+# With Lightroom Classic running
 lr system ping
-# → pong
+# -> pong
 
 lr system status
 ```
@@ -57,36 +65,36 @@ lr system status
 ## Usage Examples
 
 ```bash
-# 選択中の写真を取得
+# Get currently selected photo
 lr catalog get-selected
 
-# 現像パラメータを設定
+# Set develop parameters
 lr develop set Exposure 1.5 Contrast 25 Clarity 30
 
-# AutoTone 適用
+# Apply AutoTone
 lr develop auto-tone
 
-# トーンカーブに S カーブを適用
+# Apply S-curve to tone curve
 lr develop curve s-curve
 
-# マスクを作成してブラシを追加
+# Create a mask and add a brush
 lr develop mask create
 lr develop mask add brush
 
-# プリセット適用
+# Apply a preset
 lr develop preset "Vivid Landscape"
 
-# レーティングとフラグ操作
+# Rating and flag operations
 lr selection set-rating 5
 lr selection flag
 
-# カタログ検索
+# Search the catalog
 lr catalog search "landscape" --limit 20
 
-# JSON 出力
+# JSON output
 lr -o json develop get-settings
 
-# テーブル形式で一覧
+# Table output
 lr -o table catalog list --limit 10
 ```
 
@@ -94,147 +102,155 @@ lr -o table catalog list --limit 10
 
 | Group | Commands | Description |
 |-------|----------|-------------|
-| [`lr system`](#lr-system) | 4 | 接続管理・ステータス確認 |
-| [`lr catalog`](#lr-catalog) | 27 | カタログ操作・写真検索・メタデータ |
-| [`lr develop`](#lr-develop) | 55 | 現像設定・マスク・カーブ・フィルタ |
-| [`lr preview`](#lr-preview) | 4 | プレビュー生成・情報取得 |
-| [`lr selection`](#lr-selection) | 17 | 選択操作・フラグ・レーティング・ラベル |
+| [`lr system`](#lr-system) | 4 | Connection management and status |
+| [`lr catalog`](#lr-catalog) | 27 | Catalog operations, photo search, metadata |
+| [`lr develop`](#lr-develop) | 55 | Develop settings, masks, curves, filters |
+| [`lr preview`](#lr-preview) | 4 | Preview generation and info |
+| [`lr selection`](#lr-selection) | 17 | Selection, flags, ratings, labels |
+| [`lr plugin`](#lr-plugin) | 3 | Plugin installation and management |
 
-**全 107 コマンドの詳細は [CLI Reference](docs/CLI_REFERENCE.md) を参照してください。**
+**For all 107 commands, see the [CLI Reference](docs/CLI_REFERENCE.md).**
 
 ### lr system
 
 ```bash
-lr system ping                # 接続テスト
-lr system status              # ブリッジステータス
-lr system reconnect           # 強制再接続
-lr system check-connection    # 接続詳細チェック
+lr system ping                # Connection test
+lr system status              # Bridge status
+lr system reconnect           # Force reconnect
+lr system check-connection    # Detailed connection check
 ```
 
 ### lr catalog
 
 ```bash
-lr catalog get-selected               # 選択中の写真を取得
-lr catalog list --limit 10            # 写真一覧
-lr catalog search "keyword"           # 検索
-lr catalog get-info <photo_id>        # 詳細メタデータ
-lr catalog set-rating <id> 5          # レーティング設定
-lr catalog add-keywords <id> kw1 kw2  # キーワード追加
-lr catalog set-title <id> "Title"     # タイトル設定
-lr catalog collections                # コレクション一覧
-lr catalog create-collection "name"   # コレクション作成
-lr catalog keywords                   # キーワード一覧
-lr catalog set-view-filter <json>     # ビューフィルタ設定
-lr catalog rotate-left                # 左回転
-lr catalog create-virtual-copy        # 仮想コピー作成
+lr catalog get-selected               # Get currently selected photo
+lr catalog list --limit 10            # List photos
+lr catalog search "keyword"           # Search
+lr catalog get-info <photo_id>        # Detailed metadata
+lr catalog set-rating <id> 5          # Set rating
+lr catalog add-keywords <id> kw1 kw2  # Add keywords
+lr catalog set-title <id> "Title"     # Set title
+lr catalog collections                # List collections
+lr catalog create-collection "name"   # Create collection
+lr catalog keywords                   # List keywords
+lr catalog set-view-filter <json>     # Set view filter
+lr catalog rotate-left                # Rotate left
+lr catalog create-virtual-copy        # Create virtual copy
 ```
 
 ### lr develop
 
 ```bash
-# 基本操作
-lr develop get-settings               # 全現像設定を取得
-lr develop set Exposure 1.5           # パラメータ設定
-lr develop get Exposure               # 単一パラメータ取得
+# Basic operations
+lr develop get-settings               # Get all develop settings
+lr develop set Exposure 1.5           # Set parameter
+lr develop get Exposure               # Get single parameter
 lr develop auto-tone                  # AutoTone
 lr develop auto-wb                    # Auto White Balance
-lr develop reset                      # リセット
-lr develop apply '{"Exposure": 1.0}'  # JSON で一括適用
+lr develop reset                      # Reset settings
+lr develop apply '{"Exposure": 1.0}'  # Apply settings from JSON
 
-# トーンカーブ
-lr develop curve get                  # カーブ取得
+# Tone curve
+lr develop curve get                  # Get curve
 lr develop curve set '[[0,0],[128,140],[255,255]]'
-lr develop curve s-curve              # S カーブプリセット
-lr develop curve linear               # リニアリセット
-lr develop curve add-point 128 140    # ポイント追加
+lr develop curve s-curve              # S-curve preset
+lr develop curve linear               # Linear reset
+lr develop curve add-point 128 140    # Add point
 
-# マスキング
-lr develop mask list                  # 全マスク一覧
-lr develop mask create                # 新規マスク作成
-lr develop mask add brush             # ブラシ追加
-lr develop mask intersect luminance   # インターセクト
-lr develop mask subtract color        # サブトラクト
-lr develop mask invert mask-1         # マスク反転
+# Masking
+lr develop mask list                  # List all masks
+lr develop mask create                # Create new mask
+lr develop mask add brush             # Add brush component
+lr develop mask intersect luminance   # Intersect with luminance
+lr develop mask subtract color        # Subtract with color
+lr develop mask invert mask-1         # Invert mask
 
-# フィルタ
-lr develop filter graduated           # 段階フィルタ
-lr develop filter radial              # 円形フィルタ
-lr develop filter brush               # ブラシフィルタ
-lr develop filter ai-select           # AI 選択
+# Filters
+lr develop filter graduated           # Graduated filter
+lr develop filter radial              # Radial filter
+lr develop filter brush               # Brush filter
+lr develop filter ai-select           # AI select
 
-# ローカル補正
-lr develop local set Exposure 0.5     # ローカルパラメータ設定
-lr develop local get Exposure         # ローカルパラメータ取得
+# Local adjustments
+lr develop local set Exposure 0.5     # Set local parameter
+lr develop local get Exposure         # Get local parameter
 
-# ツール・プリセット・スナップショット
-lr develop tool crop                  # ツール選択
-lr develop preset "Preset Name"       # プリセット適用
-lr develop snapshot "Snapshot Name"   # スナップショット作成
-lr develop copy-settings              # 設定コピー
-lr develop paste-settings             # 設定ペースト
+# Tools, presets, and snapshots
+lr develop tool crop                  # Select tool
+lr develop preset "Preset Name"       # Apply preset
+lr develop snapshot "Snapshot Name"   # Create snapshot
+lr develop copy-settings              # Copy settings
+lr develop paste-settings             # Paste settings
 ```
 
 ### lr preview
 
 ```bash
-lr preview generate-current           # 選択写真のプレビュー生成
-lr preview generate --size 2048       # サイズ指定
-lr preview generate-batch             # バッチ生成
-lr preview info                       # プレビュー情報
+lr preview generate-current           # Generate preview for selected photo
+lr preview generate --size 2048       # Generate with specified size
+lr preview generate-batch             # Batch generation
+lr preview info                       # Preview info
 ```
 
 ### lr selection
 
 ```bash
-lr selection flag                     # Pick フラグ
-lr selection reject                   # Reject フラグ
-lr selection unflag                   # フラグ解除
-lr selection get-flag                 # フラグ状態取得
-lr selection set-rating 5             # レーティング設定 (0-5)
-lr selection get-rating               # レーティング取得
-lr selection color-label red          # カラーラベル設定
-lr selection get-color-label          # カラーラベル取得
-lr selection toggle-label red         # ラベルトグル
-lr selection next                     # 次の写真
-lr selection previous                 # 前の写真
-lr selection select-all               # 全選択
-lr selection select-none              # 全解除
-lr selection select-inverse           # 選択反転
-lr selection extend --direction right # 選択範囲拡張
+lr selection flag                     # Pick flag
+lr selection reject                   # Reject flag
+lr selection unflag                   # Remove flag
+lr selection get-flag                 # Get flag state
+lr selection set-rating 5             # Set rating (0-5)
+lr selection get-rating               # Get rating
+lr selection color-label red          # Set color label
+lr selection get-color-label          # Get color label
+lr selection toggle-label red         # Toggle label
+lr selection next                     # Next photo
+lr selection previous                 # Previous photo
+lr selection select-all               # Select all
+lr selection select-none              # Deselect all
+lr selection select-inverse           # Invert selection
+lr selection extend --direction right # Extend selection
 ```
 
 ## Global Options
 
 ```bash
-lr --output json ...    # JSON 出力 (-o json)
-lr --output table ...   # テーブル出力 (-o table)
-lr --verbose ...        # デバッグログ (-v)
-lr --timeout 60 ...     # タイムアウト秒数 (-t 60)
-lr --version            # バージョン表示
+lr --output json ...    # JSON output (-o json)
+lr --output table ...   # Table output (-o table)
+lr --verbose ...        # Debug logging (-v)
+lr --timeout 60 ...     # Timeout in seconds (-t 60)
+lr --version            # Show version
 ```
+
+## Configuration
+
+| Environment Variable | Description |
+|---------------------|-------------|
+| `LR_PORT_FILE` | Path to the port file used for socket communication |
+| `LR_PLUGIN_DIR` | Path to the Lightroom plugin directory |
 
 ## Features
 
-- **自動再接続**: Lightroom との接続が切れても自動リトライ（指数バックオフ）
-- **ハートビート**: 30 秒間隔の接続監視
-- **シャットダウン検知**: Lightroom 終了時のグレースフルハンドリング
-- **3 出力形式**: `text` / `json` / `table`
-- **タブ補完**: 現像パラメータ名の補完サポート
-- **コマンド別タイムアウト**: プレビュー生成など長時間処理は自動延長
+- **Auto-reconnect**: Automatically retries when the Lightroom connection drops (exponential backoff)
+- **Heartbeat**: Connection monitoring at 30-second intervals
+- **Shutdown detection**: Graceful handling when Lightroom exits
+- **3 output formats**: `text` / `json` / `table`
+- **Tab completion**: Completion support for develop parameter names
+- **Per-command timeout**: Long-running operations like preview generation are automatically extended
 
 ## Development
 
 ```bash
-# 開発用インストール
+# Install for development
 pip install -e ".[dev]"
 
-# テスト実行
+# Run tests
 python -m pytest tests/ -v
 
-# カバレッジ付き
+# With coverage
 python -m pytest tests/ -v --cov=lightroom_sdk --cov=cli
 
-# 単一テストファイル
+# Single test file
 python -m pytest tests/integration/test_cli_develop.py -v
 ```
 
@@ -242,46 +258,49 @@ python -m pytest tests/integration/test_cli_develop.py -v
 
 ```
 lightroom-cli/
-├── cli/                      # Click CLI アプリケーション
-│   ├── main.py               # エントリポイント (lr コマンド)
-│   ├── output.py             # OutputFormatter (json/text/table)
-│   ├── helpers.py            # bridge_command デコレータ
-│   ├── completions.py        # タブ補完
-│   └── commands/             # コマンドグループ
-│       ├── system.py         # lr system
-│       ├── catalog.py        # lr catalog
-│       ├── develop.py        # lr develop (+ curve/mask/local/filter/debug/color)
-│       ├── preview.py        # lr preview
-│       └── selection.py      # lr selection
-├── lightroom_sdk/            # Python SDK
-│   ├── client.py             # LightroomClient
-│   ├── socket_bridge.py      # デュアル TCP ソケット
-│   ├── resilient_bridge.py   # 自動再接続 + ハートビート
-│   ├── retry.py              # コマンド別タイムアウト
-│   └── protocol.py           # JSON-RPC プロトコル
-├── lightroom-plugin/         # Lua プラグイン
-│   ├── PluginInit.lua        # コマンドルーター (107 commands)
-│   ├── DevelopModule.lua     # 現像操作
-│   ├── CatalogModule.lua     # カタログ操作
-│   ├── SelectionModule.lua   # 選択操作
-│   ├── PreviewModule.lua     # プレビュー操作
-│   └── SocketServer.lua      # TCP サーバー
-├── scripts/                  # インストールスクリプト
-├── tests/                    # pytest テストスイート (165 tests)
-└── docs/                     # ドキュメント
++-- cli/                      # Click CLI application
+|   +-- main.py               # Entry point (lr command)
+|   +-- output.py             # OutputFormatter (json/text/table)
+|   +-- helpers.py            # bridge_command decorator
+|   +-- completions.py        # Tab completion
+|   +-- commands/             # Command groups
+|       +-- system.py         # lr system
+|       +-- catalog.py        # lr catalog
+|       +-- develop.py        # lr develop (+ curve/mask/local/filter/debug/color)
+|       +-- preview.py        # lr preview
+|       +-- selection.py      # lr selection
+|       +-- plugin.py         # lr plugin
++-- lightroom_sdk/            # Python SDK
+|   +-- client.py             # LightroomClient
+|   +-- socket_bridge.py      # Dual TCP socket
+|   +-- resilient_bridge.py   # Auto-reconnect + heartbeat
+|   +-- retry.py              # Per-command timeout
+|   +-- protocol.py           # JSON-RPC protocol
+|   +-- paths.py              # Path resolution utilities
++-- lightroom-plugin/         # Lua plugin
+|   +-- PluginInit.lua        # Command router (107 commands)
+|   +-- DevelopModule.lua     # Develop operations
+|   +-- CatalogModule.lua     # Catalog operations
+|   +-- SelectionModule.lua   # Selection operations
+|   +-- PreviewModule.lua     # Preview operations
+|   +-- SocketServer.lua      # TCP server
++-- scripts/                  # Installation scripts
++-- tests/                    # pytest test suite (189+ tests)
++-- docs/                     # Documentation
 ```
 
 ## Requirements
 
 - Python >= 3.10
 - Adobe Lightroom Classic
-- macOS (Windows 未テスト)
+- macOS (Windows untested)
 
 ### Python Dependencies
 
-- [click](https://click.palletsprojects.com/) >= 8.1 — CLI フレームワーク
-- [rich](https://rich.readthedocs.io/) >= 13.0 — テーブル出力
-- [pydantic](https://docs.pydantic.dev/) >= 2.0 — データバリデーション
+- [click](https://click.palletsprojects.com/) >= 8.1 — CLI framework
+- [rich](https://rich.readthedocs.io/) >= 13.0 — Table output
+- [pydantic](https://docs.pydantic.dev/) >= 2.0 — Data validation
+- [platformdirs](https://platformdirs.readthedocs.io/) >= 3.0 — Platform-specific directory paths
 
 ## License
 
