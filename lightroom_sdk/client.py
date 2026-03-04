@@ -75,15 +75,15 @@ class LightroomClient:
         Returns:
             True if Lightroom becomes available, False if timeout
         """
-        import logging
-        logger = logging.getLogger(__name__)
-
-        logger.info("🔍 Checking for Lightroom Classic...")
+        logger.info("Checking for Lightroom Classic...")
 
         try:
-            await self.connect()
-            logger.info("✅ Lightroom is ready!")
+            await asyncio.wait_for(self.connect(), timeout=timeout)
+            logger.info("Lightroom is ready!")
             return True
+        except asyncio.TimeoutError:
+            logger.warning(f"Lightroom not available within {timeout}s")
+            return False
         except Exception as e:
             logger.warning(f"Lightroom not ready: {e}")
             return False
