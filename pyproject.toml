@@ -56,4 +56,6 @@ markers = [
     "integration: marks tests as integration tests requiring Lightroom",
     "unit: marks tests as unit tests",
     "e2e: marks tests as E2E tests requiring Lightroom Classic",
+    "destructive: marks destructive tests (skipped by default, run with --run-destructive)",
+    "slow: marks slow tests (preview generation, batch operations)",
 ]
