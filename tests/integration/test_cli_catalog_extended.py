@@ -160,3 +160,71 @@ def test_catalog_set_color_label(mock_get_bridge, runner):
     mock_bridge.send_command.assert_called_once_with(
         "catalog.setColorLabel", {"photoId": "123", "label": "red"}, timeout=30.0
     )
+
+
+@patch("cli.commands.catalog.get_bridge")
+def test_catalog_batch_metadata(mock_get_bridge, runner):
+    """lr catalog batch-metadata がバッチメタデータを返す"""
+    mock_bridge = AsyncMock()
+    mock_bridge.send_command.return_value = {
+        "id": "10", "success": True,
+        "result": {"photos": [{"id": "1", "fileName": "test.jpg"}]},
+    }
+    mock_get_bridge.return_value = mock_bridge
+
+    result = runner.invoke(cli, ["catalog", "batch-metadata", "1", "2"])
+    assert result.exit_code == 0
+    mock_bridge.send_command.assert_called_once_with(
+        "catalog.batchGetFormattedMetadata",
+        {"photoIds": ["1", "2"], "keys": ["fileName", "dateTimeOriginal", "rating"]},
+        timeout=30.0
+    )
+
+
+@patch("cli.commands.catalog.get_bridge")
+def test_catalog_batch_metadata_custom_keys(mock_get_bridge, runner):
+    """lr catalog batch-metadata --keys でカスタムキーを指定できる"""
+    mock_bridge = AsyncMock()
+    mock_bridge.send_command.return_value = {
+        "id": "11", "success": True,
+        "result": {"photos": []},
+    }
+    mock_get_bridge.return_value = mock_bridge
+
+    result = runner.invoke(cli, ["catalog", "batch-metadata", "1", "--keys", "fileName,rating"])
+    assert result.exit_code == 0
+    mock_bridge.send_command.assert_called_once_with(
+        "catalog.batchGetFormattedMetadata",
+        {"photoIds": ["1"], "keys": ["fileName", "rating"]},
+        timeout=30.0
+    )
+
+
+@patch("cli.commands.catalog.get_bridge")
+def test_catalog_rotate_left(mock_get_bridge, runner):
+    mock_bridge = AsyncMock()
+    mock_bridge.send_command.return_value = {"id": "20", "success": True, "result": {"message": "Rotated left"}}
+    mock_get_bridge.return_value = mock_bridge
+    result = runner.invoke(cli, ["catalog", "rotate-left"])
+    assert result.exit_code == 0
+    mock_bridge.send_command.assert_called_once_with("catalog.rotateLeft", {}, timeout=30.0)
+
+
+@patch("cli.commands.catalog.get_bridge")
+def test_catalog_rotate_right(mock_get_bridge, runner):
+    mock_bridge = AsyncMock()
+    mock_bridge.send_command.return_value = {"id": "21", "success": True, "result": {"message": "Rotated right"}}
+    mock_get_bridge.return_value = mock_bridge
+    result = runner.invoke(cli, ["catalog", "rotate-right"])
+    assert result.exit_code == 0
+    mock_bridge.send_command.assert_called_once_with("catalog.rotateRight", {}, timeout=30.0)
+
+
+@patch("cli.commands.catalog.get_bridge")
+def test_catalog_create_virtual_copy(mock_get_bridge, runner):
+    mock_bridge = AsyncMock()
+    mock_bridge.send_command.return_value = {"id": "22", "success": True, "result": {"message": "Virtual copy created"}}
+    mock_get_bridge.return_value = mock_bridge
+    result = runner.invoke(cli, ["catalog", "create-virtual-copy"])
+    assert result.exit_code == 0
+    mock_bridge.send_command.assert_called_once_with("catalog.createVirtualCopy", {}, timeout=30.0)

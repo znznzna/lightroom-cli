@@ -139,3 +139,23 @@ def test_selection_select_inverse(mock_get_bridge, runner):
     result = runner.invoke(cli, ["selection", "select-inverse"])
     assert result.exit_code == 0
     mock_bridge.send_command.assert_called_once_with("selection.selectInverse", {}, timeout=30.0)
+
+
+@patch("cli.commands.selection.get_bridge")
+def test_selection_increase_rating(mock_get_bridge, runner):
+    mock_bridge = AsyncMock()
+    mock_bridge.send_command.return_value = {"id": "10", "success": True, "result": {"message": "Rating increased"}}
+    mock_get_bridge.return_value = mock_bridge
+    result = runner.invoke(cli, ["selection", "increase-rating"])
+    assert result.exit_code == 0
+    mock_bridge.send_command.assert_called_once_with("selection.increaseRating", {}, timeout=30.0)
+
+
+@patch("cli.commands.selection.get_bridge")
+def test_selection_decrease_rating(mock_get_bridge, runner):
+    mock_bridge = AsyncMock()
+    mock_bridge.send_command.return_value = {"id": "11", "success": True, "result": {"message": "Rating decreased"}}
+    mock_get_bridge.return_value = mock_bridge
+    result = runner.invoke(cli, ["selection", "decrease-rating"])
+    assert result.exit_code == 0
+    mock_bridge.send_command.assert_called_once_with("selection.decreaseRating", {}, timeout=30.0)

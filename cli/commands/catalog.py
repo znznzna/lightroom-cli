@@ -439,3 +439,89 @@ def set_color_label(ctx, photo_id, label):
             await bridge.disconnect()
 
     run_async(_run())
+
+
+@catalog.command("batch-metadata")
+@click.argument("photo_ids", nargs=-1, required=True)
+@click.option("--keys", default="fileName,dateTimeOriginal,rating", help="Comma-separated metadata keys")
+@click.pass_context
+def batch_metadata(ctx, photo_ids, keys):
+    """Get formatted metadata for multiple photos"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command(
+                "catalog.batchGetFormattedMetadata",
+                {"photoIds": list(photo_ids), "keys": keys.split(",")},
+                timeout=timeout
+            )
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
+@catalog.command("rotate-left")
+@click.pass_context
+def rotate_left(ctx):
+    """Rotate selected photo left"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command("catalog.rotateLeft", {}, timeout=timeout)
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
+@catalog.command("rotate-right")
+@click.pass_context
+def rotate_right(ctx):
+    """Rotate selected photo right"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command("catalog.rotateRight", {}, timeout=timeout)
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
+@catalog.command("create-virtual-copy")
+@click.pass_context
+def create_virtual_copy(ctx):
+    """Create virtual copy of selected photo"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command("catalog.createVirtualCopy", {}, timeout=timeout)
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())

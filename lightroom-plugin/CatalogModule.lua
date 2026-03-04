@@ -1279,4 +1279,64 @@ function CatalogModule.pasteSettings(params, callback)
     end
 end
 
+function CatalogModule.rotateLeft(params, callback)
+    ensureLrModules()
+    local catalog = LrApplication.activeCatalog()
+    local photo = catalog:getTargetPhoto()
+    if not photo then
+        callback(ErrorUtils.createError("PHOTO_NOT_FOUND", "No photo selected"))
+        return
+    end
+    local success, err = ErrorUtils.safeCall(function()
+        catalog:withWriteAccessDo("Rotate Left", function()
+            photo:rotateLeft()
+        end, { timeout = 10 })
+    end)
+    if success then
+        callback(ErrorUtils.createSuccess({ message = "Rotated left" }))
+    else
+        callback(ErrorUtils.createError("OPERATION_FAILED", tostring(err)))
+    end
+end
+
+function CatalogModule.rotateRight(params, callback)
+    ensureLrModules()
+    local catalog = LrApplication.activeCatalog()
+    local photo = catalog:getTargetPhoto()
+    if not photo then
+        callback(ErrorUtils.createError("PHOTO_NOT_FOUND", "No photo selected"))
+        return
+    end
+    local success, err = ErrorUtils.safeCall(function()
+        catalog:withWriteAccessDo("Rotate Right", function()
+            photo:rotateRight()
+        end, { timeout = 10 })
+    end)
+    if success then
+        callback(ErrorUtils.createSuccess({ message = "Rotated right" }))
+    else
+        callback(ErrorUtils.createError("OPERATION_FAILED", tostring(err)))
+    end
+end
+
+function CatalogModule.createVirtualCopy(params, callback)
+    ensureLrModules()
+    local catalog = LrApplication.activeCatalog()
+    local photo = catalog:getTargetPhoto()
+    if not photo then
+        callback(ErrorUtils.createError("PHOTO_NOT_FOUND", "No photo selected"))
+        return
+    end
+    local success, err = ErrorUtils.safeCall(function()
+        catalog:withWriteAccessDo("Create Virtual Copy", function()
+            photo:createVirtualCopy()
+        end, { timeout = 10 })
+    end)
+    if success then
+        callback(ErrorUtils.createSuccess({ message = "Virtual copy created" }))
+    else
+        callback(ErrorUtils.createError("OPERATION_FAILED", tostring(err)))
+    end
+end
+
 return CatalogModule
