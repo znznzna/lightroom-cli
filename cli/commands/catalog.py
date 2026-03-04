@@ -367,3 +367,75 @@ def folders(ctx, recursive):
             await bridge.disconnect()
 
     run_async(_run())
+
+
+@catalog.command("set-title")
+@click.argument("photo_id")
+@click.argument("title")
+@click.pass_context
+def set_title(ctx, photo_id, title):
+    """Set photo title"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command(
+                "catalog.setTitle", {"photoId": photo_id, "title": title}, timeout=timeout
+            )
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
+@catalog.command("set-caption")
+@click.argument("photo_id")
+@click.argument("caption")
+@click.pass_context
+def set_caption(ctx, photo_id, caption):
+    """Set photo caption"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command(
+                "catalog.setCaption", {"photoId": photo_id, "caption": caption}, timeout=timeout
+            )
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
+@catalog.command("set-color-label")
+@click.argument("photo_id")
+@click.argument("label", type=click.Choice(["red", "yellow", "green", "blue", "purple", "none"]))
+@click.pass_context
+def set_color_label(ctx, photo_id, label):
+    """Set photo color label"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command(
+                "catalog.setColorLabel", {"photoId": photo_id, "label": label}, timeout=timeout
+            )
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())

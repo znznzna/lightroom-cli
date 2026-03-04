@@ -1032,4 +1032,97 @@ function CatalogModule.getFlag(params, callback)
     end)
 end
 
+-- Set photo title
+function CatalogModule.setTitle(params, callback)
+    ensureLrModules()
+    local photoId = params.photoId
+    local title = params.title
+
+    if not photoId then
+        callback(ErrorUtils.createError("MISSING_PARAM", "photoId is required"))
+        return
+    end
+    if not title then
+        callback(ErrorUtils.createError("MISSING_PARAM", "title is required"))
+        return
+    end
+
+    local catalog = LrApplication.activeCatalog()
+    local writeSuccess, writeError = ErrorUtils.safeCall(function()
+        catalog:withWriteAccessDo("Set Title", function()
+            local photo = catalog:getPhotoByLocalId(tonumber(photoId))
+            if not photo then error("Photo not found: " .. tostring(photoId)) end
+            photo:setRawMetadata("title", title)
+        end, { timeout = 10 })
+    end)
+
+    if writeSuccess then
+        callback(ErrorUtils.createSuccess({ photoId = photoId, title = title, message = "Title set successfully" }))
+    else
+        callback(ErrorUtils.createError("OPERATION_FAILED", "Failed to set title: " .. tostring(writeError)))
+    end
+end
+
+-- Set photo caption
+function CatalogModule.setCaption(params, callback)
+    ensureLrModules()
+    local photoId = params.photoId
+    local caption = params.caption
+
+    if not photoId then
+        callback(ErrorUtils.createError("MISSING_PARAM", "photoId is required"))
+        return
+    end
+    if not caption then
+        callback(ErrorUtils.createError("MISSING_PARAM", "caption is required"))
+        return
+    end
+
+    local catalog = LrApplication.activeCatalog()
+    local writeSuccess, writeError = ErrorUtils.safeCall(function()
+        catalog:withWriteAccessDo("Set Caption", function()
+            local photo = catalog:getPhotoByLocalId(tonumber(photoId))
+            if not photo then error("Photo not found: " .. tostring(photoId)) end
+            photo:setRawMetadata("caption", caption)
+        end, { timeout = 10 })
+    end)
+
+    if writeSuccess then
+        callback(ErrorUtils.createSuccess({ photoId = photoId, caption = caption, message = "Caption set successfully" }))
+    else
+        callback(ErrorUtils.createError("OPERATION_FAILED", "Failed to set caption: " .. tostring(writeError)))
+    end
+end
+
+-- Set photo color label
+function CatalogModule.setColorLabel(params, callback)
+    ensureLrModules()
+    local photoId = params.photoId
+    local label = params.label
+
+    if not photoId then
+        callback(ErrorUtils.createError("MISSING_PARAM", "photoId is required"))
+        return
+    end
+    if not label then
+        callback(ErrorUtils.createError("MISSING_PARAM", "label is required"))
+        return
+    end
+
+    local catalog = LrApplication.activeCatalog()
+    local writeSuccess, writeError = ErrorUtils.safeCall(function()
+        catalog:withWriteAccessDo("Set Color Label", function()
+            local photo = catalog:getPhotoByLocalId(tonumber(photoId))
+            if not photo then error("Photo not found: " .. tostring(photoId)) end
+            photo:setRawMetadata("colorNameForLabel", label)
+        end, { timeout = 10 })
+    end)
+
+    if writeSuccess then
+        callback(ErrorUtils.createSuccess({ photoId = photoId, label = label, message = "Color label set successfully" }))
+    else
+        callback(ErrorUtils.createError("OPERATION_FAILED", "Failed to set color label: " .. tostring(writeError)))
+    end
+end
+
 return CatalogModule

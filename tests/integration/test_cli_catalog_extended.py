@@ -109,3 +109,54 @@ def test_catalog_folders_recursive(mock_get_bridge, runner):
     mock_bridge.send_command.assert_called_once_with(
         "catalog.getFolders", {"includeSubfolders": True}, timeout=30.0
     )
+
+
+@patch("cli.commands.catalog.get_bridge")
+def test_catalog_set_title(mock_get_bridge, runner):
+    """lr catalog set-title 123 'Sunset' がcatalog.setTitleに正しいパラメータを送信する"""
+    mock_bridge = AsyncMock()
+    mock_bridge.send_command.return_value = {
+        "id": "7", "success": True,
+        "result": {"photoId": "123", "title": "Sunset", "message": "Title set successfully"},
+    }
+    mock_get_bridge.return_value = mock_bridge
+
+    result = runner.invoke(cli, ["catalog", "set-title", "123", "Sunset"])
+    assert result.exit_code == 0
+    mock_bridge.send_command.assert_called_once_with(
+        "catalog.setTitle", {"photoId": "123", "title": "Sunset"}, timeout=30.0
+    )
+
+
+@patch("cli.commands.catalog.get_bridge")
+def test_catalog_set_caption(mock_get_bridge, runner):
+    """lr catalog set-caption 123 'A beautiful sunset' がcatalog.setCaptionに正しいパラメータを送信する"""
+    mock_bridge = AsyncMock()
+    mock_bridge.send_command.return_value = {
+        "id": "8", "success": True,
+        "result": {"photoId": "123", "caption": "A beautiful sunset", "message": "Caption set successfully"},
+    }
+    mock_get_bridge.return_value = mock_bridge
+
+    result = runner.invoke(cli, ["catalog", "set-caption", "123", "A beautiful sunset"])
+    assert result.exit_code == 0
+    mock_bridge.send_command.assert_called_once_with(
+        "catalog.setCaption", {"photoId": "123", "caption": "A beautiful sunset"}, timeout=30.0
+    )
+
+
+@patch("cli.commands.catalog.get_bridge")
+def test_catalog_set_color_label(mock_get_bridge, runner):
+    """lr catalog set-color-label 123 red がcatalog.setColorLabelに正しいパラメータを送信する"""
+    mock_bridge = AsyncMock()
+    mock_bridge.send_command.return_value = {
+        "id": "9", "success": True,
+        "result": {"photoId": "123", "label": "red", "message": "Color label set successfully"},
+    }
+    mock_get_bridge.return_value = mock_bridge
+
+    result = runner.invoke(cli, ["catalog", "set-color-label", "123", "red"])
+    assert result.exit_code == 0
+    mock_bridge.send_command.assert_called_once_with(
+        "catalog.setColorLabel", {"photoId": "123", "label": "red"}, timeout=30.0
+    )
