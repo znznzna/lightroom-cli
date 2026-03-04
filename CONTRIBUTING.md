@@ -11,10 +11,10 @@ pip install -e ".[dev]"
 
 ```bash
 # 全テスト
-python -m pytest tests/unit/ tests/integration/ -v
+python -m pytest tests/ -v
 
 # 特定テストファイル
-python -m pytest tests/unit/test_retry.py -v
+python -m pytest tests/test_retry.py -v
 
 # カバレッジ付き
 python -m pytest tests/ -v --cov=lightroom_sdk --cov=cli

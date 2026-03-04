@@ -86,7 +86,7 @@ lightroom-cli/
 pip install -e ".[dev]"
 
 # テスト実行
-python -m pytest tests/unit/ tests/integration/ -v
+python -m pytest tests/ -v
 
 # カバレッジ付き
 python -m pytest tests/ -v --cov=lightroom_sdk --cov=cli

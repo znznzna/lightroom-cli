@@ -14,4 +14,4 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - run: pip install -e ".[dev]"
-      - run: python -m pytest tests/unit/ tests/integration/ -v --cov=lightroom_sdk --cov=cli
+      - run: python -m pytest tests/ -v --cov=lightroom_sdk --cov=cli
