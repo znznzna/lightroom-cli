@@ -35,6 +35,7 @@ def ping(ctx):
     async def _run():
         bridge = get_bridge()
         try:
+            await bridge.connect()
             result = await bridge.send_command("system.ping", timeout=timeout)
             click.echo(OutputFormatter.format(result.get("result", result), fmt))
         except Exception as e:
@@ -55,6 +56,7 @@ def status(ctx):
     async def _run():
         bridge = get_bridge()
         try:
+            await bridge.connect()
             result = await bridge.send_command("system.status", timeout=timeout)
             click.echo(OutputFormatter.format(result.get("result", result), fmt))
         except Exception as e:
@@ -71,6 +73,7 @@ def reconnect():
     async def _run():
         bridge = get_bridge()
         try:
+            await bridge.connect()
             await bridge.disconnect()
             await bridge.connect()
             click.echo("Reconnected")

@@ -49,6 +49,7 @@ def bridge_command(bridge_cmd: str, timeout: float = 30.0):
                 async def _run():
                     bridge = get_bridge()
                     try:
+                        await bridge.connect()
                         result = await bridge.send_command(
                             bridge_cmd, params, timeout=_timeout
                         )

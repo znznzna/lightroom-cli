@@ -47,3 +47,6 @@ CLAUDE.md
 
 # Development plans (dev-only)
 docs/plans/
+
+# Dev plugin symlink (for Plugin Manager "Add" button)
+*.lrdevplugin
