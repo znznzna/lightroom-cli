@@ -892,6 +892,30 @@ def mask_activate(ctx):
     run_async(_run())
 
 
+@mask.command("complex")
+@click.option("--workflow", default=None, help="Complex mask workflow (subject_with_luminance/sky_with_color/background_refine)")
+@click.pass_context
+def mask_complex(ctx, workflow):
+    """Create a complex mask with predefined workflow"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+    params = {}
+    if workflow:
+        params["workflow"] = workflow
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command("develop.createComplexMask", params, timeout=timeout)
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
 # --- Local adjustment commands ---
 
 
@@ -1115,6 +1139,251 @@ def filter_range(ctx, range_type):
         bridge = get_bridge()
         try:
             result = await bridge.send_command("develop.createRangeMask", params, timeout=timeout)
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
+# --- Debug/introspection commands ---
+
+
+@develop.group("debug")
+def debug_cmds():
+    """Debug/introspection commands"""
+    pass
+
+
+@debug_cmds.command("dump")
+@click.pass_context
+def debug_dump(ctx):
+    """Dump LrDevelopController info"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command("develop.dumpLrDevelopController", {}, timeout=timeout)
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
+@debug_cmds.command("gradient-params")
+@click.pass_context
+def debug_gradient_params(ctx):
+    """Discover gradient parameters"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command("develop.discoverGradientParameters", {}, timeout=timeout)
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
+@debug_cmds.command("monitor")
+@click.option("--duration", default=10, type=int, help="Monitor duration in seconds")
+@click.pass_context
+def debug_monitor(ctx, duration):
+    """Monitor parameter changes"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command("develop.monitorParameterChanges", {"duration": duration}, timeout=timeout)
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
+@debug_cmds.command("probe")
+@click.pass_context
+def debug_probe(ctx):
+    """Probe all develop parameters"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command("develop.probeAllDevelopParameters", {}, timeout=timeout)
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
+# --- Color operation commands ---
+
+
+@develop.group("color")
+def color_cmds():
+    """Color operation commands"""
+    pass
+
+
+@color_cmds.command("green-swatch")
+@click.pass_context
+def color_green_swatch(ctx):
+    """Create green color swatch"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command("develop.createGreenSwatch", {}, timeout=timeout)
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
+@color_cmds.command("cyan-swatch")
+@click.pass_context
+def color_cyan_swatch(ctx):
+    """Create cyan color swatch"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command("develop.createCyanSwatch", {}, timeout=timeout)
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
+@color_cmds.command("enhance")
+@click.option("--preset", default=None, help="Enhancement preset (natural/vivid/muted)")
+@click.pass_context
+def color_enhance(ctx, preset):
+    """Enhance colors"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    params = {"preset": preset} if preset else {}
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command("develop.enhanceColors", params, timeout=timeout)
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
+# --- Mask/filter reset commands ---
+
+
+@develop.command("reset-gradient")
+@click.pass_context
+def reset_gradient(ctx):
+    """Reset gradient filter"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command("develop.resetGradient", {}, timeout=timeout)
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
+@develop.command("reset-circular")
+@click.pass_context
+def reset_circular(ctx):
+    """Reset circular gradient filter"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command("develop.resetCircularGradient", {}, timeout=timeout)
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
+@develop.command("reset-brush")
+@click.pass_context
+def reset_brush(ctx):
+    """Reset adjustment brush"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command("develop.resetBrushing", {}, timeout=timeout)
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
+@develop.command("reset-masking")
+@click.pass_context
+def reset_masking(ctx):
+    """Reset masking"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command("develop.resetMasking", {}, timeout=timeout)
             click.echo(OutputFormatter.format(result.get("result", result), fmt))
         except Exception as e:
             click.echo(OutputFormatter.format_error(str(e)))
