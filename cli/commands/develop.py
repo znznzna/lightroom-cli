@@ -313,6 +313,89 @@ def paste_settings(ctx):
     run_async(_run())
 
 
+@develop.command("range")
+@click.argument("param")
+@click.pass_context
+def get_range(ctx, param):
+    """Get min/max range for a develop parameter"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command("develop.getRange", {"param": param}, timeout=timeout)
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
+@develop.command("reset-param")
+@click.argument("param")
+@click.pass_context
+def reset_param(ctx, param):
+    """Reset a develop parameter to its default value"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command("develop.resetToDefault", {"param": param}, timeout=timeout)
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
+@develop.command("process-version")
+@click.pass_context
+def process_version(ctx):
+    """Get the current process version"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command("develop.getProcessVersion", {}, timeout=timeout)
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
+@develop.command("set-process-version")
+@click.argument("version")
+@click.pass_context
+def set_process_version(ctx, version):
+    """Set the process version"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command("develop.setProcessVersion", {"version": version}, timeout=timeout)
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
 CHANNEL_TO_PARAM = {
     "RGB": "ToneCurvePV2012",
     "Red": "ToneCurvePV2012Red",

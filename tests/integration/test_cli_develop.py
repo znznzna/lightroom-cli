@@ -217,3 +217,71 @@ def test_develop_paste_settings(mock_get_bridge, runner):
     mock_bridge.send_command.assert_called_once_with(
         "catalog.pasteSettings", {}, timeout=30.0
     )
+
+
+@patch("cli.commands.develop.get_bridge")
+def test_develop_range(mock_get_bridge, runner):
+    """lr develop range Exposure がパラメータ範囲を返す"""
+    mock_bridge = AsyncMock()
+    mock_bridge.send_command.return_value = {
+        "id": "13", "success": True,
+        "result": {"param": "Exposure", "min": -5.0, "max": 5.0},
+    }
+    mock_get_bridge.return_value = mock_bridge
+
+    result = runner.invoke(cli, ["develop", "range", "Exposure"])
+    assert result.exit_code == 0
+    mock_bridge.send_command.assert_called_once_with(
+        "develop.getRange", {"param": "Exposure"}, timeout=30.0
+    )
+
+
+@patch("cli.commands.develop.get_bridge")
+def test_develop_reset_param(mock_get_bridge, runner):
+    """lr develop reset-param Exposure がパラメータをデフォルトにリセットする"""
+    mock_bridge = AsyncMock()
+    mock_bridge.send_command.return_value = {
+        "id": "14", "success": True,
+        "result": {"param": "Exposure", "reset": True, "newValue": 0.0},
+    }
+    mock_get_bridge.return_value = mock_bridge
+
+    result = runner.invoke(cli, ["develop", "reset-param", "Exposure"])
+    assert result.exit_code == 0
+    mock_bridge.send_command.assert_called_once_with(
+        "develop.resetToDefault", {"param": "Exposure"}, timeout=30.0
+    )
+
+
+@patch("cli.commands.develop.get_bridge")
+def test_develop_process_version(mock_get_bridge, runner):
+    """lr develop process-version がプロセスバージョンを返す"""
+    mock_bridge = AsyncMock()
+    mock_bridge.send_command.return_value = {
+        "id": "15", "success": True,
+        "result": {"processVersion": "Version 5"},
+    }
+    mock_get_bridge.return_value = mock_bridge
+
+    result = runner.invoke(cli, ["develop", "process-version"])
+    assert result.exit_code == 0
+    mock_bridge.send_command.assert_called_once_with(
+        "develop.getProcessVersion", {}, timeout=30.0
+    )
+
+
+@patch("cli.commands.develop.get_bridge")
+def test_develop_set_process_version(mock_get_bridge, runner):
+    """lr develop set-process-version がプロセスバージョンを設定する"""
+    mock_bridge = AsyncMock()
+    mock_bridge.send_command.return_value = {
+        "id": "16", "success": True,
+        "result": {"processVersion": "Version 6", "applied": True},
+    }
+    mock_get_bridge.return_value = mock_bridge
+
+    result = runner.invoke(cli, ["develop", "set-process-version", "Version 6"])
+    assert result.exit_code == 0
+    mock_bridge.send_command.assert_called_once_with(
+        "develop.setProcessVersion", {"version": "Version 6"}, timeout=30.0
+    )
