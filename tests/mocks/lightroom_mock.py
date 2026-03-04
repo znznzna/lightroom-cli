@@ -42,7 +42,15 @@ class MockLightroomServer:
         try:
             await reader.read()  # 接続維持
         finally:
-            self._sender_writers.remove(writer)
+            if writer in self._sender_writers:
+                self._sender_writers.remove(writer)
+
+    async def wait_for_client(self, timeout: float = 2.0) -> None:
+        """クライアントがsender socketに接続するのを待つ"""
+        elapsed = 0.0
+        while not self._sender_writers and elapsed < timeout:
+            await asyncio.sleep(0.05)
+            elapsed += 0.05
 
     async def send_event(self, event_name: str, data: Dict[str, Any]) -> None:
         event = {"event": event_name, "data": data}
