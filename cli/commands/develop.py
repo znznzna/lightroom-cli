@@ -30,7 +30,7 @@ def _parse_pairs(pairs: tuple) -> dict:
 
 @click.group()
 def develop():
-    """Develop commands (get-settings, set, auto-tone, reset)"""
+    """Develop commands (get-settings, get, set, apply, auto-tone, auto-wb, tool, reset)"""
     pass
 
 
@@ -95,6 +95,104 @@ def auto_tone(ctx):
         bridge = get_bridge()
         try:
             result = await bridge.send_command("develop.setAutoTone", {}, timeout=timeout)
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
+@develop.command("get")
+@click.argument("parameter")
+@click.pass_context
+def get_value(ctx, parameter):
+    """Get a single develop parameter value"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command(
+                "develop.getValue", {"parameter": parameter}, timeout=timeout
+            )
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
+@develop.command("apply")
+@click.option("--settings", required=True, help="JSON string of settings to apply")
+@click.pass_context
+def apply_settings(ctx, settings):
+    """Apply develop settings from JSON"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    import json
+    try:
+        parsed = json.loads(settings)
+    except json.JSONDecodeError as e:
+        click.echo(OutputFormatter.format_error(f"Invalid JSON: {e}"))
+        return
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command(
+                "develop.applySettings", {"settings": parsed}, timeout=timeout
+            )
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
+@develop.command("auto-wb")
+@click.pass_context
+def auto_wb(ctx):
+    """Apply auto white balance"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command(
+                "develop.setAutoWhiteBalance", {}, timeout=timeout
+            )
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
+@develop.command("tool")
+@click.argument("tool_name")
+@click.pass_context
+def select_tool(ctx, tool_name):
+    """Select a develop tool (loupe/crop/dust/redeye/gradient/circularGradient/localized/upright)"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command(
+                "develop.selectTool", {"tool": tool_name}, timeout=timeout
+            )
             click.echo(OutputFormatter.format(result.get("result", result), fmt))
         except Exception as e:
             click.echo(OutputFormatter.format_error(str(e)))

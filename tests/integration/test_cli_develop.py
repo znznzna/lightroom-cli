@@ -74,3 +74,71 @@ def test_develop_auto_tone(mock_get_bridge, runner):
     mock_bridge.send_command.assert_called_once_with(
         "develop.setAutoTone", {}, timeout=30.0
     )
+
+
+@patch("cli.commands.develop.get_bridge")
+def test_develop_get_value(mock_get_bridge, runner):
+    """lr develop get Exposure が単一パラメータ値を取得する"""
+    mock_bridge = AsyncMock()
+    mock_bridge.send_command.return_value = {
+        "id": "5", "success": True,
+        "result": {"parameter": "Exposure", "value": 0.5},
+    }
+    mock_get_bridge.return_value = mock_bridge
+
+    result = runner.invoke(cli, ["develop", "get", "Exposure"])
+    assert result.exit_code == 0
+    mock_bridge.send_command.assert_called_once_with(
+        "develop.getValue", {"parameter": "Exposure"}, timeout=30.0
+    )
+
+
+@patch("cli.commands.develop.get_bridge")
+def test_develop_apply(mock_get_bridge, runner):
+    """lr develop apply がJSON設定を適用する"""
+    mock_bridge = AsyncMock()
+    mock_bridge.send_command.return_value = {
+        "id": "6", "success": True,
+        "result": {"applied": True},
+    }
+    mock_get_bridge.return_value = mock_bridge
+
+    result = runner.invoke(cli, ["develop", "apply", "--settings", '{"Exposure": 1.0}'])
+    assert result.exit_code == 0
+    mock_bridge.send_command.assert_called_once_with(
+        "develop.applySettings", {"settings": {"Exposure": 1.0}}, timeout=30.0
+    )
+
+
+@patch("cli.commands.develop.get_bridge")
+def test_develop_auto_wb(mock_get_bridge, runner):
+    """lr develop auto-wb がオートホワイトバランスを適用する"""
+    mock_bridge = AsyncMock()
+    mock_bridge.send_command.return_value = {
+        "id": "7", "success": True,
+        "result": {"applied": True},
+    }
+    mock_get_bridge.return_value = mock_bridge
+
+    result = runner.invoke(cli, ["develop", "auto-wb"])
+    assert result.exit_code == 0
+    mock_bridge.send_command.assert_called_once_with(
+        "develop.setAutoWhiteBalance", {}, timeout=30.0
+    )
+
+
+@patch("cli.commands.develop.get_bridge")
+def test_develop_tool(mock_get_bridge, runner):
+    """lr develop tool crop がツールを選択する"""
+    mock_bridge = AsyncMock()
+    mock_bridge.send_command.return_value = {
+        "id": "8", "success": True,
+        "result": {"tool": "crop"},
+    }
+    mock_get_bridge.return_value = mock_bridge
+
+    result = runner.invoke(cli, ["develop", "tool", "crop"])
+    assert result.exit_code == 0
+    mock_bridge.send_command.assert_called_once_with(
+        "develop.selectTool", {"tool": "crop"}, timeout=30.0
+    )
