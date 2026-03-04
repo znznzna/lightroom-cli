@@ -8,7 +8,7 @@ import os
 import sys
 from pathlib import Path
 
-PLUGIN_NAME = "lightroom-cli-bridge.lrdevplugin"
+PLUGIN_NAME = "lightroom-cli-bridge.lrplugin"
 
 
 def get_port_file() -> Path:
