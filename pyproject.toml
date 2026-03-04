@@ -9,10 +9,21 @@ description = "CLI tool for Adobe Lightroom Classic — 107 commands for full Li
 readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.10"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Multimedia :: Graphics",
+    "Operating System :: MacOS",
+]
 dependencies = [
     "click>=8.1",
     "rich>=13.0",
     "pydantic>=2.0",
+    "platformdirs>=3.0",
 ]
 
 [project.optional-dependencies]
@@ -22,8 +33,26 @@ dev = [
     "pytest-cov>=4.0",
 ]
 
+[project.urls]
+Homepage = "https://github.com/znznzna/lightroom-cli"
+Repository = "https://github.com/znznzna/lightroom-cli"
+Issues = "https://github.com/znznzna/lightroom-cli/issues"
+
 [project.scripts]
 lr = "cli.main:cli"
 
 [tool.setuptools]
 packages = ["lightroom_sdk", "cli", "cli.commands"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+markers = [
+    "integration: marks tests as integration tests requiring Lightroom",
+    "unit: marks tests as unit tests",
+]

@@ -44,3 +44,6 @@ CLAUDE.md
 
 # Claude
 .claude/
+
+# Development plans (dev-only)
+docs/plans/
