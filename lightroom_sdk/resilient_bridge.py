@@ -22,12 +22,16 @@ class ResilientSocketBridge:
     def __init__(
         self,
         host: str = "localhost",
-        port_file: str = "/tmp/lightroom_ports.txt",
+        port_file: str | None = None,
         max_reconnect_attempts: int = 5,
         heartbeat_interval: float = 30.0,
     ):
         self._host = host
-        self._port_file = port_file
+        if port_file is None:
+            from .paths import get_port_file
+            self._port_file = str(get_port_file())
+        else:
+            self._port_file = port_file
         self._max_reconnect = max_reconnect_attempts
         self._heartbeat_interval = heartbeat_interval
         self._bridge: Optional[SocketBridge] = None

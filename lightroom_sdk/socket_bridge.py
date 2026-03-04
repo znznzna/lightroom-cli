@@ -11,9 +11,13 @@ logger = logging.getLogger(__name__)
 class SocketBridge:
     """Manages dual socket connections to Lightroom plugin"""
 
-    def __init__(self, host: str = 'localhost', port_file: str = '/tmp/lightroom_ports.txt'):
+    def __init__(self, host: str = 'localhost', port_file: str | None = None):
         self.host = host
-        self.port_file = Path(port_file)
+        if port_file is None:
+            from .paths import get_port_file
+            self.port_file = get_port_file()
+        else:
+            self.port_file = Path(port_file)
         self._send_writer: Optional[StreamWriter] = None
         self._receive_reader: Optional[StreamReader] = None
         self._receive_writer: Optional[StreamWriter] = None  # sender接続のwriter参照保持
