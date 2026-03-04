@@ -72,6 +72,13 @@ class SocketBridge:
                 return
 
             except Exception as e:
+                # 部分的に開いたソケットをクリーンアップ
+                for writer in [self._send_writer, self._receive_writer]:
+                    if writer:
+                        writer.close()
+                self._send_writer = None
+                self._receive_reader = None
+                self._receive_writer = None
                 logger.warning(f"Connection attempt {attempt + 1}/{retry_attempts} failed: {e}")
                 if attempt < retry_attempts - 1:
                     delay = retry_delay * (2 ** attempt)

@@ -77,6 +77,12 @@ class ResilientSocketBridge:
 
     async def _reconnect(self) -> None:
         self._state = ConnectionState.RECONNECTING
+        # 旧bridgeをクリーンアップ（ソケットリーク防止）
+        if self._bridge:
+            try:
+                await self._bridge.disconnect()
+            except Exception:
+                pass
         delay = 1.0
         for attempt in range(self._max_reconnect):
             try:
@@ -89,6 +95,11 @@ class ResilientSocketBridge:
                 self._state = ConnectionState.CONNECTED
                 return
             except Exception:
+                if self._bridge:
+                    try:
+                        await self._bridge.disconnect()
+                    except Exception:
+                        pass
                 await asyncio.sleep(delay)
                 delay = min(delay * 2, 30.0)
         self._state = ConnectionState.DISCONNECTED
