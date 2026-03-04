@@ -23,5 +23,7 @@ def cli(ctx, output, verbose, timeout):
 
 from cli.commands.system import system
 from cli.commands.catalog import catalog
+from cli.commands.develop import develop
 cli.add_command(system)
 cli.add_command(catalog)
+cli.add_command(develop)

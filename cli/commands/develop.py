@@ -1,0 +1,124 @@
+import asyncio
+import click
+from cli.output import OutputFormatter
+
+
+def get_bridge():
+    """ResilientSocketBridgeインスタンスを取得（遅延import）"""
+    from lightroom_sdk.resilient_bridge import ResilientSocketBridge
+    return ResilientSocketBridge()
+
+
+def run_async(coro):
+    """CLIからasync関数を実行するヘルパー（コマンドごとに1回だけ呼ぶ）"""
+    loop = asyncio.new_event_loop()
+    try:
+        return loop.run_until_complete(coro)
+    finally:
+        loop.close()
+
+
+def _parse_pairs(pairs: tuple) -> dict:
+    """可変長引数 (param, value, param, value, ...) を辞書に変換"""
+    if len(pairs) % 2 != 0:
+        raise click.BadParameter("Parameters must be in 'param value' pairs")
+    result = {}
+    for i in range(0, len(pairs), 2):
+        result[pairs[i]] = float(pairs[i + 1])
+    return result
+
+
+@click.group()
+def develop():
+    """Develop commands (get-settings, set, auto-tone, reset)"""
+    pass
+
+
+@develop.command("get-settings")
+@click.pass_context
+def get_settings(ctx):
+    """Get all current develop settings"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command("develop.getSettings", {}, timeout=timeout)
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
+@develop.command("set")
+@click.argument("pairs", nargs=-1, required=True)
+@click.pass_context
+def set_values(ctx, pairs):
+    """Set develop parameter(s): lr develop set <param> <value> [<param2> <value2> ...]"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            parsed = _parse_pairs(pairs)
+            if len(parsed) == 1:
+                param, value = next(iter(parsed.items()))
+                result = await bridge.send_command(
+                    "develop.setValue", {"parameter": param, "value": value}, timeout=timeout
+                )
+            else:
+                result = await bridge.send_command(
+                    "develop.batchSetValues", {"settings": parsed}, timeout=timeout
+                )
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
+@develop.command("auto-tone")
+@click.pass_context
+def auto_tone(ctx):
+    """Apply auto tone adjustments"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command("develop.autoTone", {}, timeout=timeout)
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
+@develop.command("reset")
+@click.pass_context
+def reset(ctx):
+    """Reset develop settings to defaults"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command("develop.resetSettings", {}, timeout=timeout)
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
