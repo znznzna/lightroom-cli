@@ -791,3 +791,112 @@ def mask_activate(ctx):
             await bridge.disconnect()
 
     run_async(_run())
+
+
+# --- Local adjustment commands ---
+
+
+@develop.group("local")
+def local_adj():
+    """Local adjustment commands"""
+    pass
+
+
+@local_adj.command("get")
+@click.argument("parameter")
+@click.pass_context
+def local_get(ctx, parameter):
+    """Get a local adjustment parameter value"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command(
+                "develop.getLocalValue", {"parameter": parameter}, timeout=timeout
+            )
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
+@local_adj.command("set")
+@click.argument("parameter")
+@click.argument("value", type=float)
+@click.pass_context
+def local_set(ctx, parameter, value):
+    """Set a local adjustment parameter value"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command(
+                "develop.setLocalValue", {"parameter": parameter, "value": value}, timeout=timeout
+            )
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
+@local_adj.command("apply")
+@click.option("--settings", required=True, help="JSON string of local adjustment settings")
+@click.pass_context
+def local_apply(ctx, settings):
+    """Apply multiple local adjustment settings from JSON"""
+    import json
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    try:
+        parsed = json.loads(settings)
+    except json.JSONDecodeError as e:
+        click.echo(OutputFormatter.format_error(f"Invalid JSON: {e}"))
+        ctx.exit(1)
+        return
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command(
+                "develop.applyLocalSettings", {"settings": parsed}, timeout=timeout
+            )
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
+@local_adj.command("params")
+@click.pass_context
+def local_params(ctx):
+    """List available local adjustment parameters"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command(
+                "develop.getAvailableLocalParameters", {}, timeout=timeout
+            )
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
