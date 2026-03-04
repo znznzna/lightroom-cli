@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lightroom-cli"
+version = "0.2.0"
+description = "CLI tool for Adobe Lightroom Classic"
+requires-python = ">=3.10"
+dependencies = [
+    "click>=8.1",
+    "rich>=13.0",
+    "pydantic>=2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21",
+]
+
+[project.scripts]
+lr = "cli.main:cli"
+
+[tool.setuptools]
+packages = ["lightroom_sdk", "cli", "cli.commands"]
