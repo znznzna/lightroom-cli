@@ -209,3 +209,50 @@ def test_selection_deselect_others(mock_get_bridge, runner):
     result = runner.invoke(cli, ["selection", "deselect-others"])
     assert result.exit_code == 0
     mock_bridge.send_command.assert_called_once_with("selection.deselectOthers", {}, timeout=30.0)
+
+
+@patch("cli.commands.selection.get_bridge")
+def test_selection_get_flag(mock_get_bridge, runner):
+    mock_bridge = AsyncMock()
+    mock_bridge.send_command.return_value = {"id": "17", "success": True, "result": {"pickStatus": 1, "label": "Pick"}}
+    mock_get_bridge.return_value = mock_bridge
+    result = runner.invoke(cli, ["selection", "get-flag"])
+    assert result.exit_code == 0
+    mock_bridge.send_command.assert_called_once_with("selection.getFlag", {}, timeout=30.0)
+
+
+@patch("cli.commands.selection.get_bridge")
+def test_selection_get_rating(mock_get_bridge, runner):
+    mock_bridge = AsyncMock()
+    mock_bridge.send_command.return_value = {"id": "18", "success": True, "result": {"rating": 3}}
+    mock_get_bridge.return_value = mock_bridge
+    result = runner.invoke(cli, ["selection", "get-rating"])
+    assert result.exit_code == 0
+    mock_bridge.send_command.assert_called_once_with("selection.getRating", {}, timeout=30.0)
+
+
+@patch("cli.commands.selection.get_bridge")
+def test_selection_set_rating(mock_get_bridge, runner):
+    mock_bridge = AsyncMock()
+    mock_bridge.send_command.return_value = {"id": "19", "success": True, "result": {"rating": 4}}
+    mock_get_bridge.return_value = mock_bridge
+    result = runner.invoke(cli, ["selection", "set-rating", "4"])
+    assert result.exit_code == 0
+    mock_bridge.send_command.assert_called_once_with("selection.setRating", {"rating": 4}, timeout=30.0)
+
+
+@patch("cli.commands.selection.get_bridge")
+def test_selection_set_rating_invalid(mock_get_bridge, runner):
+    """範囲外のrating(6)はClickがエラーにする"""
+    result = runner.invoke(cli, ["selection", "set-rating", "6"])
+    assert result.exit_code != 0
+
+
+@patch("cli.commands.selection.get_bridge")
+def test_selection_get_color_label(mock_get_bridge, runner):
+    mock_bridge = AsyncMock()
+    mock_bridge.send_command.return_value = {"id": "20", "success": True, "result": {"label": "red"}}
+    mock_get_bridge.return_value = mock_bridge
+    result = runner.invoke(cli, ["selection", "get-color-label"])
+    assert result.exit_code == 0
+    mock_bridge.send_command.assert_called_once_with("selection.getColorLabel", {}, timeout=30.0)

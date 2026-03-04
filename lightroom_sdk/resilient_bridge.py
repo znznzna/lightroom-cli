@@ -69,11 +69,25 @@ class ResilientSocketBridge:
 
         try:
             return await self._bridge.send_command(command, params, timeout)
-        except Exception:
+        except (ConnectionError, OSError, EOFError) as e:
             if self._state == ConnectionState.SHUTDOWN:
                 raise
+            logger.warning(f"Connection error on '{command}', reconnecting: {e}")
             await self._reconnect()
             return await self._bridge.send_command(command, params, timeout)
+        except asyncio.TimeoutError:
+            raise
+        except Exception as e:
+            # Import here to avoid circular dependency
+            from .exceptions import ConnectionError as LRConnectionError
+            # Only retry on connection-related exceptions, not application errors
+            if self._state == ConnectionState.SHUTDOWN:
+                raise
+            if isinstance(e, LRConnectionError):
+                logger.warning(f"LR connection error on '{command}', reconnecting: {e}")
+                await self._reconnect()
+                return await self._bridge.send_command(command, params, timeout)
+            raise
 
     async def _reconnect(self) -> None:
         self._state = ConnectionState.RECONNECTING
