@@ -33,7 +33,7 @@
 ## In Progress
 
 ### E2E テスト実行
-- [ ] `_lr-cli-test` コレクションの写真で全コマンド網羅テスト
+- [x] `_lr-cli-test` コレクションの写真で全コマンド網羅テスト → 145 E2Eテスト実装完了 (10 phase files)
 - [x] E2E テストコード修正 (conftest の lr_bridge fixture がポートファイル存在時にスキップされない問題)
 - [x] SKILLS.md をスキルとして実際に使ってみる → 検証完了、65+コマンド追加修正済み
 
