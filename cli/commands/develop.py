@@ -547,17 +547,17 @@ def mask_create(ctx):
 
 
 @mask.command("select")
-@click.argument("index", type=int)
+@click.argument("mask_id")
 @click.pass_context
-def mask_select(ctx, index):
-    """Select a mask by index"""
+def mask_select(ctx, mask_id):
+    """Select a mask by ID"""
     timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
     fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
 
     async def _run():
         bridge = get_bridge()
         try:
-            result = await bridge.send_command("develop.selectMask", {"index": index}, timeout=timeout)
+            result = await bridge.send_command("develop.selectMask", {"maskId": mask_id}, timeout=timeout)
             click.echo(OutputFormatter.format(result.get("result", result), fmt))
         except Exception as e:
             click.echo(OutputFormatter.format_error(str(e)))
@@ -568,17 +568,17 @@ def mask_select(ctx, index):
 
 
 @mask.command("delete")
-@click.argument("index", type=int)
+@click.argument("mask_id")
 @click.pass_context
-def mask_delete(ctx, index):
-    """Delete a mask by index"""
+def mask_delete(ctx, mask_id):
+    """Delete a mask by ID"""
     timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
     fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
 
     async def _run():
         bridge = get_bridge()
         try:
-            result = await bridge.send_command("develop.deleteMask", {"index": index}, timeout=timeout)
+            result = await bridge.send_command("develop.deleteMask", {"maskId": mask_id}, timeout=timeout)
             click.echo(OutputFormatter.format(result.get("result", result), fmt))
         except Exception as e:
             click.echo(OutputFormatter.format_error(str(e)))
@@ -609,17 +609,17 @@ def mask_tool_info(ctx):
 
 
 @mask.command("select-tool")
-@click.argument("index", type=int)
+@click.argument("tool_id")
 @click.pass_context
-def mask_select_tool(ctx, index):
-    """Select a mask tool by index"""
+def mask_select_tool(ctx, tool_id):
+    """Select a mask tool by ID"""
     timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
     fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
 
     async def _run():
         bridge = get_bridge()
         try:
-            result = await bridge.send_command("develop.selectMaskTool", {"index": index}, timeout=timeout)
+            result = await bridge.send_command("develop.selectMaskTool", {"toolId": tool_id}, timeout=timeout)
             click.echo(OutputFormatter.format(result.get("result", result), fmt))
         except Exception as e:
             click.echo(OutputFormatter.format_error(str(e)))
@@ -630,17 +630,17 @@ def mask_select_tool(ctx, index):
 
 
 @mask.command("delete-tool")
-@click.argument("index", type=int)
+@click.argument("tool_id")
 @click.pass_context
-def mask_delete_tool(ctx, index):
-    """Delete a mask tool by index"""
+def mask_delete_tool(ctx, tool_id):
+    """Delete a mask tool by ID"""
     timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
     fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
 
     async def _run():
         bridge = get_bridge()
         try:
-            result = await bridge.send_command("develop.deleteMaskTool", {"index": index}, timeout=timeout)
+            result = await bridge.send_command("develop.deleteMaskTool", {"toolId": tool_id}, timeout=timeout)
             click.echo(OutputFormatter.format(result.get("result", result), fmt))
         except Exception as e:
             click.echo(OutputFormatter.format_error(str(e)))
@@ -651,17 +651,22 @@ def mask_delete_tool(ctx, index):
 
 
 @mask.command("add")
-@click.argument("tool")
+@click.argument("mask_type")
+@click.option("--subtype", default=None, help="Mask subtype")
 @click.pass_context
-def mask_add(ctx, tool):
-    """Add tool to current mask"""
+def mask_add(ctx, mask_type, subtype):
+    """Add tool to current mask (brush/gradient/radial/range/ai)"""
     timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
     fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    params = {"maskType": mask_type}
+    if subtype:
+        params["maskSubtype"] = subtype
 
     async def _run():
         bridge = get_bridge()
         try:
-            result = await bridge.send_command("develop.addToCurrentMask", {"tool": tool}, timeout=timeout)
+            result = await bridge.send_command("develop.addToCurrentMask", params, timeout=timeout)
             click.echo(OutputFormatter.format(result.get("result", result), fmt))
         except Exception as e:
             click.echo(OutputFormatter.format_error(str(e)))
@@ -672,17 +677,22 @@ def mask_add(ctx, tool):
 
 
 @mask.command("intersect")
-@click.argument("tool")
+@click.argument("mask_type")
+@click.option("--subtype", default=None, help="Mask subtype")
 @click.pass_context
-def mask_intersect(ctx, tool):
+def mask_intersect(ctx, mask_type, subtype):
     """Intersect tool with current mask"""
     timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
     fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
 
+    params = {"maskType": mask_type}
+    if subtype:
+        params["maskSubtype"] = subtype
+
     async def _run():
         bridge = get_bridge()
         try:
-            result = await bridge.send_command("develop.intersectWithCurrentMask", {"tool": tool}, timeout=timeout)
+            result = await bridge.send_command("develop.intersectWithCurrentMask", params, timeout=timeout)
             click.echo(OutputFormatter.format(result.get("result", result), fmt))
         except Exception as e:
             click.echo(OutputFormatter.format_error(str(e)))
@@ -693,17 +703,22 @@ def mask_intersect(ctx, tool):
 
 
 @mask.command("subtract")
-@click.argument("tool")
+@click.argument("mask_type")
+@click.option("--subtype", default=None, help="Mask subtype")
 @click.pass_context
-def mask_subtract(ctx, tool):
+def mask_subtract(ctx, mask_type, subtype):
     """Subtract tool from current mask"""
     timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
     fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
 
+    params = {"maskType": mask_type}
+    if subtype:
+        params["maskSubtype"] = subtype
+
     async def _run():
         bridge = get_bridge()
         try:
-            result = await bridge.send_command("develop.subtractFromCurrentMask", {"tool": tool}, timeout=timeout)
+            result = await bridge.send_command("develop.subtractFromCurrentMask", params, timeout=timeout)
             click.echo(OutputFormatter.format(result.get("result", result), fmt))
         except Exception as e:
             click.echo(OutputFormatter.format_error(str(e)))
@@ -714,16 +729,17 @@ def mask_subtract(ctx, tool):
 
 
 @mask.command("invert")
+@click.argument("mask_id")
 @click.pass_context
-def mask_invert(ctx):
-    """Invert current mask"""
+def mask_invert(ctx, mask_id):
+    """Invert a mask by ID"""
     timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
     fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
 
     async def _run():
         bridge = get_bridge()
         try:
-            result = await bridge.send_command("develop.invertMask", {}, timeout=timeout)
+            result = await bridge.send_command("develop.invertMask", {"maskId": mask_id}, timeout=timeout)
             click.echo(OutputFormatter.format(result.get("result", result), fmt))
         except Exception as e:
             click.echo(OutputFormatter.format_error(str(e)))

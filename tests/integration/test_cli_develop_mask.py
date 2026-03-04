@@ -53,9 +53,9 @@ def test_develop_mask_select(mock_get_bridge, runner):
     mock_bridge = AsyncMock()
     mock_bridge.send_command.return_value = {"id": "4", "success": True, "result": {}}
     mock_get_bridge.return_value = mock_bridge
-    result = runner.invoke(cli, ["develop", "mask", "select", "2"])
+    result = runner.invoke(cli, ["develop", "mask", "select", "mask-2"])
     assert result.exit_code == 0
-    mock_bridge.send_command.assert_called_once_with("develop.selectMask", {"index": 2}, timeout=30.0)
+    mock_bridge.send_command.assert_called_once_with("develop.selectMask", {"maskId": "mask-2"}, timeout=30.0)
 
 
 @patch("cli.commands.develop.get_bridge")
@@ -64,9 +64,9 @@ def test_develop_mask_delete(mock_get_bridge, runner):
     mock_bridge = AsyncMock()
     mock_bridge.send_command.return_value = {"id": "5", "success": True, "result": {}}
     mock_get_bridge.return_value = mock_bridge
-    result = runner.invoke(cli, ["develop", "mask", "delete", "1"])
+    result = runner.invoke(cli, ["develop", "mask", "delete", "mask-1"])
     assert result.exit_code == 0
-    mock_bridge.send_command.assert_called_once_with("develop.deleteMask", {"index": 1}, timeout=30.0)
+    mock_bridge.send_command.assert_called_once_with("develop.deleteMask", {"maskId": "mask-1"}, timeout=30.0)
 
 
 @patch("cli.commands.develop.get_bridge")
@@ -86,9 +86,9 @@ def test_develop_mask_select_tool(mock_get_bridge, runner):
     mock_bridge = AsyncMock()
     mock_bridge.send_command.return_value = {"id": "7", "success": True, "result": {}}
     mock_get_bridge.return_value = mock_bridge
-    result = runner.invoke(cli, ["develop", "mask", "select-tool", "0"])
+    result = runner.invoke(cli, ["develop", "mask", "select-tool", "tool-0"])
     assert result.exit_code == 0
-    mock_bridge.send_command.assert_called_once_with("develop.selectMaskTool", {"index": 0}, timeout=30.0)
+    mock_bridge.send_command.assert_called_once_with("develop.selectMaskTool", {"toolId": "tool-0"}, timeout=30.0)
 
 
 @patch("cli.commands.develop.get_bridge")
@@ -97,9 +97,9 @@ def test_develop_mask_delete_tool(mock_get_bridge, runner):
     mock_bridge = AsyncMock()
     mock_bridge.send_command.return_value = {"id": "8", "success": True, "result": {}}
     mock_get_bridge.return_value = mock_bridge
-    result = runner.invoke(cli, ["develop", "mask", "delete-tool", "0"])
+    result = runner.invoke(cli, ["develop", "mask", "delete-tool", "tool-0"])
     assert result.exit_code == 0
-    mock_bridge.send_command.assert_called_once_with("develop.deleteMaskTool", {"index": 0}, timeout=30.0)
+    mock_bridge.send_command.assert_called_once_with("develop.deleteMaskTool", {"toolId": "tool-0"}, timeout=30.0)
 
 
 @patch("cli.commands.develop.get_bridge")
@@ -110,7 +110,7 @@ def test_develop_mask_add(mock_get_bridge, runner):
     mock_get_bridge.return_value = mock_bridge
     result = runner.invoke(cli, ["develop", "mask", "add", "brush"])
     assert result.exit_code == 0
-    mock_bridge.send_command.assert_called_once_with("develop.addToCurrentMask", {"tool": "brush"}, timeout=30.0)
+    mock_bridge.send_command.assert_called_once_with("develop.addToCurrentMask", {"maskType": "brush"}, timeout=30.0)
 
 
 @patch("cli.commands.develop.get_bridge")
@@ -121,7 +121,7 @@ def test_develop_mask_intersect(mock_get_bridge, runner):
     mock_get_bridge.return_value = mock_bridge
     result = runner.invoke(cli, ["develop", "mask", "intersect", "luminance"])
     assert result.exit_code == 0
-    mock_bridge.send_command.assert_called_once_with("develop.intersectWithCurrentMask", {"tool": "luminance"}, timeout=30.0)
+    mock_bridge.send_command.assert_called_once_with("develop.intersectWithCurrentMask", {"maskType": "luminance"}, timeout=30.0)
 
 
 @patch("cli.commands.develop.get_bridge")
@@ -132,7 +132,7 @@ def test_develop_mask_subtract(mock_get_bridge, runner):
     mock_get_bridge.return_value = mock_bridge
     result = runner.invoke(cli, ["develop", "mask", "subtract", "color"])
     assert result.exit_code == 0
-    mock_bridge.send_command.assert_called_once_with("develop.subtractFromCurrentMask", {"tool": "color"}, timeout=30.0)
+    mock_bridge.send_command.assert_called_once_with("develop.subtractFromCurrentMask", {"maskType": "color"}, timeout=30.0)
 
 
 @patch("cli.commands.develop.get_bridge")
@@ -141,9 +141,9 @@ def test_develop_mask_invert(mock_get_bridge, runner):
     mock_bridge = AsyncMock()
     mock_bridge.send_command.return_value = {"id": "12", "success": True, "result": {}}
     mock_get_bridge.return_value = mock_bridge
-    result = runner.invoke(cli, ["develop", "mask", "invert"])
+    result = runner.invoke(cli, ["develop", "mask", "invert", "mask-1"])
     assert result.exit_code == 0
-    mock_bridge.send_command.assert_called_once_with("develop.invertMask", {}, timeout=30.0)
+    mock_bridge.send_command.assert_called_once_with("develop.invertMask", {"maskId": "mask-1"}, timeout=30.0)
 
 
 @patch("cli.commands.develop.get_bridge")
