@@ -25,13 +25,21 @@ def pytest_collection_modifyitems(config, items):
 
 @pytest.fixture
 def lr_bridge():
-    """Establish a real connection to Lightroom."""
+    """Establish a real connection to Lightroom.
+
+    Gracefully skips the test if connection fails (e.g. stale port file).
+    """
     from lightroom_sdk.resilient_bridge import ResilientSocketBridge
+    from lightroom_sdk.exceptions import ConnectionError as LRConnectionError
 
     bridge = ResilientSocketBridge()
     loop = asyncio.new_event_loop()
     try:
         loop.run_until_complete(bridge.connect())
+    except (LRConnectionError, OSError, ConnectionRefusedError) as e:
+        loop.close()
+        pytest.skip(f"Lightroom not reachable: {e}")
+    try:
         yield bridge, loop
     finally:
         loop.run_until_complete(bridge.disconnect())

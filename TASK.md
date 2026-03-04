@@ -34,7 +34,7 @@
 
 ### E2E テスト実行
 - [ ] `_lr-cli-test` コレクションの写真で全コマンド網羅テスト
-- [ ] E2E テストコード修正 (conftest の lr_bridge fixture がポートファイル存在時にスキップされない問題)
+- [x] E2E テストコード修正 (conftest の lr_bridge fixture がポートファイル存在時にスキップされない問題)
 - [ ] SKILLS.md をスキルとして実際に使ってみる (次セッション)
 
 ---
