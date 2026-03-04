@@ -19,3 +19,7 @@ def cli(ctx, output, verbose, timeout):
 
     if verbose:
         logging.basicConfig(level=logging.DEBUG)
+
+
+from cli.commands.system import system
+cli.add_command(system)
