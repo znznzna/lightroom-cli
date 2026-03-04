@@ -36,7 +36,8 @@ def bridge_command(bridge_cmd: str, timeout: float = 30.0):
         @functools.wraps(func)
         @click.pass_context
         def wrapper(ctx, **kwargs):
-            _timeout = ctx.obj.get("timeout", timeout) if ctx.obj else timeout
+            global_timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+            _timeout = timeout if timeout != 30.0 else global_timeout
             fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
 
             params = func(**kwargs)
@@ -55,7 +56,7 @@ def bridge_command(bridge_cmd: str, timeout: float = 30.0):
                             result.get("result", result), fmt
                         ))
                     except Exception as e:
-                        click.echo(OutputFormatter.format_error(str(e)))
+                        click.echo(OutputFormatter.format_error(str(e), fmt))
                     finally:
                         await bridge.disconnect()
 
