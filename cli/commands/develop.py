@@ -311,3 +311,159 @@ def paste_settings(ctx):
             await bridge.disconnect()
 
     run_async(_run())
+
+
+@develop.group()
+def curve():
+    """Tone curve commands"""
+    pass
+
+
+@curve.command("get")
+@click.option("--channel", default="RGB", help="Channel (RGB/Red/Green/Blue)")
+@click.pass_context
+def curve_get(ctx, channel):
+    """Get tone curve points"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command(
+                "develop.getCurvePoints", {"channel": channel}, timeout=timeout
+            )
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
+@curve.command("set")
+@click.option("--points", required=True, help="JSON array of [x,y] points")
+@click.option("--channel", default="RGB", help="Channel (RGB/Red/Green/Blue)")
+@click.pass_context
+def curve_set(ctx, points, channel):
+    """Set tone curve points"""
+    import json
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    try:
+        parsed = json.loads(points)
+    except json.JSONDecodeError as e:
+        click.echo(OutputFormatter.format_error(f"Invalid JSON: {e}"))
+        ctx.exit(1)
+        return
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command(
+                "develop.setCurvePoints", {"channel": channel, "points": parsed}, timeout=timeout
+            )
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
+@curve.command("linear")
+@click.option("--channel", default="RGB", help="Channel")
+@click.pass_context
+def curve_linear(ctx, channel):
+    """Reset curve to linear"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command(
+                "develop.setCurveLinear", {"channel": channel}, timeout=timeout
+            )
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
+@curve.command("s-curve")
+@click.option("--channel", default="RGB", help="Channel")
+@click.pass_context
+def curve_s_curve(ctx, channel):
+    """Apply S-curve preset"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command(
+                "develop.setCurveSCurve", {"channel": channel}, timeout=timeout
+            )
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
+@curve.command("add-point")
+@click.argument("x", type=float)
+@click.argument("y", type=float)
+@click.option("--channel", default="RGB", help="Channel")
+@click.pass_context
+def curve_add_point(ctx, x, y, channel):
+    """Add a point to the tone curve"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command(
+                "develop.addCurvePoint", {"channel": channel, "x": x, "y": y}, timeout=timeout
+            )
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
+@curve.command("remove-point")
+@click.argument("index", type=int)
+@click.option("--channel", default="RGB", help="Channel")
+@click.pass_context
+def curve_remove_point(ctx, index, channel):
+    """Remove a point from the tone curve"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command(
+                "develop.removeCurvePoint", {"channel": channel, "index": index}, timeout=timeout
+            )
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
