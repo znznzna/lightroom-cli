@@ -179,6 +179,7 @@ local function loadPhase4Modules()
         Logger:info("SelectionModule loaded successfully")
     else
         Logger:error("Failed to load SelectionModule: " .. tostring(SelectionModule))
+        return false
     end
 
     return true
