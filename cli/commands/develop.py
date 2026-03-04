@@ -1025,6 +1025,39 @@ def local_params(ctx):
     run_async(_run())
 
 
+@local_adj.command("create-mask")
+@click.option("--tool", "mask_type", default=None, help="Mask type (brush/gradient/radial)")
+@click.option("--settings", default=None, help="JSON local adjustment settings")
+@click.pass_context
+def local_create_mask(ctx, mask_type, settings):
+    """Create mask with local adjustments"""
+    import json
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+    params = {}
+    if mask_type:
+        params["maskType"] = mask_type
+    if settings:
+        try:
+            params["localSettings"] = json.loads(settings)
+        except json.JSONDecodeError as e:
+            click.echo(OutputFormatter.format_error(f"Invalid JSON: {e}"))
+            ctx.exit(1)
+            return
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command("develop.createMaskWithLocalAdjustments", params, timeout=timeout)
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
 # --- Filter creation commands ---
 
 
