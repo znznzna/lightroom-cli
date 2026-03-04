@@ -562,15 +562,15 @@ function CatalogModule.findPhotos(params, callback)
     local logger = getLogger()
     local searchDesc = params.searchDesc or {}
     local limit = params.limit or 100
-    
+    local offset = params.offset or 0
+
     logger:debug("Finding photos with search criteria")
-    
+
     local catalog = LrApplication.activeCatalog()
-    
+
     catalog:withReadAccessDo(function()
-        -- Simple fallback: just use getAllPhotos with limit
         local allPhotos = catalog:getAllPhotos()
-        
+
         if not allPhotos or #allPhotos == 0 then
             callback({
                 result = {
@@ -581,30 +581,81 @@ function CatalogModule.findPhotos(params, callback)
             })
             return
         end
-        
-        logger:info("Found " .. #allPhotos .. " photos total, applying limit")
-        
-        -- Apply limit and convert to response format
+
+        -- Apply filters
+        local filtered = {}
+        for _, photo in ipairs(allPhotos) do
+            local match = true
+
+            -- Flag filter
+            if searchDesc.flag then
+                local pickStatus = photo:getRawMetadata("pickStatus") or 0
+                if searchDesc.flag == "pick" and pickStatus ~= 1 then match = false end
+                if searchDesc.flag == "reject" and pickStatus ~= -1 then match = false end
+                if searchDesc.flag == "none" and pickStatus ~= 0 then match = false end
+            end
+
+            -- Rating filter
+            if match and searchDesc.rating then
+                local rating = photo:getRawMetadata("rating") or 0
+                local op = searchDesc.ratingOp or "=="
+                if op == "==" and rating ~= searchDesc.rating then match = false end
+                if op == ">=" and rating < searchDesc.rating then match = false end
+                if op == "<=" and rating > searchDesc.rating then match = false end
+                if op == ">" and rating <= searchDesc.rating then match = false end
+                if op == "<" and rating >= searchDesc.rating then match = false end
+            end
+
+            -- Color label filter
+            if match and searchDesc.colorLabel then
+                local label = photo:getRawMetadata("colorNameForLabel") or ""
+                if searchDesc.colorLabel == "none" then
+                    if label ~= "" and label ~= "none" then match = false end
+                else
+                    if label ~= searchDesc.colorLabel then match = false end
+                end
+            end
+
+            -- Camera filter
+            if match and searchDesc.camera then
+                local camera = photo:getFormattedMetadata("cameraModel") or ""
+                if not string.find(string.lower(camera), string.lower(searchDesc.camera)) then
+                    match = false
+                end
+            end
+
+            if match then
+                table.insert(filtered, photo)
+            end
+        end
+
+        -- Apply pagination
+        local total = #filtered
+        local startIndex = offset + 1
+        local endIndex = math.min(offset + limit, total)
         local resultPhotos = {}
-        local maxResults = math.min(limit, #allPhotos)
-        
-        for i = 1, maxResults do
-            local photo = allPhotos[i]
+
+        for i = startIndex, endIndex do
+            local photo = filtered[i]
             table.insert(resultPhotos, {
                 id = photo.localIdentifier,
                 filename = photo:getFormattedMetadata("fileName"),
                 path = photo:getRawMetadata("path"),
                 captureTime = photo:getFormattedMetadata("dateTimeOriginal"),
                 fileFormat = photo:getRawMetadata("fileFormat"),
-                rating = photo:getRawMetadata("rating")
+                rating = photo:getRawMetadata("rating"),
+                pickStatus = photo:getRawMetadata("pickStatus"),
+                colorLabel = photo:getRawMetadata("colorNameForLabel")
             })
         end
-        
+
         callback({
             result = {
                 photos = resultPhotos,
-                total = #allPhotos,
-                returned = #resultPhotos
+                total = total,
+                returned = #resultPhotos,
+                offset = offset,
+                limit = limit
             }
         })
     end)

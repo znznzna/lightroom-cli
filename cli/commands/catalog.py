@@ -20,7 +20,7 @@ def run_async(coro):
 
 @click.group()
 def catalog():
-    """Catalog commands (list, search, get-selected, get-info, set-rating, add-keywords, set-flag, get-flag)"""
+    """Catalog commands (list, search, find, get-selected, get-info, set-rating, add-keywords, set-flag, get-flag)"""
     pass
 
 
@@ -204,6 +204,54 @@ def get_flag(ctx, photo_id):
         try:
             result = await bridge.send_command(
                 "catalog.getFlag", {"photoId": photo_id}, timeout=timeout
+            )
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
+@catalog.command("find")
+@click.option("--flag", type=click.Choice(["pick", "reject", "none"]), help="Flag condition")
+@click.option("--rating", type=int, help="Rating (0-5)")
+@click.option("--rating-op", default="==", help="Rating comparison operator (==, >=, <=, >, <)")
+@click.option("--color-label", help="Color label (red/yellow/green/blue/purple/none)")
+@click.option("--keyword", multiple=True, help="Keyword (can be specified multiple times)")
+@click.option("--has-adjustments", is_flag=True, help="Has develop adjustments")
+@click.option("--camera", help="Camera model name")
+@click.option("--limit", default=50, type=int, help="Max results")
+@click.option("--offset", default=0, type=int, help="Offset for pagination")
+@click.pass_context
+def find_photos(ctx, flag, rating, rating_op, color_label, keyword, has_adjustments, camera, limit, offset):
+    """Find photos by structured criteria"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    search_desc = {}
+    if flag:
+        search_desc["flag"] = flag
+    if rating is not None:
+        search_desc["rating"] = rating
+        search_desc["ratingOp"] = rating_op
+    if color_label:
+        search_desc["colorLabel"] = color_label
+    if keyword:
+        search_desc["keywords"] = list(keyword)
+    if has_adjustments:
+        search_desc["hasAdjustments"] = True
+    if camera:
+        search_desc["camera"] = camera
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command(
+                "catalog.findPhotos",
+                {"searchDesc": search_desc, "limit": limit, "offset": offset},
+                timeout=timeout,
             )
             click.echo(OutputFormatter.format(result.get("result", result), fmt))
         except Exception as e:
