@@ -3569,4 +3569,88 @@ function DevelopModule.probeAllDevelopParameters(params, callback)
     end
 end
 
+function DevelopModule.resetCrop(params, callback)
+    ensureLrModules()
+    local success, result = ErrorUtils.safeCall(function()
+        LrDevelopController.resetCrop()
+        return { message = "Crop reset" }
+    end)
+    if success then
+        callback({ success = true, result = result })
+    else
+        callback({ error = { code = "RESET_FAILED", message = "Failed to reset crop: " .. tostring(result) } })
+    end
+end
+
+function DevelopModule.resetTransforms(params, callback)
+    ensureLrModules()
+    local success, result = ErrorUtils.safeCall(function()
+        LrDevelopController.resetTransforms()
+        return { message = "Transforms reset" }
+    end)
+    if success then
+        callback({ success = true, result = result })
+    else
+        callback({ error = { code = "RESET_FAILED", message = "Failed to reset transforms: " .. tostring(result) } })
+    end
+end
+
+function DevelopModule.resetSpotRemoval(params, callback)
+    ensureLrModules()
+    local success, result = ErrorUtils.safeCall(function()
+        LrDevelopController.resetSpotRemoval()
+        return { message = "Spot removal reset" }
+    end)
+    if success then
+        callback({ success = true, result = result })
+    else
+        callback({ error = { code = "RESET_FAILED", message = "Failed to reset spot removal: " .. tostring(result) } })
+    end
+end
+
+function DevelopModule.resetRedeye(params, callback)
+    ensureLrModules()
+    local success, result = ErrorUtils.safeCall(function()
+        LrDevelopController.resetRedeye()
+        return { message = "Red eye removal reset" }
+    end)
+    if success then
+        callback({ success = true, result = result })
+    else
+        callback({ error = { code = "RESET_FAILED", message = "Failed to reset red eye: " .. tostring(result) } })
+    end
+end
+
+function DevelopModule.resetHealing(params, callback)
+    ensureLrModules()
+    local success, result = ErrorUtils.safeCall(function()
+        LrDevelopController.resetHealing()
+        return { message = "Healing reset" }
+    end)
+    if success then
+        callback({ success = true, result = result })
+    else
+        callback({ error = { code = "RESET_FAILED", message = "Failed to reset healing: " .. tostring(result) } })
+    end
+end
+
+function DevelopModule.editInPhotoshop(params, callback)
+    ensureLrModules()
+    local catalog = LrApplication.activeCatalog()
+    local photo = catalog:getTargetPhoto()
+    if not photo then
+        callback(ErrorUtils.createError("PHOTO_NOT_FOUND", "No photo selected"))
+        return
+    end
+    local success, err = ErrorUtils.safeCall(function()
+        photo:openInPhotoshop()
+        return { message = "Opened in Photoshop" }
+    end)
+    if success then
+        callback({ success = true, result = err })
+    else
+        callback({ error = { code = "EDIT_FAILED", message = "Failed to open in Photoshop: " .. tostring(err) } })
+    end
+end
+
 return DevelopModule
