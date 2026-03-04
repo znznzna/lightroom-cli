@@ -116,7 +116,7 @@ def get_value(ctx, parameter):
         bridge = get_bridge()
         try:
             result = await bridge.send_command(
-                "develop.getValue", {"parameter": parameter}, timeout=timeout
+                "develop.getValue", {"param": parameter}, timeout=timeout
             )
             click.echo(OutputFormatter.format(result.get("result", result), fmt))
         except Exception as e:
@@ -140,6 +140,7 @@ def apply_settings(ctx, settings):
         parsed = json.loads(settings)
     except json.JSONDecodeError as e:
         click.echo(OutputFormatter.format_error(f"Invalid JSON: {e}"))
+        ctx.exit(1)
         return
 
     async def _run():

@@ -89,7 +89,7 @@ def test_develop_get_value(mock_get_bridge, runner):
     result = runner.invoke(cli, ["develop", "get", "Exposure"])
     assert result.exit_code == 0
     mock_bridge.send_command.assert_called_once_with(
-        "develop.getValue", {"parameter": "Exposure"}, timeout=30.0
+        "develop.getValue", {"param": "Exposure"}, timeout=30.0
     )
 
 
@@ -142,3 +142,10 @@ def test_develop_tool(mock_get_bridge, runner):
     mock_bridge.send_command.assert_called_once_with(
         "develop.selectTool", {"tool": "crop"}, timeout=30.0
     )
+
+
+def test_develop_apply_invalid_json(runner):
+    """lr develop apply --settings '{bad}' が非ゼロ終了する"""
+    result = runner.invoke(cli, ["develop", "apply", "--settings", "{bad json}"])
+    assert result.exit_code != 0
+    assert "Invalid JSON" in result.output
