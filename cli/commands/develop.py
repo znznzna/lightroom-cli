@@ -916,3 +916,126 @@ def local_params(ctx):
             await bridge.disconnect()
 
     run_async(_run())
+
+
+# --- Filter creation commands ---
+
+
+@develop.group("filter")
+def filter_cmds():
+    """Filter creation commands"""
+    pass
+
+
+@filter_cmds.command("graduated")
+@click.pass_context
+def filter_graduated(ctx):
+    """Create a graduated filter"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command("develop.createGraduatedFilter", {}, timeout=timeout)
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
+@filter_cmds.command("radial")
+@click.pass_context
+def filter_radial(ctx):
+    """Create a radial filter"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command("develop.createRadialFilter", {}, timeout=timeout)
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
+@filter_cmds.command("brush")
+@click.pass_context
+def filter_brush(ctx):
+    """Create an adjustment brush"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command("develop.createAdjustmentBrush", {}, timeout=timeout)
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
+@filter_cmds.command("ai-select")
+@click.option("--type", "selection_type", default=None,
+              type=click.Choice(["subject", "sky", "background", "objects", "people", "landscape"]),
+              help="AI selection type (subject/sky/background/objects/people/landscape)")
+@click.pass_context
+def filter_ai_select(ctx, selection_type):
+    """Create an AI selection mask"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    params = {}
+    if selection_type is not None:
+        params["selectionType"] = selection_type
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command("develop.createAISelectionMask", params, timeout=timeout)
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
+@filter_cmds.command("range")
+@click.option("--type", "range_type", default=None,
+              type=click.Choice(["luminance", "color", "depth"]),
+              help="Range mask type (luminance/color/depth)")
+@click.pass_context
+def filter_range(ctx, range_type):
+    """Create a range mask"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    params = {}
+    if range_type is not None:
+        params["rangeType"] = range_type
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command("develop.createRangeMask", params, timeout=timeout)
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
