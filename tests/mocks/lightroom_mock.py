@@ -44,6 +44,7 @@ class MockLightroomServer:
         finally:
             if writer in self._receiver_writers:
                 self._receiver_writers.remove(writer)
+            writer.close()
 
     async def _handle_sender(self, reader, writer):
         """LR→Pythonチャネル: senderクライアント登録"""
@@ -55,6 +56,7 @@ class MockLightroomServer:
         finally:
             if writer in self._sender_writers:
                 self._sender_writers.remove(writer)
+            writer.close()
 
     def _track_handler(self, handler_coro):
         """ハンドラをTaskとして追跡"""
