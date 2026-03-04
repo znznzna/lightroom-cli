@@ -54,7 +54,7 @@ def test_develop_set_multiple_params(mock_get_bridge, runner):
     result = runner.invoke(cli, ["develop", "set", "Exposure", "1.5", "Contrast", "25"])
     assert result.exit_code == 0
     mock_bridge.send_command.assert_called_once_with(
-        "develop.batchSetValues",
+        "develop.batchApplySettings",
         {"settings": {"Exposure": 1.5, "Contrast": 25.0}},
         timeout=30.0,
     )
@@ -72,5 +72,5 @@ def test_develop_auto_tone(mock_get_bridge, runner):
     result = runner.invoke(cli, ["develop", "auto-tone"])
     assert result.exit_code == 0
     mock_bridge.send_command.assert_called_once_with(
-        "develop.autoTone", {}, timeout=30.0
+        "develop.setAutoTone", {}, timeout=30.0
     )

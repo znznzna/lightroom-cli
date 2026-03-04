@@ -73,7 +73,7 @@ def set_values(ctx, pairs):
                 )
             else:
                 result = await bridge.send_command(
-                    "develop.batchSetValues", {"settings": parsed}, timeout=timeout
+                    "develop.batchApplySettings", {"settings": parsed}, timeout=timeout
                 )
             click.echo(OutputFormatter.format(result.get("result", result), fmt))
         except Exception as e:
@@ -94,7 +94,7 @@ def auto_tone(ctx):
     async def _run():
         bridge = get_bridge()
         try:
-            result = await bridge.send_command("develop.autoTone", {}, timeout=timeout)
+            result = await bridge.send_command("develop.setAutoTone", {}, timeout=timeout)
             click.echo(OutputFormatter.format(result.get("result", result), fmt))
         except Exception as e:
             click.echo(OutputFormatter.format_error(str(e)))
@@ -114,7 +114,7 @@ def reset(ctx):
     async def _run():
         bridge = get_bridge()
         try:
-            result = await bridge.send_command("develop.resetSettings", {}, timeout=timeout)
+            result = await bridge.send_command("develop.resetAllDevelopAdjustments", {}, timeout=timeout)
             click.echo(OutputFormatter.format(result.get("result", result), fmt))
         except Exception as e:
             click.echo(OutputFormatter.format_error(str(e)))

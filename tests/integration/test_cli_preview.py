@@ -22,7 +22,7 @@ def test_preview_generate_current(mock_get_bridge, runner):
     result = runner.invoke(cli, ["preview", "generate-current"])
     assert result.exit_code == 0
     mock_bridge.send_command.assert_called_once_with(
-        "preview.generateCurrentPreview", {}, timeout=120.0
+        "preview.generatePreview", {}, timeout=120.0
     )
 
 

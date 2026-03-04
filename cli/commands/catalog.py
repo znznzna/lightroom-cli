@@ -104,7 +104,7 @@ def get_info(ctx, photo_id):
         bridge = get_bridge()
         try:
             result = await bridge.send_command(
-                "catalog.getPhotoInfo", {"photoId": photo_id}, timeout=timeout
+                "catalog.getPhotoMetadata", {"photoId": photo_id}, timeout=timeout
             )
             click.echo(OutputFormatter.format(result.get("result", result), fmt))
         except Exception as e:

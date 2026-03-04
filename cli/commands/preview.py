@@ -34,7 +34,7 @@ def generate_current(ctx):
         bridge = get_bridge()
         try:
             result = await bridge.send_command(
-                "preview.generateCurrentPreview", {}, timeout=120.0
+                "preview.generatePreview", {}, timeout=120.0
             )
             click.echo(OutputFormatter.format(result.get("result", result), fmt))
         except Exception as e:
