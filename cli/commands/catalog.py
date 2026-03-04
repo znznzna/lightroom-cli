@@ -20,7 +20,7 @@ def run_async(coro):
 
 @click.group()
 def catalog():
-    """Catalog commands (list, search, get-selected, get-info, set-rating, add-keywords)"""
+    """Catalog commands (list, search, get-selected, get-info, set-rating, add-keywords, set-flag, get-flag)"""
     pass
 
 
@@ -154,6 +154,56 @@ def add_keywords(ctx, photo_id, keywords):
             result = await bridge.send_command(
                 "catalog.addKeywords", {"photoId": photo_id, "keywords": list(keywords)},
                 timeout=timeout
+            )
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
+@catalog.command("set-flag")
+@click.argument("photo_id")
+@click.argument("flag", type=click.Choice(["pick", "reject", "none"]))
+@click.pass_context
+def set_flag(ctx, photo_id, flag):
+    """Set photo flag (pick/reject/none)"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+    flag_map = {"pick": 1, "reject": -1, "none": 0}
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command(
+                "catalog.setFlag",
+                {"photoId": photo_id, "flag": flag_map[flag]},
+                timeout=timeout,
+            )
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
+@catalog.command("get-flag")
+@click.argument("photo_id")
+@click.pass_context
+def get_flag(ctx, photo_id):
+    """Get photo flag status"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command(
+                "catalog.getFlag", {"photoId": photo_id}, timeout=timeout
             )
             click.echo(OutputFormatter.format(result.get("result", result), fmt))
         except Exception as e:

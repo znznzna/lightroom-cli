@@ -907,4 +907,78 @@ function CatalogModule.addKeywords(params, callback)
     end
 end
 
+-- Set photo flag (pick/reject/none)
+function CatalogModule.setFlag(params, callback)
+    ensureLrModules()
+    local logger = getLogger()
+    local photoId = params.photoId
+    local flag = params.flag  -- 1=pick, -1=reject, 0=none
+
+    if not photoId then
+        callback(ErrorUtils.createError("MISSING_PARAM", "photoId is required"))
+        return
+    end
+    if flag ~= 1 and flag ~= -1 and flag ~= 0 then
+        callback(ErrorUtils.createError("INVALID_PARAM_VALUE",
+            "flag must be 1 (pick), -1 (reject), or 0 (none)"))
+        return
+    end
+
+    local catalog = LrApplication.activeCatalog()
+    local writeSuccess, writeError = ErrorUtils.safeCall(function()
+        catalog:withWriteAccessDo("Set Flag", function()
+            local photo = catalog:getPhotoByLocalId(tonumber(photoId))
+            if not photo then
+                error("Photo not found: " .. tostring(photoId))
+            end
+            photo:setRawMetadata("pickStatus", flag)
+        end, { timeout = 10 })
+    end)
+
+    if writeSuccess then
+        callback(ErrorUtils.createSuccess({
+            photoId = photoId,
+            flag = flag,
+            message = "Flag set successfully"
+        }))
+    else
+        callback(ErrorUtils.createError("OPERATION_FAILED",
+            "Failed to set flag: " .. tostring(writeError)))
+    end
+end
+
+-- Get photo flag status
+function CatalogModule.getFlag(params, callback)
+    ensureLrModules()
+    local logger = getLogger()
+    local photoId = params.photoId
+
+    if not photoId then
+        callback(ErrorUtils.createError("MISSING_PARAM", "photoId is required"))
+        return
+    end
+
+    local catalog = LrApplication.activeCatalog()
+    catalog:withReadAccessDo(function()
+        local photo = catalog:getPhotoByLocalId(tonumber(photoId))
+        if not photo then
+            callback(ErrorUtils.createError("PHOTO_NOT_FOUND",
+                "Photo not found: " .. tostring(photoId)))
+            return
+        end
+
+        local pickStatus = photo:getRawMetadata("pickStatus") or 0
+        local label = "none"
+        if pickStatus == 1 then label = "pick"
+        elseif pickStatus == -1 then label = "reject"
+        end
+
+        callback(ErrorUtils.createSuccess({
+            photoId = photoId,
+            pickStatus = pickStatus,
+            label = label
+        }))
+    end)
+end
+
 return CatalogModule
