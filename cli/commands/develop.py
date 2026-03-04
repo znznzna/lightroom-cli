@@ -221,3 +221,93 @@ def reset(ctx):
             await bridge.disconnect()
 
     run_async(_run())
+
+
+@develop.command("preset")
+@click.argument("preset_name")
+@click.pass_context
+def preset(ctx, preset_name):
+    """Apply a develop preset by name"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command(
+                "catalog.applyDevelopPreset", {"presetName": preset_name}, timeout=timeout
+            )
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
+@develop.command("snapshot")
+@click.argument("name")
+@click.pass_context
+def snapshot(ctx, name):
+    """Create a develop snapshot"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command(
+                "catalog.createDevelopSnapshot", {"name": name}, timeout=timeout
+            )
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
+@develop.command("copy-settings")
+@click.pass_context
+def copy_settings(ctx):
+    """Copy develop settings from selected photo"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command(
+                "catalog.copySettings", {}, timeout=timeout
+            )
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
+@develop.command("paste-settings")
+@click.pass_context
+def paste_settings(ctx):
+    """Paste develop settings to selected photo"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command(
+                "catalog.pasteSettings", {}, timeout=timeout
+            )
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())

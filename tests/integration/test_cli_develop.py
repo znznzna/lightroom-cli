@@ -149,3 +149,71 @@ def test_develop_apply_invalid_json(runner):
     result = runner.invoke(cli, ["develop", "apply", "--settings", "{bad json}"])
     assert result.exit_code != 0
     assert "Invalid JSON" in result.output
+
+
+@patch("cli.commands.develop.get_bridge")
+def test_develop_preset(mock_get_bridge, runner):
+    """lr develop preset がプリセット適用コマンドを送信する"""
+    mock_bridge = AsyncMock()
+    mock_bridge.send_command.return_value = {
+        "id": "9", "success": True,
+        "result": {"preset": "Adobe Color", "applied": True},
+    }
+    mock_get_bridge.return_value = mock_bridge
+
+    result = runner.invoke(cli, ["develop", "preset", "Adobe Color"])
+    assert result.exit_code == 0
+    mock_bridge.send_command.assert_called_once_with(
+        "catalog.applyDevelopPreset", {"presetName": "Adobe Color"}, timeout=30.0
+    )
+
+
+@patch("cli.commands.develop.get_bridge")
+def test_develop_snapshot(mock_get_bridge, runner):
+    """lr develop snapshot がスナップショット作成コマンドを送信する"""
+    mock_bridge = AsyncMock()
+    mock_bridge.send_command.return_value = {
+        "id": "10", "success": True,
+        "result": {"name": "Before grading", "created": True},
+    }
+    mock_get_bridge.return_value = mock_bridge
+
+    result = runner.invoke(cli, ["develop", "snapshot", "Before grading"])
+    assert result.exit_code == 0
+    mock_bridge.send_command.assert_called_once_with(
+        "catalog.createDevelopSnapshot", {"name": "Before grading"}, timeout=30.0
+    )
+
+
+@patch("cli.commands.develop.get_bridge")
+def test_develop_copy_settings(mock_get_bridge, runner):
+    """lr develop copy-settings が設定コピーコマンドを送信する"""
+    mock_bridge = AsyncMock()
+    mock_bridge.send_command.return_value = {
+        "id": "11", "success": True,
+        "result": {"copied": True},
+    }
+    mock_get_bridge.return_value = mock_bridge
+
+    result = runner.invoke(cli, ["develop", "copy-settings"])
+    assert result.exit_code == 0
+    mock_bridge.send_command.assert_called_once_with(
+        "catalog.copySettings", {}, timeout=30.0
+    )
+
+
+@patch("cli.commands.develop.get_bridge")
+def test_develop_paste_settings(mock_get_bridge, runner):
+    """lr develop paste-settings が設定ペーストコマンドを送信する"""
+    mock_bridge = AsyncMock()
+    mock_bridge.send_command.return_value = {
+        "id": "12", "success": True,
+        "result": {"pasted": True},
+    }
+    mock_get_bridge.return_value = mock_bridge
+
+    result = runner.invoke(cli, ["develop", "paste-settings"])
+    assert result.exit_code == 0
+    mock_bridge.send_command.assert_called_once_with(
+        "catalog.pasteSettings", {}, timeout=30.0
+    )

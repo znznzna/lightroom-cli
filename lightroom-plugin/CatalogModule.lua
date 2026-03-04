@@ -1125,4 +1125,158 @@ function CatalogModule.setColorLabel(params, callback)
     end
 end
 
+-- Apply a develop preset by name
+function CatalogModule.applyDevelopPreset(params, callback)
+    ensureLrModules()
+    local logger = getLogger()
+
+    if not params or not params.presetName then
+        callback(ErrorUtils.createError("MISSING_PARAM", "presetName is required"))
+        return
+    end
+
+    local presetName = params.presetName
+    logger:debug("Applying develop preset: " .. presetName)
+
+    -- Search for the preset by name across all folders
+    local targetPreset = nil
+    local folders = LrApplication.developPresetFolders()
+    for _, folder in ipairs(folders) do
+        local presets = folder:getDevelopPresets()
+        for _, preset in ipairs(presets) do
+            if preset:getName() == presetName then
+                targetPreset = preset
+                break
+            end
+        end
+        if targetPreset then break end
+    end
+
+    if not targetPreset then
+        callback(ErrorUtils.createError("PHOTO_NOT_FOUND",
+            "Develop preset not found: " .. presetName))
+        return
+    end
+
+    local catalog = LrApplication.activeCatalog()
+    local photo = catalog:getTargetPhoto()
+    if not photo then
+        callback(ErrorUtils.createError("PHOTO_NOT_FOUND", "No photo selected"))
+        return
+    end
+
+    local writeSuccess, writeError = ErrorUtils.safeCall(function()
+        catalog:withWriteAccessDo("Apply Develop Preset", function()
+            photo:applyDevelopPreset(targetPreset)
+        end, { timeout = 10 })
+    end)
+
+    if writeSuccess then
+        callback(ErrorUtils.createSuccess({
+            preset = presetName,
+            applied = true,
+            message = "Develop preset applied successfully"
+        }))
+    else
+        callback(ErrorUtils.createError("OPERATION_FAILED",
+            "Failed to apply develop preset: " .. tostring(writeError)))
+    end
+end
+
+-- Create a develop snapshot
+function CatalogModule.createDevelopSnapshot(params, callback)
+    ensureLrModules()
+    local logger = getLogger()
+
+    if not params or not params.name then
+        callback(ErrorUtils.createError("MISSING_PARAM", "name is required"))
+        return
+    end
+
+    local name = params.name
+    logger:debug("Creating develop snapshot: " .. name)
+
+    local catalog = LrApplication.activeCatalog()
+    local photo = catalog:getTargetPhoto()
+    if not photo then
+        callback(ErrorUtils.createError("PHOTO_NOT_FOUND", "No photo selected"))
+        return
+    end
+
+    local writeSuccess, writeError = ErrorUtils.safeCall(function()
+        catalog:withWriteAccessDo("Create Develop Snapshot", function()
+            photo:createDevelopSnapshot(name)
+        end, { timeout = 10 })
+    end)
+
+    if writeSuccess then
+        callback(ErrorUtils.createSuccess({
+            name = name,
+            created = true,
+            message = "Develop snapshot created successfully"
+        }))
+    else
+        callback(ErrorUtils.createError("OPERATION_FAILED",
+            "Failed to create develop snapshot: " .. tostring(writeError)))
+    end
+end
+
+-- Copy develop settings from selected photo
+function CatalogModule.copySettings(params, callback)
+    ensureLrModules()
+    local logger = getLogger()
+    logger:debug("Copying develop settings from selected photo")
+
+    local catalog = LrApplication.activeCatalog()
+    local photo = catalog:getTargetPhoto()
+    if not photo then
+        callback(ErrorUtils.createError("PHOTO_NOT_FOUND", "No photo selected"))
+        return
+    end
+
+    local success, result = ErrorUtils.safeCall(function()
+        photo:copySettings()
+    end)
+
+    if success then
+        callback(ErrorUtils.createSuccess({
+            copied = true,
+            message = "Develop settings copied successfully"
+        }))
+    else
+        callback(ErrorUtils.createError("OPERATION_FAILED",
+            "Failed to copy develop settings: " .. tostring(result)))
+    end
+end
+
+-- Paste develop settings to selected photo
+function CatalogModule.pasteSettings(params, callback)
+    ensureLrModules()
+    local logger = getLogger()
+    logger:debug("Pasting develop settings to selected photo")
+
+    local catalog = LrApplication.activeCatalog()
+    local photo = catalog:getTargetPhoto()
+    if not photo then
+        callback(ErrorUtils.createError("PHOTO_NOT_FOUND", "No photo selected"))
+        return
+    end
+
+    local writeSuccess, writeError = ErrorUtils.safeCall(function()
+        catalog:withWriteAccessDo("Paste Develop Settings", function()
+            photo:pasteSettings()
+        end, { timeout = 10 })
+    end)
+
+    if writeSuccess then
+        callback(ErrorUtils.createSuccess({
+            pasted = true,
+            message = "Develop settings pasted successfully"
+        }))
+    else
+        callback(ErrorUtils.createError("OPERATION_FAILED",
+            "Failed to paste develop settings: " .. tostring(writeError)))
+    end
+end
+
 return CatalogModule
