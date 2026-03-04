@@ -172,6 +172,15 @@ local function loadPhase4Modules()
         return false
     end
 
+    -- Load SelectionModule
+    success, SelectionModule = LrTasks.pcall(require, 'SelectionModule')
+    if success then
+        _G.LightroomPythonBridge.SelectionModule = SelectionModule
+        Logger:info("SelectionModule loaded successfully")
+    else
+        Logger:error("Failed to load SelectionModule: " .. tostring(SelectionModule))
+    end
+
     return true
 end
 
@@ -345,6 +354,27 @@ local function registerApiCommands()
     router:register("preview.generateBatchPreviews", PreviewModule.generateBatchPreviews, "sync")
     router:register("preview.getPreviewInfo", PreviewModule.getPreviewInfo, "sync")
     router:register("preview.getPreviewChunk", PreviewModule.getPreviewChunk, "sync")
+
+    -- Selection module commands
+    local SelectionModule = _G.LightroomPythonBridge.SelectionModule
+    if SelectionModule then
+        Logger:info("Registering selection commands...")
+        router:register("selection.flagAsPick", SelectionModule.flagAsPick, "sync")
+        router:register("selection.flagAsReject", SelectionModule.flagAsReject, "sync")
+        router:register("selection.removeFlag", SelectionModule.removeFlag, "sync")
+        router:register("selection.getFlag", SelectionModule.getFlag, "sync")
+        router:register("selection.setRating", SelectionModule.setRating, "sync")
+        router:register("selection.getRating", SelectionModule.getRating, "sync")
+        router:register("selection.setColorLabel", SelectionModule.setColorLabel, "sync")
+        router:register("selection.getColorLabel", SelectionModule.getColorLabel, "sync")
+        router:register("selection.nextPhoto", SelectionModule.nextPhoto, "sync")
+        router:register("selection.previousPhoto", SelectionModule.previousPhoto, "sync")
+        router:register("selection.selectAll", SelectionModule.selectAll, "sync")
+        router:register("selection.selectNone", SelectionModule.selectNone, "sync")
+        router:register("selection.selectInverse", SelectionModule.selectInverse, "sync")
+        router:register("selection.increaseRating", SelectionModule.increaseRating, "sync")
+        router:register("selection.decreaseRating", SelectionModule.decreaseRating, "sync")
+    end
 
     Logger:info("Phase 4: API wrapper commands registered successfully")
 end
