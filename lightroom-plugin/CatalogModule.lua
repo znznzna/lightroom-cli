@@ -836,4 +836,75 @@ function CatalogModule.batchGetFormattedMetadata(params, callback)
     end)
 end
 
+-- Set photo rating (Gap C fix)
+function CatalogModule.setRating(params, callback)
+    ensureLrModules()
+    local logger = getLogger()
+    local photoId = params.photoId
+    local rating = params.rating
+
+    if not photoId then
+        callback(ErrorUtils.createError("MISSING_PARAM", "photoId is required"))
+        return
+    end
+    if not rating or rating < 0 or rating > 5 then
+        callback(ErrorUtils.createError("INVALID_PARAM_VALUE", "rating must be between 0 and 5"))
+        return
+    end
+
+    local catalog = LrApplication.activeCatalog()
+    local writeSuccess, writeError = ErrorUtils.safeCall(function()
+        catalog:withWriteAccessDo("Set Rating", function()
+            local photo = catalog:getPhotoByLocalId(tonumber(photoId))
+            if not photo then error("Photo not found: " .. tostring(photoId)) end
+            photo:setRawMetadata("rating", rating)
+        end, { timeout = 10 })
+    end)
+
+    if writeSuccess then
+        callback(ErrorUtils.createSuccess({ photoId = photoId, rating = rating, message = "Rating set successfully" }))
+    else
+        callback(ErrorUtils.createError("OPERATION_FAILED", "Failed to set rating: " .. tostring(writeError)))
+    end
+end
+
+-- Add keywords to photo (Gap C fix)
+function CatalogModule.addKeywords(params, callback)
+    ensureLrModules()
+    local logger = getLogger()
+    local photoId = params.photoId
+    local keywords = params.keywords
+
+    if not photoId then
+        callback(ErrorUtils.createError("MISSING_PARAM", "photoId is required"))
+        return
+    end
+    if not keywords or type(keywords) ~= "table" or #keywords == 0 then
+        callback(ErrorUtils.createError("INVALID_PARAM_VALUE", "keywords must be a non-empty array"))
+        return
+    end
+
+    local catalog = LrApplication.activeCatalog()
+    local addedKeywords = {}
+    local writeSuccess, writeError = ErrorUtils.safeCall(function()
+        catalog:withWriteAccessDo("Add Keywords", function()
+            local photo = catalog:getPhotoByLocalId(tonumber(photoId))
+            if not photo then error("Photo not found: " .. tostring(photoId)) end
+            for _, kwName in ipairs(keywords) do
+                local keyword = catalog:createKeyword(kwName, {}, false, nil, true)
+                if keyword then
+                    photo:addKeyword(keyword)
+                    table.insert(addedKeywords, kwName)
+                end
+            end
+        end, { timeout = 10 })
+    end)
+
+    if writeSuccess then
+        callback(ErrorUtils.createSuccess({ photoId = photoId, addedKeywords = addedKeywords, count = #addedKeywords, message = "Keywords added successfully" }))
+    else
+        callback(ErrorUtils.createError("OPERATION_FAILED", "Failed to add keywords: " .. tostring(writeError)))
+    end
+end
+
 return CatalogModule

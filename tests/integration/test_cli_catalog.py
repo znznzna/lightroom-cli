@@ -56,3 +56,35 @@ def test_catalog_set_rating(mock_get_bridge, runner):
     mock_bridge.send_command.assert_called_once_with(
         "catalog.setRating", {"photoId": "photo-1", "rating": 5}, timeout=30.0
     )
+
+
+@patch("cli.commands.catalog.get_bridge")
+def test_catalog_set_rating_sends_correct_command(mock_get_bridge, runner):
+    """lr catalog set-rating がcatalog.setRatingコマンドを送信する"""
+    mock_bridge = AsyncMock()
+    mock_bridge.send_command.return_value = {
+        "id": "10", "success": True,
+        "result": {"photoId": "123", "rating": 4, "message": "Rating set successfully"},
+    }
+    mock_get_bridge.return_value = mock_bridge
+    result = runner.invoke(cli, ["catalog", "set-rating", "123", "4"])
+    assert result.exit_code == 0
+    mock_bridge.send_command.assert_called_once_with(
+        "catalog.setRating", {"photoId": "123", "rating": 4}, timeout=30.0
+    )
+
+
+@patch("cli.commands.catalog.get_bridge")
+def test_catalog_add_keywords_sends_correct_command(mock_get_bridge, runner):
+    """lr catalog add-keywords がcatalog.addKeywordsコマンドを送信する"""
+    mock_bridge = AsyncMock()
+    mock_bridge.send_command.return_value = {
+        "id": "11", "success": True,
+        "result": {"photoId": "123", "addedKeywords": ["landscape", "sunset"], "count": 2},
+    }
+    mock_get_bridge.return_value = mock_bridge
+    result = runner.invoke(cli, ["catalog", "add-keywords", "123", "landscape", "sunset"])
+    assert result.exit_code == 0
+    mock_bridge.send_command.assert_called_once_with(
+        "catalog.addKeywords", {"photoId": "123", "keywords": ["landscape", "sunset"]}, timeout=30.0,
+    )
