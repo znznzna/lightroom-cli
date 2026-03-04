@@ -26,8 +26,10 @@ from cli.commands.catalog import catalog
 from cli.commands.develop import develop
 from cli.commands.preview import preview
 from cli.commands.selection import selection
+from cli.commands.plugin import plugin
 cli.add_command(system)
 cli.add_command(catalog)
 cli.add_command(develop)
 cli.add_command(preview)
 cli.add_command(selection)
+cli.add_command(plugin)
