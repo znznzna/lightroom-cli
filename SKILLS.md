@@ -33,6 +33,24 @@
 | `lr catalog keywords` | List all keywords |
 | `lr catalog rotate-left` | Rotate photo left |
 | `lr catalog create-virtual-copy` | Create virtual copy |
+| `lr catalog find --flag PICK --rating 3` | Find photos by criteria (flag/rating/color/camera) |
+| `lr catalog select PHOTO_ID [PHOTO_ID ...]` | Select photos by ID |
+| `lr catalog find-by-path PATH` | Find photo by file path |
+| `lr catalog folders [--recursive]` | List folders in catalog |
+| `lr catalog set-flag PHOTO_ID pick\|reject\|none` | Set photo flag |
+| `lr catalog get-flag PHOTO_ID` | Get photo flag status |
+| `lr catalog set-caption PHOTO_ID "caption"` | Set photo caption |
+| `lr catalog set-color-label PHOTO_ID COLOR` | Set color label (red/yellow/green/blue/purple/none) |
+| `lr catalog batch-metadata PHOTO_ID [PHOTO_ID ...]` | Get formatted metadata for multiple photos |
+| `lr catalog rotate-right` | Rotate photo right |
+| `lr catalog set-metadata PHOTO_ID KEY VALUE` | Set arbitrary metadata |
+| `lr catalog create-smart-collection "name" --search-desc JSON` | Create smart collection |
+| `lr catalog create-collection-set "name"` | Create collection set |
+| `lr catalog create-keyword "keyword"` | Create a keyword in catalog |
+| `lr catalog remove-keyword PHOTO_ID keyword` | Remove keyword from photo |
+| `lr catalog set-view-filter --filter JSON` | Set library view filter |
+| `lr catalog get-view-filter` | Get current view filter |
+| `lr catalog remove-from-catalog PHOTO_ID` | Remove photo from catalog (irreversible!) |
 
 ### develop — Image editing
 
@@ -49,6 +67,12 @@
 | `lr develop paste-settings` | Paste develop settings |
 | `lr develop preset "name"` | Apply preset |
 | `lr develop snapshot "name"` | Create snapshot |
+| `lr develop range PARAM` | Get min/max range for parameter |
+| `lr develop reset-param PARAM` | Reset single parameter to default |
+| `lr develop process-version` | Get current process version |
+| `lr develop set-process-version VERSION` | Set process version |
+| `lr develop tool TOOL` | Select tool (loupe/crop/dust/redeye/gradient/circularGradient) |
+| `lr develop edit-in-photoshop` | Edit selected photo in Photoshop |
 
 #### Tone Curve
 
@@ -59,6 +83,7 @@
 | `lr develop curve s-curve` | Apply S-curve preset |
 | `lr develop curve linear` | Reset to linear |
 | `lr develop curve add-point X Y` | Add point |
+| `lr develop curve remove-point INDEX` | Remove point from curve |
 
 #### Masking
 
@@ -70,6 +95,16 @@
 | `lr develop mask intersect luminance` | Intersect mask |
 | `lr develop mask subtract color` | Subtract from mask |
 | `lr develop mask invert MASK_ID` | Invert mask |
+| `lr develop mask selected` | Get currently selected mask |
+| `lr develop mask select MASK_ID` | Select a mask |
+| `lr develop mask delete MASK_ID` | Delete a mask |
+| `lr develop mask tool-info` | Get selected mask tool info |
+| `lr develop mask select-tool TOOL_ID` | Select a mask tool |
+| `lr develop mask delete-tool TOOL_ID` | Delete a mask tool |
+| `lr develop mask go-to` | Go to masking view |
+| `lr develop mask toggle-overlay` | Toggle mask overlay |
+| `lr develop mask activate` | Activate masking mode |
+| `lr develop mask complex --workflow WORKFLOW` | Create complex mask with workflow |
 
 #### Filters
 
@@ -79,6 +114,7 @@
 | `lr develop filter radial` | Radial filter |
 | `lr develop filter brush` | Brush filter |
 | `lr develop filter ai-select` | AI selection |
+| `lr develop filter range` | Range mask (luminance/color/depth) |
 
 #### Local Adjustments
 
@@ -86,6 +122,40 @@
 |---------|-------------|
 | `lr develop local set PARAM VALUE` | Set local parameter |
 | `lr develop local get PARAM` | Get local parameter |
+| `lr develop local apply --settings JSON` | Apply multiple local adjustments |
+| `lr develop local params` | List available local parameters |
+| `lr develop local create-mask --tool TYPE` | Create mask with local adjustments |
+
+#### Reset Commands
+
+| Command | Description |
+|---------|-------------|
+| `lr develop reset-gradient` | Reset gradient filter |
+| `lr develop reset-circular` | Reset circular gradient |
+| `lr develop reset-brush` | Reset adjustment brush |
+| `lr develop reset-masking` | Reset masking |
+| `lr develop reset-crop` | Reset crop |
+| `lr develop reset-transforms` | Reset transforms |
+| `lr develop reset-spot` | Reset spot removal |
+| `lr develop reset-redeye` | Reset red-eye removal |
+| `lr develop reset-healing` | Reset healing |
+
+#### Debug Commands
+
+| Command | Description |
+|---------|-------------|
+| `lr develop debug dump` | Dump LrDevelopController info |
+| `lr develop debug gradient-params` | Discover gradient parameters |
+| `lr develop debug monitor --duration N` | Monitor parameter changes |
+| `lr develop debug probe` | Probe all develop parameters |
+
+#### Color Operations
+
+| Command | Description |
+|---------|-------------|
+| `lr develop color green-swatch` | Create green color swatch |
+| `lr develop color cyan-swatch` | Create cyan color swatch |
+| `lr develop color enhance --preset natural\|vivid\|muted` | Enhance colors |
 
 ### preview — Image preview generation
 
@@ -94,7 +164,7 @@
 | `lr preview generate-current` | Generate preview for selected photo |
 | `lr preview generate --size 2048` | Generate with size |
 | `lr preview generate-batch` | Batch generate |
-| `lr preview info` | Get preview info |
+| `lr preview info PHOTO_ID` | Get preview info for a photo |
 
 ### selection — Navigation & flagging
 
@@ -112,6 +182,13 @@
 | `lr selection previous` | Previous photo |
 | `lr selection select-all` | Select all |
 | `lr selection select-none` | Deselect all |
+| `lr selection select-inverse` | Invert current selection |
+| `lr selection increase-rating` | Increase rating by 1 |
+| `lr selection decrease-rating` | Decrease rating by 1 |
+| `lr selection toggle-label COLOR` | Toggle color label |
+| `lr selection extend --direction left\|right --amount N` | Extend selection |
+| `lr selection deselect-active` | Deselect active photo |
+| `lr selection deselect-others` | Deselect all except active |
 
 ### plugin — Plugin management
 
