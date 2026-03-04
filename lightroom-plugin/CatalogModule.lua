@@ -1372,4 +1372,163 @@ function CatalogModule.setMetadata(params, callback)
     end, { timeout = 10 })
 end
 
+function CatalogModule.createCollection(params, callback)
+    ensureLrModules()
+    local name = params.name
+    if not name then
+        callback(ErrorUtils.createError("MISSING_PARAM", "Collection name is required"))
+        return
+    end
+    local catalog = LrApplication.activeCatalog()
+    local success, err = ErrorUtils.safeCall(function()
+        catalog:withWriteAccessDo("Create Collection", function()
+            catalog:createCollection(name, nil, true)
+        end, { timeout = 10 })
+    end)
+    if success then
+        callback(ErrorUtils.createSuccess({ name = name, message = "Collection created" }))
+    else
+        callback(ErrorUtils.createError("OPERATION_FAILED", tostring(err)))
+    end
+end
+
+function CatalogModule.createSmartCollection(params, callback)
+    ensureLrModules()
+    local name = params.name
+    if not name then
+        callback(ErrorUtils.createError("MISSING_PARAM", "Smart collection name is required"))
+        return
+    end
+    local searchDesc = params.searchDesc or {}
+    local catalog = LrApplication.activeCatalog()
+    local success, err = ErrorUtils.safeCall(function()
+        catalog:withWriteAccessDo("Create Smart Collection", function()
+            catalog:createSmartCollection(name, searchDesc, nil, true)
+        end, { timeout = 10 })
+    end)
+    if success then
+        callback(ErrorUtils.createSuccess({ name = name, message = "Smart collection created" }))
+    else
+        callback(ErrorUtils.createError("OPERATION_FAILED", tostring(err)))
+    end
+end
+
+function CatalogModule.createCollectionSet(params, callback)
+    ensureLrModules()
+    local name = params.name
+    if not name then
+        callback(ErrorUtils.createError("MISSING_PARAM", "Collection set name is required"))
+        return
+    end
+    local catalog = LrApplication.activeCatalog()
+    local success, err = ErrorUtils.safeCall(function()
+        catalog:withWriteAccessDo("Create Collection Set", function()
+            catalog:createCollectionSet(name, nil, true)
+        end, { timeout = 10 })
+    end)
+    if success then
+        callback(ErrorUtils.createSuccess({ name = name, message = "Collection set created" }))
+    else
+        callback(ErrorUtils.createError("OPERATION_FAILED", tostring(err)))
+    end
+end
+
+function CatalogModule.createKeyword(params, callback)
+    ensureLrModules()
+    local keyword = params.keyword
+    if not keyword then
+        callback(ErrorUtils.createError("MISSING_PARAM", "Keyword is required"))
+        return
+    end
+    local catalog = LrApplication.activeCatalog()
+    local success, err = ErrorUtils.safeCall(function()
+        catalog:withWriteAccessDo("Create Keyword", function()
+            catalog:createKeyword(keyword, {}, true, nil, true)
+        end, { timeout = 10 })
+    end)
+    if success then
+        callback(ErrorUtils.createSuccess({ keyword = keyword, message = "Keyword created" }))
+    else
+        callback(ErrorUtils.createError("OPERATION_FAILED", tostring(err)))
+    end
+end
+
+function CatalogModule.removeKeyword(params, callback)
+    ensureLrModules()
+    local photoId = params.photoId
+    local keyword = params.keyword
+    if not photoId or not keyword then
+        callback(ErrorUtils.createError("MISSING_PARAM", "Photo ID and keyword are required"))
+        return
+    end
+    local catalog = LrApplication.activeCatalog()
+    catalog:withWriteAccessDo("Remove Keyword", function()
+        local photo = catalog:getPhotoByLocalId(tonumber(photoId))
+        if not photo then
+            callback(ErrorUtils.createError("PHOTO_NOT_FOUND", "Photo not found"))
+            return
+        end
+        local success, err = ErrorUtils.safeCall(function()
+            photo:removeKeyword(keyword)
+        end)
+        if success then
+            callback(ErrorUtils.createSuccess({ photoId = photoId, keyword = keyword, message = "Keyword removed" }))
+        else
+            callback(ErrorUtils.createError("OPERATION_FAILED", tostring(err)))
+        end
+    end, { timeout = 10 })
+end
+
+function CatalogModule.setViewFilter(params, callback)
+    ensureLrModules()
+    local filter = params.filter or {}
+    local catalog = LrApplication.activeCatalog()
+    local success, err = ErrorUtils.safeCall(function()
+        catalog:setViewFilter(filter)
+    end)
+    if success then
+        callback(ErrorUtils.createSuccess({ message = "View filter set" }))
+    else
+        callback(ErrorUtils.createError("OPERATION_FAILED", tostring(err)))
+    end
+end
+
+function CatalogModule.getCurrentViewFilter(params, callback)
+    ensureLrModules()
+    local catalog = LrApplication.activeCatalog()
+    local success, result = ErrorUtils.safeCall(function()
+        return catalog:getCurrentViewFilter()
+    end)
+    if success then
+        callback(ErrorUtils.createSuccess({ filter = result }))
+    else
+        callback(ErrorUtils.createError("OPERATION_FAILED", tostring(result)))
+    end
+end
+
+function CatalogModule.removeFromCatalog(params, callback)
+    ensureLrModules()
+    local photoId = params.photoId
+    if not photoId then
+        callback(ErrorUtils.createError("MISSING_PARAM", "Photo ID is required"))
+        return
+    end
+    local catalog = LrApplication.activeCatalog()
+    catalog:withWriteAccessDo("Remove From Catalog", function()
+        local photo = catalog:getPhotoByLocalId(tonumber(photoId))
+        if not photo then
+            callback(ErrorUtils.createError("PHOTO_NOT_FOUND", "Photo not found"))
+            return
+        end
+        local success, err = ErrorUtils.safeCall(function()
+            catalog:removePhoto(photo)
+        end)
+        if success then
+            callback(ErrorUtils.createSuccess({ photoId = photoId, message = "Photo removed from catalog" }))
+        else
+            callback(ErrorUtils.createError("OPERATION_FAILED", tostring(err)))
+        end
+    end, { timeout = 10 })
+end
+
 return CatalogModule

@@ -552,3 +552,205 @@ def set_metadata(ctx, photo_id, key, value):
             await bridge.disconnect()
 
     run_async(_run())
+
+
+@catalog.command("create-collection")
+@click.argument("name")
+@click.pass_context
+def create_collection(ctx, name):
+    """Create a new collection"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command(
+                "catalog.createCollection", {"name": name}, timeout=timeout
+            )
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
+@catalog.command("create-smart-collection")
+@click.argument("name")
+@click.option("--search-desc", default=None, help="JSON search descriptor")
+@click.pass_context
+def create_smart_collection(ctx, name, search_desc):
+    """Create a smart collection"""
+    import json
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+    params = {"name": name}
+    if search_desc:
+        try:
+            params["searchDesc"] = json.loads(search_desc)
+        except json.JSONDecodeError as e:
+            click.echo(OutputFormatter.format_error(f"Invalid JSON for --search-desc: {e}"))
+            ctx.exit(1)
+            return
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command(
+                "catalog.createSmartCollection", params, timeout=timeout
+            )
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
+@catalog.command("create-collection-set")
+@click.argument("name")
+@click.pass_context
+def create_collection_set(ctx, name):
+    """Create a collection set"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command(
+                "catalog.createCollectionSet", {"name": name}, timeout=timeout
+            )
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
+@catalog.command("create-keyword")
+@click.argument("keyword")
+@click.pass_context
+def create_keyword(ctx, keyword):
+    """Create a keyword in catalog"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command(
+                "catalog.createKeyword", {"keyword": keyword}, timeout=timeout
+            )
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
+@catalog.command("remove-keyword")
+@click.argument("photo_id")
+@click.argument("keyword")
+@click.pass_context
+def remove_keyword(ctx, photo_id, keyword):
+    """Remove keyword from a photo"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command(
+                "catalog.removeKeyword", {"photoId": photo_id, "keyword": keyword}, timeout=timeout
+            )
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
+@catalog.command("set-view-filter")
+@click.option("--filter", "filter_json", required=True, help="JSON filter descriptor")
+@click.pass_context
+def set_view_filter(ctx, filter_json):
+    """Set view filter"""
+    import json
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+    try:
+        filter_data = json.loads(filter_json)
+    except json.JSONDecodeError as e:
+        click.echo(OutputFormatter.format_error(f"Invalid JSON for --filter: {e}"))
+        ctx.exit(1)
+        return
+    params = {"filter": filter_data}
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command(
+                "catalog.setViewFilter", params, timeout=timeout
+            )
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
+@catalog.command("get-view-filter")
+@click.pass_context
+def get_view_filter(ctx):
+    """Get current view filter"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command(
+                "catalog.getCurrentViewFilter", {}, timeout=timeout
+            )
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
+@catalog.command("remove-from-catalog")
+@click.argument("photo_id")
+@click.pass_context
+def remove_from_catalog(ctx, photo_id):
+    """Remove photo from catalog"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command(
+                "catalog.removeFromCatalog", {"photoId": photo_id}, timeout=timeout
+            )
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
