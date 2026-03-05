@@ -32,7 +32,8 @@ def schema_cmd(ctx, path):
     elif "." not in path:
         schemas = get_schemas_by_group(path)
         if not schemas:
-            click.echo(OutputFormatter.format_error(f"Unknown group: {path}", fmt))
+            click.echo(OutputFormatter.format_error(f"Unknown group: {path}", fmt), err=True)
+            ctx.exit(1)
             return
         summary = [
             {
@@ -53,7 +54,8 @@ def schema_cmd(ctx, path):
                 target = s
                 break
         if target is None:
-            click.echo(OutputFormatter.format_error(f"Unknown command: {path}", fmt))
+            click.echo(OutputFormatter.format_error(f"Unknown command: {path}", fmt), err=True)
+            ctx.exit(1)
             return
         detail = {
             "command": target.cli_path,

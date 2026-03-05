@@ -40,10 +40,26 @@ class TestSchemaCommand:
 
     def test_schema_unknown_group(self, runner):
         result = runner.invoke(cli, ["-o", "json", "schema", "nonexistent"])
-        assert result.exit_code == 0
+        assert result.exit_code == 1
         assert "error" in result.output.lower() or "unknown" in result.output.lower()
 
     def test_schema_unknown_command(self, runner):
         result = runner.invoke(cli, ["-o", "json", "schema", "develop.nonexistent"])
-        assert result.exit_code == 0
+        assert result.exit_code == 1
         assert "error" in result.output.lower() or "unknown" in result.output.lower()
+
+
+class TestSchemaExitCodes:
+    """lr schema のエラー時 exit code テスト"""
+
+    @pytest.fixture
+    def runner(self):
+        return CliRunner()
+
+    def test_unknown_group_exit_code_1(self, runner):
+        result = runner.invoke(cli, ["-o", "json", "schema", "foobar"])
+        assert result.exit_code == 1
+
+    def test_unknown_command_exit_code_1(self, runner):
+        result = runner.invoke(cli, ["-o", "json", "schema", "develop.nonexistent"])
+        assert result.exit_code == 1
