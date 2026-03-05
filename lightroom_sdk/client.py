@@ -4,22 +4,22 @@ from typing import Any, Dict, Optional
 
 from .exceptions import ERROR_CODE_MAP, LightroomSDKError
 from .protocol import LightroomResponse
-from .socket_bridge import SocketBridge
+from .resilient_bridge import ResilientSocketBridge
 
 logger = logging.getLogger(__name__)
 
 
 class LightroomClient:
-    """Main client for interacting with Lightroom"""
+    """Main client for interacting with Lightroom (uses ResilientSocketBridge)"""
 
-    def __init__(self, host: str = "localhost"):
+    def __init__(self, host: str = "localhost", port_file: str | None = None):
         self.host = host
-        self._bridge = SocketBridge(host)
+        self._bridge = ResilientSocketBridge(host=host, port_file=port_file)
 
-    async def connect(self, retry_attempts: int = 5) -> None:
-        """Connect to Lightroom bridge"""
+    async def connect(self) -> None:
+        """Connect to Lightroom bridge (retry is handled by ResilientSocketBridge)"""
         logger.debug(f"[LR_CLIENT:{id(self)}] connect() called")
-        await self._bridge.connect(retry_attempts=retry_attempts)
+        await self._bridge.connect()
         logger.debug(f"[LR_CLIENT:{id(self)}] connect() completed")
 
     async def disconnect(self) -> None:
@@ -66,17 +66,8 @@ class LightroomClient:
         return await self.execute_command("system.status")
 
     async def wait_for_lightroom(self, timeout: float = 60.0) -> bool:
-        """
-        Wait for Lightroom to become available with helpful progress messages
-
-        Args:
-            timeout: Maximum time to wait in seconds
-
-        Returns:
-            True if Lightroom becomes available, False if timeout
-        """
+        """Wait for Lightroom to become available"""
         logger.info("Checking for Lightroom Classic...")
-
         try:
             await asyncio.wait_for(self.connect(), timeout=timeout)
             logger.info("Lightroom is ready!")
@@ -95,14 +86,7 @@ class LightroomClient:
         adjustments: Optional[Dict[str, float]] = None,
         timeout: float = 60.0,
     ) -> Dict[str, Any]:
-        """Create an AI mask and optionally apply adjustments.
-
-        Args:
-            selection_type: One of subject, sky, background, objects, people, landscape
-            part: Optional body/landscape part for people/landscape types
-            adjustments: Optional dict of develop parameter adjustments
-            timeout: Command timeout in seconds
-        """
+        """Create an AI mask and optionally apply adjustments."""
         params: Dict[str, Any] = {"selectionType": selection_type}
         if part:
             params["part"] = part
@@ -120,17 +104,7 @@ class LightroomClient:
         continue_on_error: bool = True,
         timeout: float = 300.0,
     ) -> Dict[str, Any]:
-        """Apply AI mask to multiple photos.
-
-        Args:
-            selection_type: One of subject, sky, background, objects, people, landscape
-            photo_ids: List of photo IDs to process
-            all_selected: If True, apply to all currently selected photos
-            part: Optional body/landscape part
-            adjustments: Optional dict of develop parameter adjustments
-            continue_on_error: If True, continue processing on individual failures
-            timeout: Command timeout in seconds
-        """
+        """Apply AI mask to multiple photos."""
         params: Dict[str, Any] = {
             "selectionType": selection_type,
             "allSelected": all_selected,

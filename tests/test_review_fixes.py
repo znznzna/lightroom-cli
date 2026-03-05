@@ -7,7 +7,7 @@ from click.testing import CliRunner
 
 from cli.main import cli
 from cli.output import OutputFormatter
-from cli.validation import ValidationError, validate_params
+from lightroom_sdk.validation import ValidationError, validate_params
 
 
 class TestResetMaskingRiskLevel:

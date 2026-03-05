@@ -95,7 +95,7 @@ def execute_command(ctx, command: str, params: dict, *, timeout: float | None = 
 
     async def _run():
         # バリデーション（スキーマ未定義コマンドはスキップ）
-        from cli.validation import ValidationError, validate_params
+        from lightroom_sdk.validation import ValidationError, validate_params
 
         try:
             validated = validate_params(command, params)
