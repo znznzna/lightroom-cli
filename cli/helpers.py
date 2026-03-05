@@ -19,6 +19,48 @@ def run_async(coro):
         loop.close()
 
 
+def execute_command(ctx, command: str, params: dict, *, timeout: float | None = None):
+    """共通コマンド実行ヘルパー。
+
+    - エラーハンドリング（構造化エラー + 終了コード）
+    - fields フィルタリング
+    - bridge 接続・切断の管理
+    """
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+    fields = ctx.obj.get("fields") if ctx.obj else None
+    cmd_timeout = timeout or (ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0)
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            await bridge.connect()
+            result = await bridge.send_command(command, params, timeout=cmd_timeout)
+            data = result.get("result", result)
+            click.echo(OutputFormatter.format(data, fmt, fields=fields))
+        except ConnectionError as e:
+            click.echo(
+                OutputFormatter.format_error(str(e), fmt, code="CONNECTION_ERROR"),
+                err=True,
+            )
+            ctx.exit(3)
+        except TimeoutError as e:
+            click.echo(
+                OutputFormatter.format_error(str(e), fmt, code="TIMEOUT_ERROR"),
+                err=True,
+            )
+            ctx.exit(4)
+        except Exception as e:
+            click.echo(
+                OutputFormatter.format_error(str(e), fmt),
+                err=True,
+            )
+            ctx.exit(1)
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
 def bridge_command(bridge_cmd: str, timeout: float = 30.0):
     """CLIコマンドのボイラープレートを削減するデコレータ。
 
