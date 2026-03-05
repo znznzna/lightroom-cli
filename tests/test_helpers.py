@@ -190,3 +190,29 @@ class TestExecuteCommand:
         mock_bridge.send_command.assert_called_once_with(
             "system.ping", {}, timeout=120.0
         )
+
+    def test_sdk_connection_error_exit_code_3(self):
+        """SDK ConnectionError もビルトインと同じく exit code 3"""
+        from cli.helpers import execute_command
+        from lightroom_sdk.exceptions import ConnectionError as SDKConnectionError
+        mock_ctx = self._make_ctx()
+        mock_bridge = AsyncMock()
+        mock_bridge.send_command.side_effect = SDKConnectionError("refused")
+
+        with patch("cli.helpers.get_bridge", return_value=mock_bridge):
+            execute_command(mock_ctx, "system.ping", {})
+
+        mock_ctx.exit.assert_called_with(3)
+
+    def test_sdk_timeout_error_exit_code_4(self):
+        """SDK TimeoutError もビルトインと同じく exit code 4"""
+        from cli.helpers import execute_command
+        from lightroom_sdk.exceptions import TimeoutError as SDKTimeoutError
+        mock_ctx = self._make_ctx()
+        mock_bridge = AsyncMock()
+        mock_bridge.send_command.side_effect = SDKTimeoutError("timed out")
+
+        with patch("cli.helpers.get_bridge", return_value=mock_bridge):
+            execute_command(mock_ctx, "system.ping", {})
+
+        mock_ctx.exit.assert_called_with(4)

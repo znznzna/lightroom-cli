@@ -4,6 +4,18 @@ import click
 from cli.output import OutputFormatter
 
 
+def _is_connection_error(e: Exception) -> bool:
+    """ビルトイン ConnectionError と SDK ConnectionError の両方を判定"""
+    from lightroom_sdk.exceptions import ConnectionError as SDKConnectionError
+    return isinstance(e, (ConnectionError, SDKConnectionError))
+
+
+def _is_timeout_error(e: Exception) -> bool:
+    """ビルトイン TimeoutError と SDK TimeoutError の両方を判定"""
+    from lightroom_sdk.exceptions import TimeoutError as SDKTimeoutError
+    return isinstance(e, (TimeoutError, SDKTimeoutError))
+
+
 def get_bridge(port_file: str | None = None):
     """ResilientSocketBridgeインスタンスを取得（遅延import）"""
     from lightroom_sdk.resilient_bridge import ResilientSocketBridge
@@ -95,19 +107,21 @@ def execute_command(ctx, command: str, params: dict, *, timeout: float | None = 
             result = await bridge.send_command(command, validated, timeout=cmd_timeout)
             data = result.get("result", result)
             click.echo(OutputFormatter.format(data, fmt, fields=fields))
-        except ConnectionError as e:
-            click.echo(
-                OutputFormatter.format_error(str(e), fmt, code="CONNECTION_ERROR"),
-                err=True,
-            )
-            ctx.exit(3)
-        except TimeoutError as e:
-            click.echo(
-                OutputFormatter.format_error(str(e), fmt, code="TIMEOUT_ERROR"),
-                err=True,
-            )
-            ctx.exit(4)
         except Exception as e:
+            if _is_connection_error(e):
+                click.echo(
+                    OutputFormatter.format_error(str(e), fmt, code="CONNECTION_ERROR"),
+                    err=True,
+                )
+                ctx.exit(3)
+                return
+            if _is_timeout_error(e):
+                click.echo(
+                    OutputFormatter.format_error(str(e), fmt, code="TIMEOUT_ERROR"),
+                    err=True,
+                )
+                ctx.exit(4)
+                return
             click.echo(
                 OutputFormatter.format_error(str(e), fmt),
                 err=True,
@@ -121,13 +135,13 @@ def execute_command(ctx, command: str, params: dict, *, timeout: float | None = 
 
 def handle_error(ctx, error: Exception, fmt: str = "text"):
     """共通エラーハンドリング（execute_command を使わないコマンド用）"""
-    if isinstance(error, ConnectionError):
+    if _is_connection_error(error):
         click.echo(
             OutputFormatter.format_error(str(error), fmt, code="CONNECTION_ERROR"),
             err=True,
         )
         ctx.exit(3)
-    elif isinstance(error, TimeoutError):
+    elif _is_timeout_error(error):
         click.echo(
             OutputFormatter.format_error(str(error), fmt, code="TIMEOUT_ERROR"),
             err=True,
