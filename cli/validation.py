@@ -57,6 +57,22 @@ def validate_params(command: str, params: dict) -> dict:
     return validated
 
 
+def _check_range(name: str, value: int | float, schema: ParamSchema) -> None:
+    """min/max 範囲チェック。schema に min/max が未設定ならスキップ。"""
+    if schema.min is not None and value < schema.min:
+        raise ValidationError(
+            f"Value {value} for '{name}' is below minimum {schema.min}",
+            param=name,
+            suggestions=[f"Valid range: {schema.min} to {schema.max}"],
+        )
+    if schema.max is not None and value > schema.max:
+        raise ValidationError(
+            f"Value {value} for '{name}' is above maximum {schema.max}",
+            param=name,
+            suggestions=[f"Valid range: {schema.min} to {schema.max}"],
+        )
+
+
 def _coerce_type(name: str, value: object, schema: ParamSchema) -> object:
     """型変換を試みる。失敗時は ValidationError。"""
     try:
@@ -64,9 +80,13 @@ def _coerce_type(name: str, value: object, schema: ParamSchema) -> object:
             case ParamType.STRING:
                 return str(value)
             case ParamType.INTEGER:
-                return int(value)
+                result = int(value)
+                _check_range(name, result, schema)
+                return result
             case ParamType.FLOAT:
-                return float(value)
+                result = float(value)
+                _check_range(name, result, schema)
+                return result
             case ParamType.BOOLEAN:
                 if isinstance(value, bool):
                     return value
