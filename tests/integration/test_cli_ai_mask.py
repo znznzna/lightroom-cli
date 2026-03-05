@@ -202,3 +202,23 @@ def test_ai_adjust_and_preset_conflict(runner):
     ])
     assert result.exit_code == 0
     assert "Cannot use both" in result.output
+
+
+def test_ai_presets_lists_all(runner):
+    """lr develop ai presets が全プリセット名を出力する"""
+    result = runner.invoke(cli, ["develop", "ai", "presets"])
+    assert result.exit_code == 0
+    assert "darken-sky" in result.output
+    assert "brighten-subject" in result.output
+    assert "blur-background" in result.output
+    assert "warm-skin" in result.output
+    assert "enhance-landscape" in result.output
+
+
+def test_ai_presets_json_format(runner):
+    """lr develop ai presets -o json が JSON 形式で出力する"""
+    result = runner.invoke(cli, ["-o", "json", "develop", "ai", "presets"])
+    assert result.exit_code == 0
+    import json
+    data = json.loads(result.output)
+    assert "darken-sky" in data

@@ -130,3 +130,12 @@ ai.add_command(_make_ai_type_command(
     "landscape", has_part=True,
     part_choices=["mountain", "tree", "water", "building", "road"],
 ))
+
+
+@ai.command("presets")
+@click.pass_context
+def ai_presets(ctx):
+    """List available adjustment presets"""
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+    from lightroom_sdk.presets import AI_MASK_PRESETS
+    click.echo(OutputFormatter.format(AI_MASK_PRESETS, fmt))
