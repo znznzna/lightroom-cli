@@ -36,3 +36,39 @@ def test_text_output_nested():
 def test_format_error():
     result = OutputFormatter.format_error("Something went wrong", "text")
     assert "Error" in result or "error" in result.lower()
+
+
+class TestFieldsFiltering:
+    """--fields によるレスポンスフィールド制限テスト"""
+
+    def test_filter_dict_fields(self):
+        data = {"name": "photo.jpg", "rating": 5, "size": 1024}
+        result = OutputFormatter.format(data, "json", fields=["name", "rating"])
+        parsed = json.loads(result)
+        assert parsed == {"name": "photo.jpg", "rating": 5}
+        assert "size" not in parsed
+
+    def test_filter_list_of_dicts(self):
+        data = [
+            {"name": "a.jpg", "rating": 3, "size": 100},
+            {"name": "b.jpg", "rating": 5, "size": 200},
+        ]
+        result = OutputFormatter.format(data, "json", fields=["name"])
+        parsed = json.loads(result)
+        assert parsed == [{"name": "a.jpg"}, {"name": "b.jpg"}]
+
+    def test_no_fields_returns_all(self):
+        data = {"name": "photo.jpg", "rating": 5}
+        result = OutputFormatter.format(data, "json", fields=None)
+        parsed = json.loads(result)
+        assert parsed == {"name": "photo.jpg", "rating": 5}
+
+    def test_filter_non_dict_returns_as_is(self):
+        result = OutputFormatter.format("hello", "text", fields=["name"])
+        assert result == "hello"
+
+    def test_empty_fields_list_returns_empty_dict(self):
+        data = {"name": "photo.jpg", "rating": 5}
+        result = OutputFormatter.format(data, "json", fields=[])
+        parsed = json.loads(result)
+        assert parsed == {}

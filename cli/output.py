@@ -7,13 +7,24 @@ from rich.table import Table
 
 class OutputFormatter:
     @staticmethod
-    def format(data: Any, mode: str = "text") -> str:
+    def format(data: Any, mode: str = "text", fields: list[str] | None = None) -> str:
+        if fields is not None:
+            data = OutputFormatter._filter_fields(data, fields)
         if mode == "json":
             return json.dumps(data, indent=2, ensure_ascii=False)
         elif mode == "table":
             return OutputFormatter._format_table(data)
         else:
             return OutputFormatter._format_text(data)
+
+    @staticmethod
+    def _filter_fields(data: Any, fields: list[str]) -> Any:
+        """指定フィールドのみを残す（トップレベルのみ）"""
+        if isinstance(data, dict):
+            return {k: v for k, v in data.items() if k in fields}
+        elif isinstance(data, list):
+            return [OutputFormatter._filter_fields(item, fields) for item in data]
+        return data
 
     @staticmethod
     def _format_text(data: Any, indent: int = 0) -> str:
