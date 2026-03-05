@@ -49,6 +49,22 @@
 - [x] E2E テスト11件 ALL PASS (実機検証済み)
 - [x] ユニット/統合テスト 215件 ALL PASS
 
+### Agent-First CLI 最適化 (2026-03-05)
+
+設計書: `docs/plans/2026-03-05-agent-first-hardening-design.md`
+実装計画: `docs/plans/2026-03-05-agent-first-hardening.md`
+
+- [x] Phase 1-9: TTY検出, --fields, 構造化エラー, execute_command, lr schema, バリデーション, --dry-run, --json, 既存コマンド移行, SKILLS.md, テスト
+- [x] P1: min/max range validation, string sanitization, cli_constraints (supports_dry_run/requires_confirm/risk_level)
+- [x] P2: risk_level in dry-run, output sanitization, schema_hash, system status metadata
+- [x] 3モデルレビュー (Opus 42/Sonnet 38/Codex) → 討論 → MUST FIX 2件 + SHOULD FIX 5件 修正
+  - develop.resetMasking requires_confirm=True (risk_level不整合修正)
+  - JSON truncation に _truncated フラグ追加
+  - JSON_OBJECT/JSON_ARRAY 再帰サニタイズ
+  - SKILLS.md: mutating応答例, exit code リカバリ, JSON構造例追加
+- [x] SKILLS.md restructure: schema-first discovery (559→226行, 5,500→2,100トークン, 62%削減)
+- [x] 3モデル最終確認: Opus 46/50, Sonnet 46/50, Codex 合格 — 全会一致 Ship it
+
 ### 発見・修正した問題
 
 - `.lrdevplugin` は Modules ディレクトリの自動検出で認識されない → `.lrplugin` に変更
@@ -62,31 +78,13 @@
 
 ---
 
-## In Progress
-
-### Agent-First CLI 最適化 (2026-03-05 ~)
-
-設計書: `docs/plans/2026-03-05-agent-first-cli-design.md`
-実装計画: `docs/plans/2026-03-05-agent-first-cli-implementation.md` (22タスク / 9 Phase)
-
-- [x] Phase 1: TTY検出 + 環境変数 (Task 1-3) — middleware, main.py統合
-- [ ] Phase 2: --fields レスポンスフィルタ + 構造化エラー + execute_command (Task 4-6)
-- [ ] Phase 3: スキーマ定義 + lr schema コマンド (Task 7-9)
-- [ ] Phase 4: 入力バリデーション (Task 10-11)
-- [ ] Phase 5: --dry-run 全mutating (Task 12-13)
-- [ ] Phase 6: --json 入力統一 (Task 14-15)
-- [ ] Phase 7: 既存コマンド移行 (Task 16-20)
-- [ ] Phase 8: SKILLS.md 更新 (Task 21)
-- [ ] Phase 9: 全テスト + バージョンバンプ (Task 22)
-
----
-
 ## Backlog
 
-### CLI 最適化
+### P3: Agent-First 追加機能 (必要性は議論対象)
 
-- [x] コードレビュー (Codex CLI) — P1-P3 修正済み
-- [ ] CLI パフォーマンス改善 (起動時間等) — Agent-First最適化とは別
+- [ ] NDJSON streaming — 大量データのストリーミング出力
+- [ ] `lr invoke` — 汎用コマンドエントリポイント
+- [ ] 監査ログ — コマンド実行履歴の記録
 
 ### 配布
 
@@ -116,6 +114,6 @@
 
 ### 品質
 
-- [x] コードレビュー (Codex CLI) — AI mask 実装レビュー完了
+- [x] コードレビュー (Codex CLI) — AI mask + agent-first hardening 完了
 - [ ] カバレッジレポート
 - [ ] ruff / mypy 導入
