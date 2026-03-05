@@ -238,3 +238,19 @@ def test_ai_list_calls_get_all_masks(mock_get_bridge, runner):
     mock_bridge.send_command.assert_called_once_with(
         "develop.getAllMasks", {}, timeout=30.0,
     )
+
+
+@patch("cli.commands.ai_mask.get_bridge")
+def test_ai_reset_calls_reset_masking(mock_get_bridge, runner):
+    """lr develop ai reset が develop.resetMasking を呼ぶ"""
+    mock_bridge = AsyncMock()
+    mock_bridge.send_command.return_value = {
+        "id": "1", "success": True,
+        "result": {"message": "All masks reset"},
+    }
+    mock_get_bridge.return_value = mock_bridge
+    result = runner.invoke(cli, ["develop", "ai", "reset"])
+    assert result.exit_code == 0
+    mock_bridge.send_command.assert_called_once_with(
+        "develop.resetMasking", {}, timeout=30.0,
+    )

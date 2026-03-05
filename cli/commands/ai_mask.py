@@ -141,6 +141,26 @@ def ai_presets(ctx):
     click.echo(OutputFormatter.format(AI_MASK_PRESETS, fmt))
 
 
+@ai.command("reset")
+@click.pass_context
+def ai_reset(ctx):
+    """Remove all masks from the current photo"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command("develop.resetMasking", {}, timeout=timeout)
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
+
+
 @ai.command("list")
 @click.pass_context
 def ai_list(ctx):
