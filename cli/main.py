@@ -23,9 +23,11 @@ def cli(ctx, output, verbose, timeout, fields):
     ctx.obj["fields"] = resolve_fields(fields)
 
     if ctx.obj["verbose"]:
-        logging.basicConfig(level=logging.DEBUG)
+        logging.basicConfig(level=logging.DEBUG, force=True)
+    elif ctx.obj["output"] == "json":
+        logging.basicConfig(level=logging.ERROR, force=True)
     else:
-        logging.basicConfig(level=logging.WARNING)
+        logging.basicConfig(level=logging.WARNING, force=True)
 
 
 from cli.commands.system import system
