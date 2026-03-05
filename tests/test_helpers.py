@@ -149,6 +149,22 @@ class TestExecuteCommand:
 
         mock_bridge.send_command.assert_called_once()
 
+    def test_json_input_overrides_params(self):
+        from cli.helpers import execute_command
+        mock_ctx = self._make_ctx(params={"json_str": '{"parameter": "Contrast", "value": 50}'})
+        mock_bridge = AsyncMock()
+        mock_bridge.send_command.return_value = {"result": {"ok": True}}
+
+        with patch("cli.helpers.get_bridge", return_value=mock_bridge):
+            execute_command(
+                mock_ctx, "develop.setValue",
+                {"parameter": "Exposure", "value": 0.5}
+            )
+
+        call_args = mock_bridge.send_command.call_args
+        assert call_args[0][1]["parameter"] == "Contrast"
+        assert call_args[0][1]["value"] == 50
+
     def test_zero_timeout_not_treated_as_falsy(self):
         from cli.helpers import execute_command
         mock_ctx = self._make_ctx()

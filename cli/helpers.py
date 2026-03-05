@@ -30,6 +30,22 @@ def execute_command(ctx, command: str, params: dict, *, timeout: float | None = 
     fields = ctx.obj.get("fields") if ctx.obj else None
     cmd_timeout = timeout if timeout is not None else (ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0)
 
+    # --json 入力チェック
+    json_str = getattr(ctx, "params", {}).get("json_str")
+    if json_str:
+        from cli.decorators import parse_json_input
+        try:
+            json_params = parse_json_input(json_str, None)
+            if json_params is not None:
+                params = json_params
+        except click.BadParameter as e:
+            click.echo(
+                OutputFormatter.format_error(str(e), fmt, code="VALIDATION_ERROR"),
+                err=True,
+            )
+            ctx.exit(2)
+            return
+
     # dry-run チェック
     if getattr(ctx, "params", {}).get("dry_run", False):
         from lightroom_sdk.schema import get_schema
