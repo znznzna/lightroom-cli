@@ -7,7 +7,7 @@
   "plugins": [
     {
       "name": "lightroom-cli",
-      "source": ".",
+      "source": "./plugin",
       "description": "Control Adobe Lightroom Classic via CLI — 107 commands for full Lightroom control",
       "version": "1.0.0"
     }
