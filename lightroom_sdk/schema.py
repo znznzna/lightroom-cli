@@ -35,6 +35,16 @@ class CommandSchema:
     mutating: bool = False
     timeout: float = 30.0
     response_fields: list[str] = field(default_factory=list)
+    supports_dry_run: bool = False
+    requires_confirm: bool = False
+
+    @property
+    def risk_level(self) -> str:
+        if self.requires_confirm:
+            return "destructive"
+        if self.mutating:
+            return "write"
+        return "read"
 
 
 # ---------------------------------------------------------------------------
@@ -87,7 +97,7 @@ _register(
             ParamSchema("value", ParamType.FLOAT, required=True,
                         description="Parameter value"),
         ],
-        mutating=True, timeout=10.0,
+        mutating=True, timeout=10.0, supports_dry_run=True,
         response_fields=["parameter", "value", "previousValue"],
     ),
     CommandSchema(
@@ -106,7 +116,7 @@ _register(
             ParamSchema("settings", ParamType.JSON_OBJECT, required=True,
                         description="JSON object of settings to apply"),
         ],
-        mutating=True,
+        mutating=True, supports_dry_run=True,
         response_fields=["applied", "settings"],
     ),
     CommandSchema(
@@ -116,19 +126,19 @@ _register(
             ParamSchema("settings", ParamType.JSON_OBJECT, required=True,
                         description="JSON object of settings to apply"),
         ],
-        mutating=True,
+        mutating=True, supports_dry_run=True,
         response_fields=["applied", "settings"],
     ),
     CommandSchema(
         "develop.setAutoTone", "develop.auto-tone",
         "Apply auto tone adjustments",
-        mutating=True,
+        mutating=True, supports_dry_run=True,
         response_fields=["status"],
     ),
     CommandSchema(
         "develop.setAutoWhiteBalance", "develop.auto-wb",
         "Apply auto white balance",
-        mutating=True,
+        mutating=True, supports_dry_run=True,
         response_fields=["status"],
     ),
     CommandSchema(
@@ -146,7 +156,7 @@ _register(
     CommandSchema(
         "develop.resetAllDevelopAdjustments", "develop.reset",
         "Reset develop settings to defaults",
-        mutating=True,
+        mutating=True, supports_dry_run=True,
     ),
     CommandSchema(
         "develop.getRange", "develop.range",
@@ -164,7 +174,7 @@ _register(
             ParamSchema("param", ParamType.STRING, required=True,
                         description="Develop parameter name to reset"),
         ],
-        mutating=True,
+        mutating=True, supports_dry_run=True,
     ),
     CommandSchema(
         "develop.getProcessVersion", "develop.process-version",
@@ -178,7 +188,7 @@ _register(
             ParamSchema("version", ParamType.STRING, required=True,
                         description="Process version string (e.g., 6.7)"),
         ],
-        mutating=True,
+        mutating=True, supports_dry_run=True,
     ),
 )
 
@@ -202,21 +212,21 @@ _register(
             ParamSchema("points", ParamType.JSON_ARRAY, required=True,
                         description="Array of {x, y} control points, each 0-255"),
         ],
-        mutating=True,
+        mutating=True, supports_dry_run=True,
     ),
     CommandSchema(
         "develop.setCurveLinear", "develop.curve.linear",
         "Reset curve to linear",
         params=[ParamSchema("param", ParamType.STRING, required=True,
                             description="Curve parameter name")],
-        mutating=True,
+        mutating=True, supports_dry_run=True,
     ),
     CommandSchema(
         "develop.setCurveSCurve", "develop.curve.s-curve",
         "Apply S-curve preset",
         params=[ParamSchema("param", ParamType.STRING, required=True,
                             description="Curve parameter name")],
-        mutating=True,
+        mutating=True, supports_dry_run=True,
     ),
     CommandSchema(
         "develop.addCurvePoint", "develop.curve.add-point",
@@ -229,7 +239,7 @@ _register(
             ParamSchema("y", ParamType.FLOAT, required=True,
                         description="Y coordinate (output value, 0-255)"),
         ],
-        mutating=True,
+        mutating=True, supports_dry_run=True,
     ),
     CommandSchema(
         "develop.removeCurvePoint", "develop.curve.remove-point",
@@ -240,7 +250,7 @@ _register(
             ParamSchema("index", ParamType.INTEGER, required=True,
                         description="Zero-based index of the point to remove"),
         ],
-        mutating=True,
+        mutating=True, supports_dry_run=True,
     ),
 )
 
@@ -273,7 +283,7 @@ _register(
             ParamSchema("value", ParamType.FLOAT, required=True,
                         description="Numeric value to set"),
         ],
-        mutating=True,
+        mutating=True, supports_dry_run=True,
     ),
     CommandSchema(
         "develop.applyLocalSettings", "develop.local.apply",
@@ -282,7 +292,7 @@ _register(
             ParamSchema("settings", ParamType.JSON_OBJECT, required=True,
                         description="JSON object of local adjustment settings"),
         ],
-        mutating=True,
+        mutating=True, supports_dry_run=True,
     ),
     CommandSchema(
         "develop.getAvailableLocalParameters", "develop.local.params",
@@ -299,18 +309,18 @@ _register(
             ParamSchema("localSettings", ParamType.JSON_OBJECT,
                         description="Local adjustment settings to apply to the mask"),
         ],
-        mutating=True,
+        mutating=True, supports_dry_run=True,
     ),
 )
 
 # --- develop.filter ---
 _register(
     CommandSchema("develop.createGraduatedFilter", "develop.filter.graduated",
-                  "Create a graduated filter", mutating=True),
+                  "Create a graduated filter", mutating=True, supports_dry_run=True),
     CommandSchema("develop.createRadialFilter", "develop.filter.radial",
-                  "Create a radial filter", mutating=True),
+                  "Create a radial filter", mutating=True, supports_dry_run=True),
     CommandSchema("develop.createAdjustmentBrush", "develop.filter.brush",
-                  "Create an adjustment brush", mutating=True),
+                  "Create an adjustment brush", mutating=True, supports_dry_run=True),
     CommandSchema(
         "develop.createRangeMask", "develop.filter.range",
         "Create a range mask",
@@ -319,51 +329,51 @@ _register(
                         description="Range mask type",
                         enum_values=["luminance", "color", "depth"]),
         ],
-        mutating=True,
+        mutating=True, supports_dry_run=True,
     ),
 )
 
 # --- develop reset commands ---
 _register(
     CommandSchema("develop.resetGradient", "develop.reset-gradient",
-                  "Reset gradient filter", mutating=True),
+                  "Reset gradient filter", mutating=True, supports_dry_run=True),
     CommandSchema("develop.resetCircularGradient", "develop.reset-circular",
-                  "Reset circular gradient filter", mutating=True),
+                  "Reset circular gradient filter", mutating=True, supports_dry_run=True),
     CommandSchema("develop.resetBrushing", "develop.reset-brush",
-                  "Reset adjustment brush", mutating=True),
+                  "Reset adjustment brush", mutating=True, supports_dry_run=True),
     CommandSchema("develop.resetMasking", "develop.reset-masking",
-                  "Reset masking", mutating=True),
+                  "Reset masking", mutating=True, supports_dry_run=True),
     CommandSchema("develop.resetCrop", "develop.reset-crop",
-                  "Reset crop", mutating=True),
+                  "Reset crop", mutating=True, supports_dry_run=True),
     CommandSchema("develop.resetTransforms", "develop.reset-transforms",
-                  "Reset transforms", mutating=True),
+                  "Reset transforms", mutating=True, supports_dry_run=True),
     CommandSchema("develop.resetSpotRemoval", "develop.reset-spot",
-                  "Reset spot removal", mutating=True),
+                  "Reset spot removal", mutating=True, supports_dry_run=True),
     CommandSchema("develop.resetRedeye", "develop.reset-redeye",
-                  "Reset red eye removal", mutating=True),
+                  "Reset red eye removal", mutating=True, supports_dry_run=True),
     CommandSchema("develop.resetHealing", "develop.reset-healing",
-                  "Reset healing", mutating=True),
+                  "Reset healing", mutating=True, supports_dry_run=True),
 )
 
 # --- develop other ---
 _register(
     CommandSchema("develop.editInPhotoshop", "develop.edit-in-photoshop",
-                  "Open current photo in Photoshop", mutating=True),
+                  "Open current photo in Photoshop", mutating=True, supports_dry_run=True),
     CommandSchema("catalog.applyDevelopPreset", "develop.preset",
                   "Apply a develop preset by name",
                   params=[ParamSchema("presetName", ParamType.STRING, required=True,
                                       description="Preset name to apply")],
-                  mutating=True),
+                  mutating=True, supports_dry_run=True),
     CommandSchema("catalog.createDevelopSnapshot", "develop.snapshot",
                   "Create a develop snapshot",
                   params=[ParamSchema("name", ParamType.STRING, required=True,
                                       description="Snapshot name")],
-                  mutating=True),
+                  mutating=True, supports_dry_run=True),
     CommandSchema("catalog.copySettings", "develop.copy-settings",
                   "Copy develop settings from selected photo",
                   response_fields=["status"]),
     CommandSchema("catalog.pasteSettings", "develop.paste-settings",
-                  "Paste develop settings to selected photo", mutating=True),
+                  "Paste develop settings to selected photo", mutating=True, supports_dry_run=True),
 )
 
 # --- develop.debug ---
@@ -383,15 +393,15 @@ _register(
 # --- develop.color ---
 _register(
     CommandSchema("develop.createGreenSwatch", "develop.color.green-swatch",
-                  "Create green color swatch", mutating=True),
+                  "Create green color swatch", mutating=True, supports_dry_run=True),
     CommandSchema("develop.createCyanSwatch", "develop.color.cyan-swatch",
-                  "Create cyan color swatch", mutating=True),
+                  "Create cyan color swatch", mutating=True, supports_dry_run=True),
     CommandSchema("develop.enhanceColors", "develop.color.enhance",
                   "Enhance colors",
                   params=[ParamSchema("preset", ParamType.ENUM,
                                       description="Color enhancement preset",
                                       enum_values=["natural", "vivid", "muted"])],
-                  mutating=True),
+                  mutating=True, supports_dry_run=True),
 )
 
 # --- develop.ai (individual types) ---
@@ -415,7 +425,7 @@ for _ai_type in _AI_TYPES:
                 ParamSchema("adjustments", ParamType.JSON_OBJECT,
                             description="Optional develop adjustments to apply"),
             ],
-            mutating=True, timeout=60.0,
+            mutating=True, timeout=60.0, supports_dry_run=True,
         ),
     )
 
@@ -435,7 +445,7 @@ _register(
             ParamSchema("part", ParamType.STRING,
                         description="Specific part to mask"),
         ],
-        mutating=True, timeout=60.0,
+        mutating=True, timeout=60.0, supports_dry_run=True,
     ),
 )
 
@@ -444,7 +454,8 @@ _register(
                   "List available adjustment presets",
                   response_fields=["presets"]),
     CommandSchema("develop.ai.reset", "develop.ai.reset",
-                  "Remove all masks from the current photo", mutating=True),
+                  "Remove all masks from the current photo",
+                  mutating=True, supports_dry_run=True, requires_confirm=True),
     CommandSchema("develop.ai.list", "develop.ai.list",
                   "List all masks on the current photo",
                   response_fields=["masks", "count"]),
@@ -465,7 +476,7 @@ _register(
             ParamSchema("continueOnError", ParamType.BOOLEAN, default=False,
                         description="Continue processing if a photo fails"),
         ],
-        mutating=True, timeout=300.0,
+        mutating=True, timeout=300.0, supports_dry_run=True,
     ),
 )
 
@@ -515,7 +526,7 @@ _register(
             ParamSchema("rating", ParamType.INTEGER, required=True,
                         description="Star rating (0-5)", min=0, max=5),
         ],
-        mutating=True,
+        mutating=True, supports_dry_run=True,
         response_fields=["photoId", "rating"],
     ),
     CommandSchema(
@@ -527,7 +538,7 @@ _register(
             ParamSchema("keywords", ParamType.JSON_ARRAY, required=True,
                         description="Array of keyword strings to add"),
         ],
-        mutating=True,
+        mutating=True, supports_dry_run=True,
         response_fields=["photoId", "keywords"],
     ),
     CommandSchema(
@@ -539,7 +550,7 @@ _register(
             ParamSchema("flag", ParamType.INTEGER, required=True,
                         description="Flag value (1=pick, -1=reject, 0=none)"),
         ],
-        mutating=True,
+        mutating=True, supports_dry_run=True,
         response_fields=["photoId", "flag"],
     ),
     CommandSchema(
@@ -569,7 +580,7 @@ _register(
             ParamSchema("photoIds", ParamType.JSON_ARRAY, required=True,
                         description="Array of photo ID strings to select"),
         ],
-        mutating=True,
+        mutating=True, supports_dry_run=True,
     ),
     CommandSchema(
         "catalog.findPhotoByPath", "catalog.find-by-path",
@@ -600,7 +611,7 @@ _register(
             ParamSchema("title", ParamType.STRING, required=True,
                         description="Title text to set"),
         ],
-        mutating=True,
+        mutating=True, supports_dry_run=True,
     ),
     CommandSchema(
         "catalog.setCaption", "catalog.set-caption",
@@ -611,7 +622,7 @@ _register(
             ParamSchema("caption", ParamType.STRING, required=True,
                         description="Caption text to set"),
         ],
-        mutating=True,
+        mutating=True, supports_dry_run=True,
     ),
     CommandSchema(
         "catalog.setColorLabel", "catalog.set-color-label",
@@ -623,7 +634,7 @@ _register(
                         description="Color label to set",
                         enum_values=["red", "yellow", "green", "blue", "purple", "none"]),
         ],
-        mutating=True,
+        mutating=True, supports_dry_run=True,
     ),
     CommandSchema(
         "catalog.batchGetFormattedMetadata", "catalog.batch-metadata",
@@ -637,11 +648,11 @@ _register(
         response_fields=["photos", "keys"],
     ),
     CommandSchema("catalog.rotateLeft", "catalog.rotate-left",
-                  "Rotate selected photo left", mutating=True),
+                  "Rotate selected photo left", mutating=True, supports_dry_run=True),
     CommandSchema("catalog.rotateRight", "catalog.rotate-right",
-                  "Rotate selected photo right", mutating=True),
+                  "Rotate selected photo right", mutating=True, supports_dry_run=True),
     CommandSchema("catalog.createVirtualCopy", "catalog.create-virtual-copy",
-                  "Create virtual copy of selected photo", mutating=True),
+                  "Create virtual copy of selected photo", mutating=True, supports_dry_run=True),
     CommandSchema(
         "catalog.setMetadata", "catalog.set-metadata",
         "Set arbitrary metadata key/value",
@@ -653,14 +664,14 @@ _register(
             ParamSchema("value", ParamType.STRING, required=True,
                         description="Metadata value to set"),
         ],
-        mutating=True,
+        mutating=True, supports_dry_run=True,
     ),
     CommandSchema(
         "catalog.createCollection", "catalog.create-collection",
         "Create a new collection",
         params=[ParamSchema("name", ParamType.STRING, required=True,
                             description="Collection name")],
-        mutating=True,
+        mutating=True, supports_dry_run=True,
     ),
     CommandSchema(
         "catalog.createSmartCollection", "catalog.create-smart-collection",
@@ -671,21 +682,21 @@ _register(
             ParamSchema("searchDesc", ParamType.JSON_OBJECT,
                         description="Search criteria as JSON object"),
         ],
-        mutating=True,
+        mutating=True, supports_dry_run=True,
     ),
     CommandSchema(
         "catalog.createCollectionSet", "catalog.create-collection-set",
         "Create a collection set",
         params=[ParamSchema("name", ParamType.STRING, required=True,
                             description="Collection set name")],
-        mutating=True,
+        mutating=True, supports_dry_run=True,
     ),
     CommandSchema(
         "catalog.createKeyword", "catalog.create-keyword",
         "Create a keyword in catalog",
         params=[ParamSchema("keyword", ParamType.STRING, required=True,
                             description="Keyword string to create")],
-        mutating=True,
+        mutating=True, supports_dry_run=True,
     ),
     CommandSchema(
         "catalog.removeKeyword", "catalog.remove-keyword",
@@ -696,14 +707,14 @@ _register(
             ParamSchema("keyword", ParamType.STRING, required=True,
                         description="Keyword string to remove"),
         ],
-        mutating=True,
+        mutating=True, supports_dry_run=True,
     ),
     CommandSchema(
         "catalog.setViewFilter", "catalog.set-view-filter",
         "Set view filter",
         params=[ParamSchema("filter", ParamType.JSON_OBJECT, required=True,
                             description="View filter criteria as JSON object")],
-        mutating=True,
+        mutating=True, supports_dry_run=True,
     ),
     CommandSchema("catalog.getCurrentViewFilter", "catalog.get-view-filter",
                   "Get current view filter",
@@ -713,18 +724,18 @@ _register(
         "Remove photo from catalog",
         params=[ParamSchema("photoId", ParamType.STRING, required=True,
                             description="Photo ID to remove from catalog")],
-        mutating=True,
+        mutating=True, supports_dry_run=True, requires_confirm=True,
     ),
 )
 
 # --- selection ---
 _register(
     CommandSchema("selection.flagAsPick", "selection.flag",
-                  "Flag selected photo(s) as Pick", mutating=True),
+                  "Flag selected photo(s) as Pick", mutating=True, supports_dry_run=True),
     CommandSchema("selection.flagAsReject", "selection.reject",
-                  "Flag selected photo(s) as Reject", mutating=True),
+                  "Flag selected photo(s) as Reject", mutating=True, supports_dry_run=True),
     CommandSchema("selection.removeFlag", "selection.unflag",
-                  "Remove flag from selected photo(s)", mutating=True),
+                  "Remove flag from selected photo(s)", mutating=True, supports_dry_run=True),
     CommandSchema("selection.nextPhoto", "selection.next",
                   "Move to next photo",
                   response_fields=["status"]),
@@ -739,18 +750,18 @@ _register(
                         description="Color label to set",
                         enum_values=["red", "yellow", "green", "blue", "purple", "none"]),
         ],
-        mutating=True,
+        mutating=True, supports_dry_run=True,
     ),
     CommandSchema("selection.selectAll", "selection.select-all",
-                  "Select all photos", mutating=True),
+                  "Select all photos", mutating=True, supports_dry_run=True),
     CommandSchema("selection.selectNone", "selection.select-none",
-                  "Deselect all photos", mutating=True),
+                  "Deselect all photos", mutating=True, supports_dry_run=True),
     CommandSchema("selection.selectInverse", "selection.select-inverse",
-                  "Invert the current selection", mutating=True),
+                  "Invert the current selection", mutating=True, supports_dry_run=True),
     CommandSchema("selection.increaseRating", "selection.increase-rating",
-                  "Increase rating by 1", mutating=True),
+                  "Increase rating by 1", mutating=True, supports_dry_run=True),
     CommandSchema("selection.decreaseRating", "selection.decrease-rating",
-                  "Decrease rating by 1", mutating=True),
+                  "Decrease rating by 1", mutating=True, supports_dry_run=True),
     CommandSchema(
         "selection.toggleColorLabel", "selection.toggle-label",
         "Toggle color label for selected photo(s)",
@@ -759,7 +770,7 @@ _register(
                         description="Color label to toggle",
                         enum_values=["red", "yellow", "green", "blue", "purple"]),
         ],
-        mutating=True,
+        mutating=True, supports_dry_run=True,
     ),
     CommandSchema(
         "selection.extendSelection", "selection.extend",
@@ -771,12 +782,12 @@ _register(
             ParamSchema("amount", ParamType.INTEGER, default=1,
                         description="Number of photos to extend by"),
         ],
-        mutating=True,
+        mutating=True, supports_dry_run=True,
     ),
     CommandSchema("selection.deselectActive", "selection.deselect-active",
-                  "Deselect the active photo", mutating=True),
+                  "Deselect the active photo", mutating=True, supports_dry_run=True),
     CommandSchema("selection.deselectOthers", "selection.deselect-others",
-                  "Deselect all except active photo", mutating=True),
+                  "Deselect all except active photo", mutating=True, supports_dry_run=True),
     CommandSchema("selection.getFlag", "selection.get-flag",
                   "Get flag status of selected photo",
                   response_fields=["flag"]),
@@ -790,7 +801,7 @@ _register(
             ParamSchema("rating", ParamType.INTEGER, required=True,
                         description="Rating 0-5", min=0, max=5),
         ],
-        mutating=True,
+        mutating=True, supports_dry_run=True,
     ),
     CommandSchema("selection.getColorLabel", "selection.get-color-label",
                   "Get color label of selected photo",
