@@ -261,16 +261,12 @@ lightroom-cli/
 │   ├── resilient_bridge.py   # 自動再接続 + ハートビート
 │   ├── retry.py              # コマンド別タイムアウト
 │   └── protocol.py           # JSON-RPC プロトコル
-├── lightroom-plugin/         # Lua プラグイン
-│   ├── PluginInit.lua        # コマンドルーター (107 commands)
-│   ├── DevelopModule.lua     # 現像操作
-│   ├── CatalogModule.lua     # カタログ操作
-│   ├── SelectionModule.lua   # 選択操作
-│   ├── PreviewModule.lua     # プレビュー操作
-│   └── SocketServer.lua      # TCP サーバー
-├── scripts/                  # インストールスクリプト
-├── tests/                    # pytest テストスイート (165 tests)
-└── docs/                     # ドキュメント
+│   └── plugin/               # Lua プラグイン (バンドル)
+│       ├── PluginInit.lua    # コマンドルーター (107 commands)
+│       ├── DevelopModule.lua # 現像操作
+│       └── CatalogModule.lua # カタログ操作
+├── tests/                    # pytest テストスイート (680+ tests)
+└── homebrew/                 # Homebrew Formula
 ```
 
 ## Requirements

@@ -40,10 +40,4 @@ def get_lightroom_modules_dir() -> Path:
 
 
 def get_plugin_source_dir() -> Path:
-    repo_dir = Path(__file__).parent.parent / "lightroom-plugin"
-    if repo_dir.exists():
-        return repo_dir
-
-    import importlib.resources as pkg_resources
-
-    return Path(str(pkg_resources.files("lightroom_cli_plugin")))
+    return Path(__file__).parent / "plugin"

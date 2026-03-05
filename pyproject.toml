@@ -6,6 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "lightroom-cli"
 version = "2.0.0"
 description = "CLI tool for Adobe Lightroom Classic — 107 commands for full Lightroom control"
+authors = [{name = "M.Endo", email = "motoki@clockwork-sound.com"}]
 readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.10"
@@ -43,7 +44,10 @@ Issues = "https://github.com/znznzna/lightroom-cli/issues"
 lr = "cli.main:cli"
 
 [tool.setuptools]
-packages = ["lightroom_sdk", "cli", "cli.commands"]
+packages = ["lightroom_sdk", "lightroom_sdk.types", "cli", "cli.commands"]
+
+[tool.setuptools.package-data]
+lightroom_sdk = ["plugin/*.lua"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -69,5 +73,3 @@ line-length = 120
 select = ["E", "F", "W", "I"]
 ignore = ["E402"]
 
-[tool.ruff.lint.per-file-ignores]
-"scripts/*" = ["F841"]

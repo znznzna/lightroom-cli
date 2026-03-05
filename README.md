@@ -277,16 +277,11 @@ lightroom-cli/
 |   +-- retry.py              # Per-command timeout
 |   +-- protocol.py           # JSON-RPC protocol
 |   +-- paths.py              # Path resolution utilities
-+-- lightroom-plugin/         # Lua plugin
-|   +-- PluginInit.lua        # Command router (107 commands)
-|   +-- DevelopModule.lua     # Develop operations
-|   +-- CatalogModule.lua     # Catalog operations
-|   +-- SelectionModule.lua   # Selection operations
-|   +-- PreviewModule.lua     # Preview operations
-|   +-- SocketServer.lua      # TCP server
-+-- scripts/                  # Installation scripts
-+-- tests/                    # pytest test suite (189+ tests)
-+-- docs/                     # Documentation
+|   +-- plugin/               # Lua plugin (bundled)
+|       +-- PluginInit.lua    # Command router (107 commands)
+|       +-- DevelopModule.lua # Develop operations
+|       +-- CatalogModule.lua # Catalog operations
++-- tests/                    # pytest test suite (680+ tests)
 ```
 
 ## Requirements

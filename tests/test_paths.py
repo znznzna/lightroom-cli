@@ -63,7 +63,7 @@ class TestGetPluginSourceDir:
         from lightroom_sdk.paths import get_plugin_source_dir
 
         result = get_plugin_source_dir()
-        assert result.name == "lightroom-plugin"
+        assert result.name == "plugin"
         assert result.exists()
 
     def test_contains_info_lua(self):
