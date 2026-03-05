@@ -148,12 +148,17 @@ class ConnectionManager:
             await self._client.connect()
         return self._client
 
-    async def get_status(self) -> dict[str, Any]:
-        """Get connection status for MCP resource."""
+    async def get_status(self) -> str:
+        """Get connection status for MCP resource (JSON string).
+
+        fastmcp >=3.0 のリソースは str / bytes を返す必要がある。
+        """
+        import json
+
         if self._client is None:
-            return {"connected": False, "state": "disconnected"}
+            return json.dumps({"connected": False, "state": "disconnected"})
         state = self._client._bridge.state.value
-        return {"connected": state == "connected", "state": state}
+        return json.dumps({"connected": state == "connected", "state": state})
 
     async def shutdown(self) -> None:
         """Clean shutdown."""

@@ -1,10 +1,14 @@
 """Schema-driven MCP tool registration.
 
 Converts COMMAND_SCHEMAS into FastMCP tools automatically.
+
+fastmcp >=3.0 では **kwargs 関数を tool として登録できないため、
+各コマンドのパラメータから明示的シグネチャを持つ関数を動的生成する。
 """
 
 from __future__ import annotations
 
+import inspect
 import re
 from typing import TYPE_CHECKING, Any, Literal, Optional
 
@@ -114,49 +118,80 @@ def build_param_field(param: ParamSchema) -> tuple[type, FieldInfo]:
 def create_tool_function(
     schema: CommandSchema, connection: "ConnectionManager | None"
 ) -> Any:
-    """Create an async tool function for a given CommandSchema."""
+    """Create an async tool function for a given CommandSchema.
+
+    fastmcp >=3.0 では **kwargs を持つ関数を tool 登録できないため、
+    inspect.Parameter で明示的シグネチャを持つ関数を動的生成する。
+    """
     tool_name = sanitize_tool_name(schema.command)
 
+    # パラメータ情報を収集
     param_annotations: dict[str, type] = {}
-    param_defaults: dict[str, FieldInfo] = {}
+    param_fields: dict[str, FieldInfo] = {}
+    sig_params: list[inspect.Parameter] = []
 
     if schema.params:
-        for param in schema.params:
-            annotation, field = build_param_field(param)
-            param_annotations[param.name] = annotation
-            param_defaults[param.name] = field
+        for param_schema in schema.params:
+            annotation, field = build_param_field(param_schema)
+            param_annotations[param_schema.name] = annotation
+            param_fields[param_schema.name] = field
+
+            default = field.default if field.default is not ... else inspect.Parameter.empty
+            sig_params.append(
+                inspect.Parameter(
+                    name=param_schema.name,
+                    kind=inspect.Parameter.KEYWORD_ONLY,
+                    default=default,
+                    annotation=annotation,
+                )
+            )
+
+    # mutating コマンドには dry_run パラメータを追加
+    if schema.mutating:
+        sig_params.append(
+            inspect.Parameter(
+                name="dry_run",
+                kind=inspect.Parameter.KEYWORD_ONLY,
+                default=False,
+                annotation=bool,
+            )
+        )
+        param_annotations["dry_run"] = bool
+
+    sig = inspect.Signature(parameters=sig_params)
+
+    # クロージャで schema と connection をキャプチャ
+    _schema = schema
+    _connection = connection
 
     async def tool_fn(**kwargs: Any) -> Any:
-        if connection is None:
+        if _connection is None:
             return {"error": "No connection manager configured"}
 
         dry_run = kwargs.pop("dry_run", False)
-        if dry_run and schema.mutating:
+        if dry_run and _schema.mutating:
             return {
                 "dry_run": True,
-                "command": schema.command,
-                "mutating": schema.mutating,
-                "risk_level": schema.risk_level,
+                "command": _schema.command,
+                "mutating": _schema.mutating,
+                "risk_level": _schema.risk_level,
                 "params": kwargs,
             }
 
-        return await connection.execute(
-            command=schema.command,
-            params=kwargs,
-            timeout=schema.timeout,
-            mutating=schema.mutating,
+        # None のオプションパラメータを除去
+        filtered = {k: v for k, v in kwargs.items() if v is not None}
+
+        return await _connection.execute(
+            command=_schema.command,
+            params=filtered,
+            timeout=_schema.timeout,
+            mutating=_schema.mutating,
         )
 
     tool_fn.__name__ = tool_name
     tool_fn.__qualname__ = tool_name
-
+    tool_fn.__signature__ = sig
     tool_fn.__annotations__ = param_annotations.copy()
-    if param_defaults:
-        tool_fn.__kwdefaults__ = {
-            name: field.default
-            for name, field in param_defaults.items()
-            if field.default is not ...
-        }
 
     return tool_fn
 
