@@ -36,3 +36,48 @@ class TestResolveOutputFormat:
         monkeypatch.delenv("LR_OUTPUT", raising=False)
         monkeypatch.setattr(sys.stdout, "isatty", lambda: True)
         assert resolve_output_format(None) == "text"
+
+
+class TestResolveTimeout:
+    """resolve_timeout() のテスト"""
+
+    def test_explicit_timeout_takes_priority(self):
+        from cli.middleware import resolve_timeout
+        assert resolve_timeout(60.0) == 60.0
+
+    def test_env_var_used_when_no_explicit(self, monkeypatch):
+        from cli.middleware import resolve_timeout
+        monkeypatch.setenv("LR_TIMEOUT", "45.0")
+        assert resolve_timeout(None) == 45.0
+
+    def test_invalid_env_var_returns_default(self, monkeypatch):
+        from cli.middleware import resolve_timeout
+        monkeypatch.setenv("LR_TIMEOUT", "not_a_number")
+        assert resolve_timeout(None) == 30.0
+
+    def test_no_env_returns_default(self, monkeypatch):
+        from cli.middleware import resolve_timeout
+        monkeypatch.delenv("LR_TIMEOUT", raising=False)
+        assert resolve_timeout(None) == 30.0
+
+
+class TestResolveFields:
+    """resolve_fields() のテスト"""
+
+    def test_explicit_fields_parsed(self):
+        from cli.middleware import resolve_fields
+        assert resolve_fields("name,rating") == ["name", "rating"]
+
+    def test_env_var_fields(self, monkeypatch):
+        from cli.middleware import resolve_fields
+        monkeypatch.setenv("LR_FIELDS", "fileName,dateTimeOriginal")
+        assert resolve_fields(None) == ["fileName", "dateTimeOriginal"]
+
+    def test_strips_whitespace(self):
+        from cli.middleware import resolve_fields
+        assert resolve_fields(" name , rating ") == ["name", "rating"]
+
+    def test_none_when_not_set(self, monkeypatch):
+        from cli.middleware import resolve_fields
+        monkeypatch.delenv("LR_FIELDS", raising=False)
+        assert resolve_fields(None) is None
