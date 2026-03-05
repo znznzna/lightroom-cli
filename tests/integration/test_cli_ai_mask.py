@@ -222,3 +222,19 @@ def test_ai_presets_json_format(runner):
     import json
     data = json.loads(result.output)
     assert "darken-sky" in data
+
+
+@patch("cli.commands.ai_mask.get_bridge")
+def test_ai_list_calls_get_all_masks(mock_get_bridge, runner):
+    """lr develop ai list が develop.getAllMasks を呼ぶ"""
+    mock_bridge = AsyncMock()
+    mock_bridge.send_command.return_value = {
+        "id": "1", "success": True,
+        "result": {"masks": [{"type": "aiSelection", "subtype": "sky"}]},
+    }
+    mock_get_bridge.return_value = mock_bridge
+    result = runner.invoke(cli, ["develop", "ai", "list"])
+    assert result.exit_code == 0
+    mock_bridge.send_command.assert_called_once_with(
+        "develop.getAllMasks", {}, timeout=30.0,
+    )

@@ -139,3 +139,23 @@ def ai_presets(ctx):
     fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
     from lightroom_sdk.presets import AI_MASK_PRESETS
     click.echo(OutputFormatter.format(AI_MASK_PRESETS, fmt))
+
+
+@ai.command("list")
+@click.pass_context
+def ai_list(ctx):
+    """List all masks on the current photo"""
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command("develop.getAllMasks", {}, timeout=timeout)
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
