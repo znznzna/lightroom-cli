@@ -82,13 +82,18 @@ lr plugin install --dev
 
 ### 接続確認
 
+1. Lightroom Classic を起動
+2. **File > Plugin Extras > Start CLI Bridge** を選択
+3. 以下のコマンドを実行：
+
 ```bash
-# Lightroom Classic を起動した状態で
 lr system ping
 # → pong
 
 lr system status
 ```
+
+> **注意:** ブリッジは自動起動しません。Lightroom を起動するたびに「Start CLI Bridge」をメニューから選択する必要があります。
 
 ## Usage Examples
 

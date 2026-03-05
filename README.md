@@ -82,13 +82,18 @@ See the [Development](#development) section for running tests and linting.
 
 ### Verify Connection
 
+1. Open Lightroom Classic
+2. Go to **File > Plugin Extras > Start CLI Bridge**
+3. Run the following commands:
+
 ```bash
-# With Lightroom Classic running
 lr system ping
 # -> pong
 
 lr system status
 ```
+
+> **Note:** The bridge does not start automatically. You must select "Start CLI Bridge" from the menu each time you launch Lightroom.
 
 ## Usage Examples
 
