@@ -9,7 +9,7 @@ def runner():
     return CliRunner()
 
 
-@patch("cli.commands.system.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_system_ping(mock_get_bridge, runner):
     """lr system ping がpingコマンドを送信する"""
     mock_bridge = AsyncMock()
@@ -23,7 +23,7 @@ def test_system_ping(mock_get_bridge, runner):
     assert "ok" in result.output
 
 
-@patch("cli.commands.system.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_system_status(mock_get_bridge, runner):
     """lr system status がstatusコマンドを送信する"""
     mock_bridge = AsyncMock()

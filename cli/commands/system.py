@@ -1,22 +1,7 @@
-import asyncio
 import click
 from pathlib import Path
+from cli.helpers import execute_command, get_bridge, run_async
 from cli.output import OutputFormatter
-
-
-def get_bridge(port_file: str | None = None):
-    """ResilientSocketBridgeインスタンスを取得（遅延import）"""
-    from lightroom_sdk.resilient_bridge import ResilientSocketBridge
-    return ResilientSocketBridge(port_file=port_file)
-
-
-def run_async(coro):
-    """CLIからasync関数を実行するヘルパー（コマンドごとに1回だけ呼ぶ）"""
-    loop = asyncio.new_event_loop()
-    try:
-        return loop.run_until_complete(coro)
-    finally:
-        loop.close()
 
 
 @click.group()
@@ -29,42 +14,14 @@ def system():
 @click.pass_context
 def ping(ctx):
     """Test connection to Lightroom"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            await bridge.connect()
-            result = await bridge.send_command("system.ping", timeout=timeout)
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "system.ping", {})
 
 
 @system.command()
 @click.pass_context
 def status(ctx):
     """Get Lightroom bridge status"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            await bridge.connect()
-            result = await bridge.send_command("system.status", timeout=timeout)
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "system.status", {})
 
 
 @system.command()

@@ -93,7 +93,7 @@ class TestResilientBridgeUsesPathsModule:
 class TestSystemCommandUsesPathsModule:
     def test_get_bridge_default_uses_paths(self):
         import inspect
-        from cli.commands.system import get_bridge
+        from cli.helpers import get_bridge
         sig = inspect.signature(get_bridge)
         default = sig.parameters["port_file"].default
         assert default is None

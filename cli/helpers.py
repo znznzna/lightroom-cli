@@ -4,10 +4,10 @@ import click
 from cli.output import OutputFormatter
 
 
-def get_bridge():
+def get_bridge(port_file: str | None = None):
     """ResilientSocketBridgeインスタンスを取得（遅延import）"""
     from lightroom_sdk.resilient_bridge import ResilientSocketBridge
-    return ResilientSocketBridge()
+    return ResilientSocketBridge(port_file=port_file)
 
 
 def run_async(coro):
