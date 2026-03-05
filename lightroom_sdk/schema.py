@@ -402,6 +402,26 @@ for _ai_type in _AI_TYPES:
         ),
     )
 
+# Bridge command alias: ai_mask.py calls execute_command("develop.createAIMaskWithAdjustments", ...)
+# Register a shared schema so validation/dry-run still works for the bridge command name.
+_register(
+    CommandSchema(
+        "develop.createAIMaskWithAdjustments", "develop.ai._bridge",
+        "Create AI mask with adjustments (internal bridge command)",
+        params=[
+            ParamSchema("selectionType", ParamType.ENUM, required=True,
+                        description="AI mask selection type",
+                        enum_values=["subject", "sky", "background",
+                                     "objects", "people", "landscape"]),
+            ParamSchema("adjustments", ParamType.JSON_OBJECT,
+                        description="Optional develop adjustments to apply"),
+            ParamSchema("part", ParamType.STRING,
+                        description="Specific part to mask"),
+        ],
+        mutating=True, timeout=60.0,
+    ),
+)
+
 _register(
     CommandSchema("develop.ai.presets", "develop.ai.presets",
                   "List available adjustment presets"),

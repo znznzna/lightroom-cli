@@ -49,6 +49,12 @@ class TestDotNotationFilter:
         result = OutputFormatter._filter_fields(data, ["name", "rating"])
         assert result == {"name": "photo.jpg", "rating": 5}
 
+    def test_dot_notation_on_scalar_ignored(self):
+        """スカラー値に対するドット記法はスキップされる（Codex P2 fix）"""
+        data = {"total": 2, "photos": [{"id": "1"}]}
+        result = OutputFormatter._filter_fields(data, ["total.id"])
+        assert result == {}
+
     def test_format_with_dot_notation(self):
         data = {"photos": [{"id": "1", "name": "a.jpg"}], "total": 1}
         output = OutputFormatter.format(data, "json", fields=["photos.id", "total"])

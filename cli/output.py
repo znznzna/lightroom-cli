@@ -54,8 +54,7 @@ class OutputFormatter:
                     ]
                 elif isinstance(value, dict):
                     result[parent] = {c: value[c] for c in children if c in value}
-                else:
-                    result[parent] = value
+                # scalar values have no children — skip (dotted filter on scalar is a no-op)
             return result
         elif isinstance(data, list):
             return [OutputFormatter._filter_fields(item, fields) for item in data]
