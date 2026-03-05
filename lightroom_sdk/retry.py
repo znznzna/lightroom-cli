@@ -11,6 +11,10 @@ COMMAND_TIMEOUTS: dict[str, float] = {
     "develop.get_current_settings": 10.0,
     "catalog.search_photos": 60.0,
     "catalog.get_all_photos": 60.0,
+    # AI Mask commands
+    "develop.createAIMaskWithAdjustments": 60.0,
+    "develop.batchAIMask": 300.0,
+    "develop.probeAIPartSupport": 30.0,
 }
 
 DEFAULT_TIMEOUT = 30.0

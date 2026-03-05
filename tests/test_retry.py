@@ -26,3 +26,15 @@ def test_retry_config_custom():
     cfg = RetryConfig(max_retries=5, initial_delay=0.5)
     assert cfg.max_retries == 5
     assert cfg.initial_delay == 0.5
+
+
+def test_ai_mask_timeout():
+    assert get_timeout("develop.createAIMaskWithAdjustments") == 60.0
+
+
+def test_batch_ai_mask_timeout():
+    assert get_timeout("develop.batchAIMask") == 300.0
+
+
+def test_probe_ai_part_timeout():
+    assert get_timeout("develop.probeAIPartSupport") == 30.0
