@@ -49,6 +49,7 @@ from cli.commands.plugin import plugin
 from cli.commands.preview import preview
 from cli.commands.selection import selection
 from cli.commands.system import system
+from cli.commands.mcp import mcp
 from cli.schema import schema_cmd
 
 cli.add_command(system)
@@ -57,4 +58,5 @@ cli.add_command(develop)
 cli.add_command(preview)
 cli.add_command(selection)
 cli.add_command(plugin)
+cli.add_command(mcp)
 cli.add_command(schema_cmd)

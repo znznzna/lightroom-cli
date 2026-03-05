@@ -3,6 +3,11 @@
 C2: LightroomClient.execute_command() 経由でコマンドを実行する。
     client._bridge 直アクセスは行わない（例外正規化を崩さないため）。
 C1: mutating=True のコマンドは再接続後に再送せずエラー返却する。
+
+NOTE: ResilientSocketBridge は send_command 内で接続断時に自動リトライ(1回)する。
+      mutating コマンドの二重送信リスクがあるが、ResilientSocketBridge に
+      retry_on_error=False オプションを追加する変更は本フェーズのスコープ外。
+      実機E2Eテストで確認し、必要なら後続タスクで対処する。
 """
 
 from __future__ import annotations
