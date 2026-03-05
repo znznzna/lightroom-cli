@@ -314,6 +314,7 @@ local function registerApiCommands()
     router:register("develop.createRadialFilter", DevelopModule.createRadialFilter, "sync")
     router:register("develop.createAdjustmentBrush", DevelopModule.createAdjustmentBrush, "sync")
     router:register("develop.createAISelectionMask", DevelopModule.createAISelectionMask, "sync")
+    router:register("develop.createAIMaskWithAdjustments", DevelopModule.createAIMaskWithAdjustments, "sync")
     router:register("develop.createRangeMask", DevelopModule.createRangeMask, "sync")
     router:register("develop.createComplexMask", DevelopModule.createComplexMask, "sync")
     

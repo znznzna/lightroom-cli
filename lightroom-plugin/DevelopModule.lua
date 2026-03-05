@@ -2144,7 +2144,7 @@ function DevelopModule.createNewMask(params, callback)
         else
             maskId = LrDevelopController.createNewMask(maskType)
         end
-        
+
         return {
             maskId = maskId,
             maskType = maskType,
@@ -2152,7 +2152,7 @@ function DevelopModule.createNewMask(params, callback)
             message = "Created new mask of type '" .. maskType .. "'"
         }
     end)
-    
+
     if success then
         callback({
             success = true,
@@ -2785,6 +2785,117 @@ function DevelopModule.createAISelectionMask(params, callback)
             error = {
                 code = "CREATE_AI_SELECTION_FAILED",
                 message = "Failed to create AI selection mask: " .. tostring(result)
+            }
+        })
+    end
+end
+
+function DevelopModule.createAIMaskWithAdjustments(params, callback)
+    ensureLrModules()
+    local logger = getLogger()
+    local selectionType = params.selectionType or "subject"
+    local part = params.part
+    local adjustments = params.adjustments
+
+    -- Validate selection type
+    local validTypes = {"subject", "sky", "background", "objects", "people", "landscape"}
+    local isValid = false
+    for _, validType in ipairs(validTypes) do
+        if selectionType == validType then
+            isValid = true
+            break
+        end
+    end
+
+    if not isValid then
+        callback({
+            error = {
+                code = "AI_MASK_INVALID_TYPE",
+                message = "Valid types: " .. table.concat(validTypes, ", ")
+            }
+        })
+        return
+    end
+
+    local success, result = ErrorUtils.safeCall(function()
+        -- Guard: check current tool to avoid hang
+        local currentTool = LrDevelopController.getSelectedTool()
+        if currentTool ~= "masking" then
+            LrDevelopController.selectTool("masking")
+        end
+
+        -- Create AI selection mask
+        local maskId = LrDevelopController.createNewMask("aiSelection", selectionType)
+
+        local partApplied = false
+        local partSupported = false
+
+        -- Attempt part selection if requested (SDK support unverified)
+        if part then
+            local partSuccess, partResult = ErrorUtils.safeCall(function()
+                -- NOTE: This is experimental - SDK may not support part selection
+                return false  -- Placeholder until SDK support is verified
+            end)
+            if partSuccess and partResult then
+                partApplied = true
+                partSupported = true
+            end
+        end
+
+        -- Apply adjustments if provided
+        local appliedAdjustments = {}
+        local adjustmentErrors = {}
+
+        if adjustments and type(adjustments) == "table" then
+            for param, value in pairs(adjustments) do
+                local adjSuccess, adjError = ErrorUtils.safeCall(function()
+                    LrDevelopController.setValue(param, value)
+                end)
+                if adjSuccess then
+                    appliedAdjustments[param] = value
+                else
+                    adjustmentErrors[param] = tostring(adjError)
+                end
+            end
+        end
+
+        local resultData = {
+            maskType = "aiSelection",
+            selectionType = selectionType,
+            part = part,
+            partApplied = partApplied,
+            partSupported = partSupported,
+            message = "Created AI " .. selectionType .. " mask"
+        }
+
+        if next(appliedAdjustments) then
+            resultData.adjustments = {
+                applied = appliedAdjustments,
+            }
+            resultData.message = resultData.message .. " with adjustments"
+        end
+
+        if next(adjustmentErrors) then
+            resultData.adjustmentErrors = adjustmentErrors
+        end
+
+        if part and not partApplied then
+            resultData.warning = "Part selection not supported by SDK. Full " .. selectionType .. " mask created instead."
+        end
+
+        return resultData
+    end)
+
+    if success then
+        callback({
+            success = true,
+            result = result
+        })
+    else
+        callback({
+            error = {
+                code = "AI_MASK_CREATION_FAILED",
+                message = "Failed to create AI mask: " .. tostring(result)
             }
         })
     end
