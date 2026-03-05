@@ -1,6 +1,10 @@
 """Input validation based on command schemas."""
 from __future__ import annotations
+import re
 from lightroom_sdk.schema import get_schema, ParamType, ParamSchema
+
+_MAX_STRING_LENGTH = 10_000
+_CONTROL_CHAR_RE = re.compile(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]')
 
 
 class ValidationError(Exception):
@@ -73,12 +77,35 @@ def _check_range(name: str, value: int | float, schema: ParamSchema) -> None:
         )
 
 
+def _sanitize_string(name: str, value: str) -> str:
+    """文字列のサニタイズ: NUL・制御文字・過長入力をreject。\t, \n, \r は許可。"""
+    if '\x00' in value:
+        raise ValidationError(
+            f"Parameter '{name}' contains null character",
+            param=name,
+        )
+    if _CONTROL_CHAR_RE.search(value):
+        raise ValidationError(
+            f"Parameter '{name}' contains control characters",
+            param=name,
+            suggestions=["Remove non-printable characters from the value"],
+        )
+    if len(value) > _MAX_STRING_LENGTH:
+        raise ValidationError(
+            f"Parameter '{name}' exceeds maximum length ({len(value)} > {_MAX_STRING_LENGTH})",
+            param=name,
+            suggestions=[f"Maximum string length is {_MAX_STRING_LENGTH} characters"],
+        )
+    return value
+
+
 def _coerce_type(name: str, value: object, schema: ParamSchema) -> object:
     """型変換を試みる。失敗時は ValidationError。"""
     try:
         match schema.type:
             case ParamType.STRING:
-                return str(value)
+                s = str(value)
+                return _sanitize_string(name, s)
             case ParamType.INTEGER:
                 result = int(value)
                 _check_range(name, result, schema)
