@@ -2901,6 +2901,118 @@ function DevelopModule.createAIMaskWithAdjustments(params, callback)
     end
 end
 
+function DevelopModule.batchAIMask(params, callback)
+    ensureLrModules()
+    local logger = getLogger()
+    local selectionType = params.selectionType or "subject"
+    local photoIds = params.photoIds
+    local allSelected = params.allSelected
+    local part = params.part
+    local adjustments = params.adjustments
+    local continueOnError = params.continueOnError
+    if continueOnError == nil then continueOnError = true end
+
+    local success, result = ErrorUtils.safeCall(function()
+        local catalog = LrApplication.activeCatalog()
+        local photos = {}
+
+        if allSelected then
+            local targetPhoto = catalog:getTargetPhoto()
+            local multiplePhotos = catalog:getTargetPhotos()
+            if multiplePhotos and #multiplePhotos > 0 then
+                photos = multiplePhotos
+            elseif targetPhoto then
+                photos = { targetPhoto }
+            end
+        elseif photoIds and type(photoIds) == "table" then
+            local allPhotos = catalog:getAllPhotos()
+            for _, pid in ipairs(photoIds) do
+                for _, photo in ipairs(allPhotos) do
+                    local localId = tostring(photo.localIdentifier)
+                    if localId == pid then
+                        table.insert(photos, photo)
+                        break
+                    end
+                end
+            end
+        end
+
+        if #photos == 0 then
+            return {
+                total = 0, succeeded = 0, failed = 0,
+                results = {},
+                message = "No photos found to process",
+            }
+        end
+
+        local results = {}
+        local succeeded = 0
+        local failed = 0
+
+        for _, photo in ipairs(photos) do
+            local photoSuccess, photoResult = ErrorUtils.safeCall(function()
+                catalog:setSelectedPhotos(photo, { photo })
+
+                local currentTool = LrDevelopController.getSelectedTool()
+                if currentTool ~= "masking" then
+                    LrDevelopController.selectTool("masking")
+                end
+
+                local maskId = LrDevelopController.createNewMask("aiSelection", selectionType)
+
+                if adjustments and type(adjustments) == "table" then
+                    for param, value in pairs(adjustments) do
+                        LrDevelopController.setValue(param, value)
+                    end
+                end
+
+                return {
+                    photoId = tostring(photo.localIdentifier),
+                    status = "success",
+                    message = "Applied " .. selectionType .. " mask",
+                }
+            end)
+
+            if photoSuccess then
+                table.insert(results, photoResult)
+                succeeded = succeeded + 1
+            else
+                failed = failed + 1
+                table.insert(results, {
+                    photoId = tostring(photo.localIdentifier or "unknown"),
+                    status = "error",
+                    error = tostring(photoResult),
+                })
+                if not continueOnError then
+                    break
+                end
+            end
+        end
+
+        return {
+            total = #photos,
+            succeeded = succeeded,
+            failed = failed,
+            results = results,
+            message = "Batch AI mask: " .. succeeded .. "/" .. #photos .. " succeeded",
+        }
+    end)
+
+    if success then
+        callback({
+            success = true,
+            result = result
+        })
+    else
+        callback({
+            error = {
+                code = "BATCH_AI_MASK_FAILED",
+                message = "Failed to batch AI mask: " .. tostring(result)
+            }
+        })
+    end
+end
+
 function DevelopModule.createRangeMask(params, callback)
     ensureLrModules()
     local logger = getLogger()
