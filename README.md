@@ -36,7 +36,40 @@ A Lua plugin runs inside Lightroom Classic and communicates with the Python SDK 
 
 ### Installation
 
-#### From Source (Development)
+This tool is designed as an **agent-first CLI** — AI agents operate Lightroom by reading a SKILL file and invoking CLI commands. All three steps below are required for full functionality.
+
+#### Step 1: Install the CLI
+
+```bash
+pip install lightroom-cli
+```
+
+#### Step 2: Install the Lightroom Plugin
+
+The Lua plugin enables communication between Lightroom Classic and the CLI.
+
+```bash
+lr plugin install
+```
+
+After installation, restart Lightroom Classic. The plugin appears under **File > Plug-in Manager** as "Lightroom CLI Bridge".
+
+#### Step 3: Install the Skill (Required)
+
+The SKILL file tells AI agents how to discover and use all 107 commands. **Without it, agents cannot operate the CLI.** This step is mandatory — the CLI is designed to be driven by agents reading the SKILL file, not by humans typing commands directly.
+
+```bash
+/plugin marketplace add znznzna/lightroom-cli
+/plugin install lightroom-cli@lightroom-cli
+```
+
+This installs the Claude Code Plugin, which includes `SKILL.md` — the agent's reference for all available commands, parameters, and workflows.
+
+#### For Contributors Only
+
+> **Regular users can skip this section.** The steps above (Step 1–3) are all you need.
+
+If you want to contribute to lightroom-cli itself, install from source instead of pip:
 
 ```bash
 git clone https://github.com/znznzna/lightroom-cli.git
@@ -45,19 +78,7 @@ pip install -e ".[dev]"
 lr plugin install --dev
 ```
 
-#### Via pip
-
-```bash
-pip install lightroom-cli
-lr plugin install
-```
-
-#### Claude Code Plugin (for AI agents)
-
-```bash
-/plugin marketplace add znznzna/lightroom-cli
-/plugin install lightroom-cli@lightroom-cli
-```
+See the [Development](#development) section for running tests and linting.
 
 ### Verify Connection
 
@@ -248,9 +269,6 @@ lr --version            # Show version
 ## Development
 
 ```bash
-# Install for development
-pip install -e ".[dev]"
-
 # Run tests
 python -m pytest tests/ -v
 
