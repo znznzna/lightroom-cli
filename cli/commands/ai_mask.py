@@ -23,8 +23,8 @@ def _make_ai_type_command(selection_type: str, has_part: bool = False, part_choi
         click.Option(["--adjust"], default=None, help="JSON adjustment settings"),
         click.Option(["--adjust-preset"], default=None, help="Named preset (darken-sky, brighten-subject, etc)"),
         click.Option(["--dry-run"], is_flag=True, default=False, help="Preview without executing"),
-        click.Option(["--json"], "json_str", default=None, help="JSON string with all parameters"),
-        click.Option(["--json-stdin"], "json_stdin", is_flag=True, default=False, help="Read JSON parameters from stdin"),
+        click.Option(["--json", "json_str"], default=None, help="JSON string with all parameters"),
+        click.Option(["--json-stdin", "json_stdin"], is_flag=True, default=False, help="Read JSON parameters from stdin"),
     ]
     # --part is hidden until SDK support is verified
     if has_part and part_choices:
