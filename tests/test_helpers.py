@@ -102,6 +102,37 @@ class TestExecuteCommand:
             "preview.generatePreview", {}, timeout=120.0
         )
 
+    def test_validation_error_exit_code_2(self):
+        from cli.helpers import execute_command
+
+        mock_ctx = MagicMock()
+        mock_ctx.obj = {"output": "json", "timeout": 30.0, "fields": None}
+
+        with patch("cli.helpers.get_bridge") as mock_get:
+            mock_bridge = AsyncMock()
+            mock_get.return_value = mock_bridge
+            execute_command(mock_ctx, "develop.setValue", {"Exposre": 0.5})
+
+        mock_ctx.exit.assert_called_with(2)
+        mock_bridge.send_command.assert_not_called()
+
+    def test_valid_params_pass_to_bridge(self):
+        from cli.helpers import execute_command
+
+        mock_ctx = MagicMock()
+        mock_ctx.obj = {"output": "json", "timeout": 30.0, "fields": None}
+
+        mock_bridge = AsyncMock()
+        mock_bridge.send_command.return_value = {"result": {"status": "ok"}}
+
+        with patch("cli.helpers.get_bridge", return_value=mock_bridge):
+            execute_command(
+                mock_ctx, "develop.setValue",
+                {"parameter": "Exposure", "value": 0.5}
+            )
+
+        mock_bridge.send_command.assert_called_once()
+
     def test_zero_timeout_not_treated_as_falsy(self):
         from cli.helpers import execute_command
 

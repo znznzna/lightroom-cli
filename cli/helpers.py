@@ -31,10 +31,26 @@ def execute_command(ctx, command: str, params: dict, *, timeout: float | None = 
     cmd_timeout = timeout if timeout is not None else (ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0)
 
     async def _run():
+        # バリデーション（スキーマ未定義コマンドはスキップ）
+        from cli.validation import validate_params, ValidationError
+        try:
+            validated = validate_params(command, params)
+        except ValidationError as e:
+            click.echo(
+                OutputFormatter.format_error(
+                    str(e), fmt,
+                    code="VALIDATION_ERROR",
+                    suggestions=e.suggestions,
+                ),
+                err=True,
+            )
+            ctx.exit(2)
+            return
+
         bridge = get_bridge()
         try:
             await bridge.connect()
-            result = await bridge.send_command(command, params, timeout=cmd_timeout)
+            result = await bridge.send_command(command, validated, timeout=cmd_timeout)
             data = result.get("result", result)
             click.echo(OutputFormatter.format(data, fmt, fields=fields))
         except ConnectionError as e:
