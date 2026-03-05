@@ -9,7 +9,15 @@ class OutputFormatter:
     @staticmethod
     def format(data: Any, mode: str = "text", fields: list[str] | None = None) -> str:
         if fields is not None:
-            data = OutputFormatter._filter_fields(data, fields)
+            filtered = OutputFormatter._filter_fields(data, fields)
+            if isinstance(filtered, dict) and not filtered and isinstance(data, dict) and data and fields:
+                available = sorted(data.keys())[:10]
+                filtered["_warning"] = (
+                    f"No matching fields found. "
+                    f"Requested: {', '.join(fields)}. "
+                    f"Available: {', '.join(available)}"
+                )
+            data = filtered
         if mode == "json":
             return json.dumps(data, indent=2, ensure_ascii=False)
         elif mode == "table":

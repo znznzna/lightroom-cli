@@ -106,3 +106,44 @@ class TestStructuredError:
         """既存呼び出し (mode 未指定) が壊れないことを確認"""
         result = OutputFormatter.format_error("fail")
         assert "fail" in result
+
+
+class TestFilterFieldsNested:
+    """_filter_fields のネストされたレスポンス対応テスト"""
+
+    def test_filter_top_level(self):
+        """トップレベルのフィールドフィルタ"""
+        data = {"Exposure": 0.5, "Contrast": 25, "Highlights": -10}
+        result = OutputFormatter._filter_fields(data, ["Exposure", "Contrast"])
+        assert result == {"Exposure": 0.5, "Contrast": 25}
+
+    def test_filter_empty_result_warning(self):
+        """フィルタ結果が空の場合の動作"""
+        data = {"Exposure2012": 0.5}
+        result = OutputFormatter._filter_fields(data, ["Exposure"])
+        assert result == {}
+
+    def test_filter_nested_result_key(self):
+        """result キーの中にデータがある場合"""
+        data = {"result": {"Exposure": 0.5, "Contrast": 25}}
+        result = OutputFormatter._filter_fields(data, ["Exposure"])
+        assert result == {}
+
+    def test_filter_fields_case_sensitive(self):
+        """フィールド名は大文字小文字を区別する"""
+        data = {"Exposure": 0.5, "exposure": 1.0}
+        result = OutputFormatter._filter_fields(data, ["Exposure"])
+        assert result == {"Exposure": 0.5}
+
+
+class TestFieldsWarning:
+    """--fields でフィールドが見つからない場合の警告テスト"""
+
+    def test_format_with_empty_fields_result_includes_warning(self):
+        """フィルタ結果が空 dict の場合、_warning が含まれる"""
+        data = {"Exposure2012": 0.5}
+        result = OutputFormatter.format(data, "json", fields=["Exposure"])
+        parsed = json.loads(result)
+        assert "_warning" in parsed
+        assert "Exposure" in parsed["_warning"]
+        assert "Exposure2012" in parsed["_warning"]
