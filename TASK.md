@@ -78,42 +78,41 @@
 
 ---
 
-## Backlog
+## Next Sprint: リリース & 配布
 
-### P3: Agent-First 追加機能 (必要性は議論対象)
+リリースGO判断済み (2026-03-05)。
 
-- [ ] NDJSON streaming — 大量データのストリーミング出力
-- [ ] `lr invoke` — 汎用コマンドエントリポイント
-- [ ] 監査ログ — コマンド実行履歴の記録
+### Sprint 1: ruff + Plugin化 + PyPI
 
-### 配布
+- [ ] **ruff 導入 + CI** — 設定なしですぐ動く。既存コード修正は数件程度
+- [ ] **Claude Code Plugin化** — `.claude-plugin/plugin.json` + `skills/lightroom-cli/SKILL.md`
+  - `/plugin install motokiendo/lightroom-cli` でインストール可能に
+  - SKILLS.md → SKILL.md リネーム + YAMLフロントマター追加
+- [ ] **PyPI 公開** — `pip install lightroom-cli`
 
-- [ ] PyPI 公開 (リリースGO判断後)
-- [ ] Homebrew Tap リポ作成 + Formula 公開 (リリースGO判断後)
-- [ ] SKILLS.md を Claude Code スキルとして配布する導線整備
-  - インストール手順に `~/.claude/skills/` への配置を含める
-  - `lr skill install` コマンドの検討
+### Sprint 2: MCP Server + Homebrew
+
+- [ ] **MCP Server** (`lightroom_sdk/mcp_server.py`) — 既存SDKのラッパー
+  - Claude Desktop / Cowork 対応 (Research Preview, 2026年1月〜)
+  - `lr-mcp` エントリポイント追加 (pyproject.toml)
+  - `.mcp.json` で Claude Desktop から自動認識
+- [ ] **Homebrew Tap** リポ作成 + Formula 公開
+
+### Backlog (保留)
+
+- [ ] NDJSON streaming — Lua側もストリーミング化が必要でコスト重い。`--limit/--offset` ページネーションで代替可能
+- [ ] `lr invoke` — 汎用エントリポイント。107コマンドCLI化済みのため緊急性ゼロ
+- [ ] 監査ログ — 3つの中で最も実用的だが `--verbose` で当面代替可能
+- [ ] mypy — 型アノテーション不足で大量エラー出る。段階的導入が現実的
+- [ ] カバレッジレポート
 
 ### 開発体験
 
 - [ ] Plugin Manager「Add」でソース直接読み込み失敗の原因調査
-  - `.lrdevplugin` 拡張子付きシンリンク or リネームで解決できるか
-- [ ] `lr plugin install --dev` の改善 (Plugin Manager 手動追加の案内表示)
+- [ ] `lr plugin install --dev` の改善
 
 ### Windows版 (別リポ)
 
 - [ ] 別リポで Windows 対応を検討
 - [ ] `paths.py` の Windows 分岐は準備済み
-- [ ] `PlatformPaths.lua` は Lightroom sandbox 制約により `os.getenv` 不可 → 別アプローチ必要
-
-### Claude Cowork 対応
-
-- [ ] Claude Cowork (マルチエージェント) での利用を想定したインターフェース設計
-- [ ] MCP Server としての公開検討
-- [ ] エージェント間での写真編集ワークフロー共有
-
-### 品質
-
-- [x] コードレビュー (Codex CLI) — AI mask + agent-first hardening 完了
-- [ ] カバレッジレポート
-- [ ] ruff / mypy 導入
+- [ ] `PlatformPaths.lua` — Lightroom sandbox 制約で `os.getenv` 不可 → 別アプローチ必要
