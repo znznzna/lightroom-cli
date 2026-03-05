@@ -33,7 +33,7 @@
 | `lr catalog keywords` | List all keywords |
 | `lr catalog rotate-left` | Rotate photo left |
 | `lr catalog create-virtual-copy` | Create virtual copy |
-| `lr catalog find --flag PICK --rating 3` | Find photos by criteria (flag/rating/color/camera) |
+| `lr catalog find --flag pick --rating 3` | Find photos by criteria (flag/rating/color/camera) |
 | `lr catalog select PHOTO_ID [PHOTO_ID ...]` | Select photos by ID |
 | `lr catalog find-by-path PATH` | Find photo by file path |
 | `lr catalog folders [--recursive]` | List folders in catalog |
@@ -62,7 +62,7 @@
 | `lr develop auto-tone` | Apply AutoTone |
 | `lr develop auto-wb` | Apply Auto White Balance |
 | `lr develop reset` | Reset to defaults |
-| `lr develop apply '{"Exposure": 1.0}'` | Apply JSON settings |
+| `lr develop apply --settings '{"Exposure": 1.0}'` | Apply JSON settings |
 | `lr develop copy-settings` | Copy develop settings |
 | `lr develop paste-settings` | Paste develop settings |
 | `lr develop preset "name"` | Apply preset |
@@ -79,32 +79,37 @@
 | Command | Description |
 |---------|-------------|
 | `lr develop curve get` | Get curve points |
-| `lr develop curve set '[[0,0],[128,140],[255,255]]'` | Set curve |
+| `lr develop curve set --points '[[0,0],[128,140],[255,255]]'` | Set curve |
 | `lr develop curve s-curve` | Apply S-curve preset |
 | `lr develop curve linear` | Reset to linear |
 | `lr develop curve add-point X Y` | Add point |
 | `lr develop curve remove-point INDEX` | Remove point from curve |
 
-#### Masking
+#### Masking (legacy)
+
+> **Note:** Most masking operations have moved to `lr develop ai`. The `mask` subgroup is kept for low-level operations.
 
 | Command | Description |
 |---------|-------------|
-| `lr develop mask list` | List all masks |
-| `lr develop mask create` | Create new mask |
-| `lr develop mask add brush` | Add brush to mask |
-| `lr develop mask intersect luminance` | Intersect mask |
-| `lr develop mask subtract color` | Subtract from mask |
-| `lr develop mask invert MASK_ID` | Invert mask |
+| `lr develop mask list` | List all masks (deprecated — use `lr develop ai list`) |
 | `lr develop mask selected` | Get currently selected mask |
-| `lr develop mask select MASK_ID` | Select a mask |
-| `lr develop mask delete MASK_ID` | Delete a mask |
-| `lr develop mask tool-info` | Get selected mask tool info |
-| `lr develop mask select-tool TOOL_ID` | Select a mask tool |
-| `lr develop mask delete-tool TOOL_ID` | Delete a mask tool |
 | `lr develop mask go-to` | Go to masking view |
 | `lr develop mask toggle-overlay` | Toggle mask overlay |
-| `lr develop mask activate` | Activate masking mode |
-| `lr develop mask complex --workflow WORKFLOW` | Create complex mask with workflow |
+
+#### AI Masks
+
+| Command | Description |
+|---------|-------------|
+| `lr develop ai subject` | Create AI subject mask |
+| `lr develop ai sky` | Create AI sky mask |
+| `lr develop ai background` | Create AI background mask |
+| `lr develop ai objects` | Create AI objects mask |
+| `lr develop ai people` | Create AI people mask |
+| `lr develop ai landscape` | Create AI landscape mask |
+| `lr develop ai list` | List all masks on current photo |
+| `lr develop ai reset` | Remove all masks from current photo |
+| `lr develop ai presets` | List available adjustment presets |
+| `lr develop ai batch TYPE --photos ID1,ID2` | Apply AI mask to multiple photos |
 
 #### Filters
 
@@ -113,7 +118,6 @@
 | `lr develop filter graduated` | Graduated filter |
 | `lr develop filter radial` | Radial filter |
 | `lr develop filter brush` | Brush filter |
-| `lr develop filter ai-select` | AI selection |
 | `lr develop filter range` | Range mask (luminance/color/depth) |
 
 #### Local Adjustments
@@ -221,7 +225,7 @@ lr catalog set-rating PHOTO_ID 5
 lr -o json develop get-settings
 
 # 2. Apply to target photos
-lr develop apply '{"Exposure": 1.0, "Contrast": 25}'
+lr develop apply --settings '{"Exposure": 1.0, "Contrast": 25}'
 ```
 
 ### Organize photos with keywords and collections
@@ -256,7 +260,7 @@ Use `lr schema` to discover available commands without reading documentation:
 ```bash
 lr schema                      # List all command groups
 lr schema develop              # List commands in develop group
-lr schema develop.setValue     # Show command detail with parameters
+lr schema develop.set          # Show command detail with parameters
 ```
 
 ## Output Formats
@@ -302,6 +306,8 @@ Pass parameters as JSON instead of CLI arguments:
 lr develop set --json '{"parameter": "Exposure", "value": 1.0}'
 echo '{"parameter": "Contrast", "value": 25}' | lr develop set --json-stdin
 ```
+
+> **Limitation:** `--json` / `--json-stdin` cannot bypass required Click arguments. For commands with required positional arguments (e.g., `lr catalog get-info PHOTO_ID`), you must provide the argument on the command line — passing it only via JSON will fail with a missing-argument error. Use `--json` primarily for commands where all parameters are options.
 
 ## Environment Variables
 
