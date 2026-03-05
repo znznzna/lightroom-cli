@@ -54,8 +54,7 @@ async def test_lock_serializes_commands(mock_lr_server):
     (label_b, start_b, end_b) = timestamps[1]
     # At least one must have finished before the other started (within tolerance)
     assert end_a <= start_b + 0.05 or end_b <= start_a + 0.05, (
-        f"Commands overlapped: {label_a}=[{start_a:.3f},{end_a:.3f}], "
-        f"{label_b}=[{start_b:.3f},{end_b:.3f}]"
+        f"Commands overlapped: {label_a}=[{start_a:.3f},{end_a:.3f}], {label_b}=[{start_b:.3f},{end_b:.3f}]"
     )
     await cm.shutdown()
 

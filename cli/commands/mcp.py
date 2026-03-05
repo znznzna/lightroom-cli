@@ -76,7 +76,7 @@ def install(force):
     """Install lightroom-cli MCP server into Claude Desktop config."""
     if not _check_fastmcp_installed():
         click.echo(
-            "Error: fastmcp is not installed.\n" "Run: pip install lightroom-cli[mcp]",
+            "Error: fastmcp is not installed.\nRun: pip install lightroom-cli[mcp]",
             err=True,
         )
         raise SystemExit(1)
@@ -88,9 +88,7 @@ def install(force):
         config["mcpServers"] = {}
 
     if "lightroom-cli" in config["mcpServers"] and not force:
-        click.echo(
-            "lightroom-cli is already installed in the config.\n" "Use --force to overwrite the existing entry."
-        )
+        click.echo("lightroom-cli is already installed in the config.\nUse --force to overwrite the existing entry.")
         return
 
     config["mcpServers"]["lightroom-cli"] = MCP_SERVER_ENTRY
@@ -144,7 +142,7 @@ def test():
     """Test MCP server by connecting to Lightroom and sending a ping."""
     if not _check_fastmcp_installed():
         click.echo(
-            "Error: fastmcp is not installed.\n" "Run: pip install lightroom-cli[mcp]",
+            "Error: fastmcp is not installed.\nRun: pip install lightroom-cli[mcp]",
             err=True,
         )
         raise SystemExit(1)

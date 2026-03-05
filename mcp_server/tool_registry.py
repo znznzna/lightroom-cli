@@ -54,9 +54,7 @@ def build_description(schema: CommandSchema) -> str:
     return f"{schema.description} [{tag_str}] Timeout: {schema.timeout}s"
 
 
-def param_type_to_json_schema(
-    param_type: ParamType, enum_values: list[str] | None = None
-) -> dict[str, Any]:
+def param_type_to_json_schema(param_type: ParamType, enum_values: list[str] | None = None) -> dict[str, Any]:
     """Convert ParamType to JSON Schema type."""
     mapping = {
         ParamType.STRING: {"type": "string"},
@@ -115,9 +113,7 @@ def build_param_field(param: ParamSchema) -> tuple[type, FieldInfo]:
     return annotation, Field(**field_kwargs)
 
 
-def create_tool_function(
-    schema: CommandSchema, connection: "ConnectionManager | None"
-) -> Any:
+def create_tool_function(schema: CommandSchema, connection: "ConnectionManager | None") -> Any:
     """Create an async tool function for a given CommandSchema.
 
     fastmcp >=3.0 では **kwargs を持つ関数を tool 登録できないため、
@@ -136,7 +132,8 @@ def create_tool_function(
             param_annotations[param_schema.name] = annotation
             param_fields[param_schema.name] = field
 
-            default = field.default if field.default is not ... else inspect.Parameter.empty
+            # ParamSchema.required を直接チェック（Field.default は PydanticUndefined になるため）
+            default = inspect.Parameter.empty if param_schema.required else None
             sig_params.append(
                 inspect.Parameter(
                     name=param_schema.name,

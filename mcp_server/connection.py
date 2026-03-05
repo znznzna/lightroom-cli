@@ -56,23 +56,25 @@ class ConnectionManager:
                 "isError": True,
                 "code": "MUTATING_NOT_RETRIED",
                 "message": (
-                    "接続が切断されたため、mutating コマンドは安全のため再送されませんでした。"
-                    "再度実行してください。"
+                    "接続が切断されたため、mutating コマンドは安全のため再送されませんでした。再度実行してください。"
                 ),
             }
 
-        # 3. Execute with lock
+        # 3. Execute with lock (asyncio.wait_for for Python 3.10 compatibility)
         try:
-            async with asyncio.timeout(timeout):
+
+            async def _execute():
                 async with self._lock:
                     client = await self._get_client()
-                    result = await client.execute_command(command, validated, timeout=timeout)
-                    return {"result": result}
+                    return await client.execute_command(command, validated, timeout=timeout)
+
+            result = await asyncio.wait_for(_execute(), timeout=timeout)
+            return {"result": result}
         except (ConnectionError, OSError) as e:
             logger.warning(f"Connection error on '{command}': {e}")
             self._client = None
-            self._reconnected = True
             if mutating:
+                # mutating コマンドは再送しない。_reconnected はセットしない（次回は新規接続扱い）
                 return {
                     "isError": True,
                     "code": "MUTATING_NOT_RETRIED",
@@ -81,6 +83,7 @@ class ConnectionManager:
                         "再度実行してください。"
                     ),
                 }
+            self._reconnected = True
             return {
                 "isError": True,
                 "code": "CONNECTION_ERROR",
@@ -102,7 +105,6 @@ class ConnectionManager:
 
             if isinstance(e, LRConnectionError):
                 self._client = None
-                self._reconnected = True
                 if mutating:
                     return {
                         "isError": True,
@@ -112,6 +114,7 @@ class ConnectionManager:
                             "再度実行してください。"
                         ),
                     }
+                self._reconnected = True
                 return {
                     "isError": True,
                     "code": "CONNECTION_ERROR",

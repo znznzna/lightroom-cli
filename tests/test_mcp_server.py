@@ -8,12 +8,13 @@ import pytest
 
 fastmcp = pytest.importorskip("fastmcp")
 
-from fastmcp import Client as TestClient, FastMCP
+from fastmcp import Client as TestClient
+from fastmcp import FastMCP
 
 from lightroom_sdk.schema import COMMAND_SCHEMAS
 from mcp_server.connection import ConnectionManager
 from mcp_server.instructions import INSTRUCTIONS
-from mcp_server.tool_registry import register_all_tools, sanitize_tool_name
+from mcp_server.tool_registry import register_all_tools
 
 
 @pytest.fixture

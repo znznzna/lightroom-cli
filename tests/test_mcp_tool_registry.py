@@ -1,6 +1,5 @@
 """MCP tool_registry のテスト。"""
 
-import pytest
 from annotated_types import Ge, Le
 
 from lightroom_sdk.schema import CommandSchema, ParamSchema, ParamType
@@ -24,10 +23,7 @@ class TestSanitizeToolName:
         assert sanitize_tool_name("develop.setValue") == "lr_develop_set_value"
 
     def test_nested_camel_case(self):
-        assert (
-            sanitize_tool_name("develop.createAIMaskWithAdjustments")
-            == "lr_develop_create_ai_mask_with_adjustments"
-        )
+        assert sanitize_tool_name("develop.createAIMaskWithAdjustments") == "lr_develop_create_ai_mask_with_adjustments"
 
     def test_consecutive_uppercase(self):
         """AI のような連続大文字も正しく変換"""

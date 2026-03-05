@@ -109,8 +109,9 @@ from unittest.mock import patch as stdlib_patch
 
 def test_get_port_file_macos_uses_tmp():
     """macOS では /tmp を使用すること（Lightroom SDK と一致）"""
-    from lightroom_sdk.paths import get_port_file
     import os
+
+    from lightroom_sdk.paths import get_port_file
 
     with patch.dict("os.environ", {}, clear=True):
         os.environ.pop("LR_PORT_FILE", None)
@@ -122,8 +123,9 @@ def test_get_port_file_macos_uses_tmp():
 
 def test_get_port_file_windows_uses_tempfile():
     """Windows では tempfile.gettempdir() を使用すること"""
-    from lightroom_sdk.paths import get_port_file
     import os
+
+    from lightroom_sdk.paths import get_port_file
 
     with patch.dict("os.environ", {}, clear=True):
         os.environ.pop("LR_PORT_FILE", None)
@@ -167,5 +169,6 @@ class TestWindowsPaths:
         """LR_PORT_FILE 環境変数が優先されること"""
         with patch.dict("os.environ", {"LR_PORT_FILE": "/custom/ports.txt"}):
             from lightroom_sdk.paths import get_port_file
+
             result = get_port_file()
             assert result == Path("/custom/ports.txt")

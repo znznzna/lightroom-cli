@@ -45,11 +45,11 @@ def cli(ctx, output, verbose, timeout, fields):
 
 from cli.commands.catalog import catalog
 from cli.commands.develop import develop
+from cli.commands.mcp import mcp
 from cli.commands.plugin import plugin
 from cli.commands.preview import preview
 from cli.commands.selection import selection
 from cli.commands.system import system
-from cli.commands.mcp import mcp
 from cli.schema import schema_cmd
 
 cli.add_command(system)

@@ -14,8 +14,7 @@ def main():
         from fastmcp import FastMCP  # noqa: F401
     except ImportError:
         print(
-            "Error: fastmcp is not installed.\n"
-            "Install with: pip install lightroom-cli[mcp]\n",
+            "Error: fastmcp is not installed.\nInstall with: pip install lightroom-cli[mcp]\n",
             file=sys.stderr,
         )
         sys.exit(1)

@@ -1,4 +1,5 @@
 """CLI と MCP でバリデーション結果が一致することを確認。"""
+
 import pytest
 
 from lightroom_sdk.validation import ValidationError, validate_params
@@ -50,4 +51,5 @@ class TestValidationEquivalence:
     def test_validation_source_is_sdk(self):
         """バリデーションが lightroom_sdk.validation から来ていること"""
         import lightroom_sdk.validation as sdk_val
+
         assert validate_params is sdk_val.validate_params

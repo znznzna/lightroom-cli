@@ -6,9 +6,9 @@ from __future__ import annotations
 def run_server():
     from fastmcp import FastMCP
 
+    from mcp_server.connection import ConnectionManager
     from mcp_server.instructions import INSTRUCTIONS
     from mcp_server.tool_registry import register_all_tools
-    from mcp_server.connection import ConnectionManager
 
     mcp = FastMCP(
         name="lightroom-cli",

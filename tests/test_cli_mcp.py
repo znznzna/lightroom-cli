@@ -1,8 +1,8 @@
 """lr mcp サブコマンドのテスト。"""
+
 import json
 from unittest.mock import patch
 
-import pytest
 from click.testing import CliRunner
 
 from cli.main import cli

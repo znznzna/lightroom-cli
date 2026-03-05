@@ -101,13 +101,13 @@ class TestPluginStatus:
         assert "symlink" in result.output.lower()
 
 
-import os
 from unittest.mock import patch
 
 
 def test_plugin_install_dev_windows_fallback(tmp_path):
     """Windows で --dev 指定時に symlink 失敗したら copytree にフォールバック"""
     from click.testing import CliRunner
+
     from cli.commands.plugin import install
 
     source = tmp_path / "source_plugin"
@@ -126,6 +126,7 @@ def test_plugin_install_dev_windows_fallback(tmp_path):
         runner = CliRunner()
         result = runner.invoke(install, ["--dev"])
         assert result.exit_code == 0
-        assert "copytree" in result.output.lower() or "copy" in result.output.lower() or "installed" in result.output.lower()
+        out = result.output.lower()
+        assert "copytree" in out or "copy" in out or "installed" in out
         dest = dest_dir / "lightroom-cli-bridge.lrplugin"
         assert dest.exists()
