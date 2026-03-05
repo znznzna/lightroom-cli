@@ -81,8 +81,17 @@ _register(
         ],
     ),
     CommandSchema(
-        "develop.batchApplySettings", "develop.apply",
+        "develop.applySettings", "develop.apply",
         "Apply develop settings from JSON",
+        params=[
+            ParamSchema("settings", ParamType.JSON_OBJECT, required=True,
+                        description="JSON object of settings to apply"),
+        ],
+        mutating=True,
+    ),
+    CommandSchema(
+        "develop.batchApplySettings", "develop.batch-apply",
+        "Batch apply develop settings (used internally by develop set with multiple pairs)",
         params=[
             ParamSchema("settings", ParamType.JSON_OBJECT, required=True,
                         description="JSON object of settings to apply"),
@@ -589,20 +598,14 @@ _register(
     CommandSchema("selection.decreaseRating", "selection.decrease-rating",
                   "Decrease rating by 1", mutating=True),
     CommandSchema(
-        "selection.toggleRedLabel", "selection.toggle-label.red",
-        "Toggle red label", mutating=True),
-    CommandSchema(
-        "selection.toggleYellowLabel", "selection.toggle-label.yellow",
-        "Toggle yellow label", mutating=True),
-    CommandSchema(
-        "selection.toggleGreenLabel", "selection.toggle-label.green",
-        "Toggle green label", mutating=True),
-    CommandSchema(
-        "selection.toggleBlueLabel", "selection.toggle-label.blue",
-        "Toggle blue label", mutating=True),
-    CommandSchema(
-        "selection.togglePurpleLabel", "selection.toggle-label.purple",
-        "Toggle purple label", mutating=True),
+        "selection.toggleColorLabel", "selection.toggle-label",
+        "Toggle color label for selected photo(s)",
+        params=[
+            ParamSchema("color", ParamType.ENUM, required=True,
+                        enum_values=["red", "yellow", "green", "blue", "purple"]),
+        ],
+        mutating=True,
+    ),
     CommandSchema(
         "selection.extendSelection", "selection.extend",
         "Extend selection in a direction",
@@ -661,8 +664,8 @@ def get_schema(command: str) -> CommandSchema | None:
 
 
 def get_schemas_by_group(group: str) -> dict[str, CommandSchema]:
-    """グループ名（develop, catalog 等）でフィルタ"""
-    return {k: v for k, v in COMMAND_SCHEMAS.items() if k.startswith(f"{group}.")}
+    """グループ名でフィルタ（cli_pathベース。bridge commandが異なるグループでも正しく分類）"""
+    return {k: v for k, v in COMMAND_SCHEMAS.items() if v.cli_path.startswith(f"{group}.")}
 
 
 def get_all_schemas() -> dict[str, CommandSchema]:

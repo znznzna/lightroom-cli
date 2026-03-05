@@ -21,7 +21,7 @@ def schema_cmd(ctx, path):
         schemas = get_all_schemas()
         groups: dict[str, dict] = {}
         for cmd_name, schema in schemas.items():
-            group = cmd_name.split(".")[0]
+            group = schema.cli_path.split(".")[0]
             if group not in groups:
                 groups[group] = {"name": group, "commands": 0, "mutating": 0}
             groups[group]["commands"] += 1

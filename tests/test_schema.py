@@ -44,8 +44,8 @@ class TestSchemaDataStructures:
         from lightroom_sdk.schema import get_schemas_by_group
         develop_schemas = get_schemas_by_group("develop")
         assert len(develop_schemas) > 0
-        for key in develop_schemas:
-            assert key.startswith("develop.")
+        for schema in develop_schemas.values():
+            assert schema.cli_path.startswith("develop.")
 
     def test_get_all_schemas_not_empty(self):
         from lightroom_sdk.schema import get_all_schemas
