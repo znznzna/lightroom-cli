@@ -66,9 +66,36 @@ def _coerce_type(name: str, value: object, schema: ParamSchema) -> object:
             case ParamType.FLOAT:
                 return float(value)
             case ParamType.BOOLEAN:
+                if isinstance(value, bool):
+                    return value
                 if isinstance(value, str):
-                    return value.lower() in ("true", "1", "yes")
+                    lower = value.lower()
+                    if lower in ("true", "1", "yes"):
+                        return True
+                    if lower in ("false", "0", "no"):
+                        return False
+                    raise ValidationError(
+                        f"Invalid value '{value}' for '{name}': "
+                        f"expected boolean (true/false/yes/no/1/0)",
+                        param=name,
+                    )
                 return bool(value)
+            case ParamType.JSON_OBJECT:
+                if not isinstance(value, dict):
+                    raise ValidationError(
+                        f"Invalid type for '{name}': expected JSON object (dict), "
+                        f"got {type(value).__name__}",
+                        param=name,
+                    )
+                return value
+            case ParamType.JSON_ARRAY:
+                if not isinstance(value, list):
+                    raise ValidationError(
+                        f"Invalid type for '{name}': expected JSON array (list), "
+                        f"got {type(value).__name__}",
+                        param=name,
+                    )
+                return value
             case ParamType.ENUM:
                 if str(value) not in (schema.enum_values or []):
                     raise ValidationError(

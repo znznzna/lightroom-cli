@@ -49,6 +49,64 @@ class TestValidateParams:
         )
         assert result == {"any_param": "any_value"}
 
+    def test_boolean_true_values(self):
+        from cli.validation import validate_params
+        for val in [True, "true", "1", "yes", "True", "YES"]:
+            result = validate_params(
+                "catalog.getFolders",
+                {"includeSubfolders": val}
+            )
+            assert result["includeSubfolders"] is True
+
+    def test_boolean_false_values(self):
+        from cli.validation import validate_params
+        for val in [False, "false", "0", "no", "False", "NO"]:
+            result = validate_params(
+                "catalog.getFolders",
+                {"includeSubfolders": val}
+            )
+            assert result["includeSubfolders"] is False
+
+    def test_boolean_invalid_string_raises(self):
+        from cli.validation import validate_params, ValidationError
+        with pytest.raises(ValidationError, match="expected boolean"):
+            validate_params(
+                "catalog.getFolders",
+                {"includeSubfolders": "flase"}
+            )
+
+    def test_json_object_valid(self):
+        from cli.validation import validate_params
+        result = validate_params(
+            "develop.applySettings",
+            {"settings": {"Exposure": 0.5}}
+        )
+        assert result["settings"] == {"Exposure": 0.5}
+
+    def test_json_object_invalid_raises(self):
+        from cli.validation import validate_params, ValidationError
+        with pytest.raises(ValidationError, match="expected JSON object"):
+            validate_params(
+                "develop.applySettings",
+                {"settings": "not_a_dict"}
+            )
+
+    def test_json_array_valid(self):
+        from cli.validation import validate_params
+        result = validate_params(
+            "catalog.addKeywords",
+            {"photoId": "123", "keywords": ["sunset", "beach"]}
+        )
+        assert result["keywords"] == ["sunset", "beach"]
+
+    def test_json_array_invalid_raises(self):
+        from cli.validation import validate_params, ValidationError
+        with pytest.raises(ValidationError, match="expected JSON array"):
+            validate_params(
+                "catalog.addKeywords",
+                {"photoId": "123", "keywords": "not_a_list"}
+            )
+
     def test_enum_valid_value(self):
         from cli.validation import validate_params
         result = validate_params(
