@@ -572,12 +572,9 @@ class CommandSchema:
 
 以下のコマンドに `supports_dry_run=True` を追加（`mutating=True` かつ実際に `--dry-run` が CLI で使えるもの）:
 
-- `develop.setValue` — `supports_dry_run=True` を追加
-- `develop.applySettings` — `supports_dry_run=True` を追加
-- `develop.batchApplySettings` — `supports_dry_run=True` を追加
-- `develop.setAutoTone` — `supports_dry_run=True` を追加
-- `develop.setAutoWhiteBalance` — `supports_dry_run=True` を追加
-- `develop.resetAllDevelopAdjustments` — `supports_dry_run=True` を追加
+> **C2修正 (Codex指摘)**: `selection.*` / `preview.*` / `develop.ai.*` 等の `--dry-run` 付きコマンドが漏れていた。CLI実装 (`cli/commands/`) で `--dry-run` オプションが付いている全コマンドを網羅する。
+
+**catalog系:**
 - `catalog.setRating` — `supports_dry_run=True` を追加
 - `catalog.addKeywords` — `supports_dry_run=True` を追加
 - `catalog.setFlag` — `supports_dry_run=True` を追加
@@ -587,6 +584,82 @@ class CommandSchema:
 - `catalog.setMetadata` — `supports_dry_run=True` を追加
 - `catalog.removeFromCatalog` — `supports_dry_run=True` を追加
 - `catalog.removeKeyword` — `supports_dry_run=True` を追加
+- `catalog.selectPhotos` — `supports_dry_run=True` を追加
+- `catalog.rotateLeft` — `supports_dry_run=True` を追加
+- `catalog.rotateRight` — `supports_dry_run=True` を追加
+- `catalog.createVirtualCopy` — `supports_dry_run=True` を追加
+- `catalog.createCollection` — `supports_dry_run=True` を追加
+- `catalog.createSmartCollection` — `supports_dry_run=True` を追加
+- `catalog.createCollectionSet` — `supports_dry_run=True` を追加
+- `catalog.createKeyword` — `supports_dry_run=True` を追加
+- `catalog.setViewFilter` — `supports_dry_run=True` を追加
+
+**develop系:**
+- `develop.setValue` — `supports_dry_run=True` を追加
+- `develop.applySettings` — `supports_dry_run=True` を追加
+- `develop.batchApplySettings` — `supports_dry_run=True` を追加
+- `develop.setAutoTone` — `supports_dry_run=True` を追加
+- `develop.setAutoWhiteBalance` — `supports_dry_run=True` を追加
+- `develop.resetAllDevelopAdjustments` — `supports_dry_run=True` を追加
+- `develop.applyPreset` — `supports_dry_run=True` を追加
+- `develop.createSnapshot` — `supports_dry_run=True` を追加
+- `develop.copySettings` — `supports_dry_run=True` を追加
+- `develop.pasteSettings` — `supports_dry_run=True` を追加
+- `develop.resetParam` — `supports_dry_run=True` を追加
+- `develop.setProcessVersion` — `supports_dry_run=True` を追加
+- `develop.setCurvePoints` — `supports_dry_run=True` を追加
+- `develop.linearCurve` — `supports_dry_run=True` を追加
+- `develop.sCurve` — `supports_dry_run=True` を追加
+- `develop.addCurvePoint` — `supports_dry_run=True` を追加
+- `develop.removeCurvePoint` — `supports_dry_run=True` を追加
+- `develop.goToMasking` — `supports_dry_run=True` を追加
+- `develop.toggleMaskOverlay` — `supports_dry_run=True` を追加
+- `develop.local.set` — `supports_dry_run=True` を追加
+- `develop.local.apply` — `supports_dry_run=True` を追加
+- `develop.local.createMask` — `supports_dry_run=True` を追加
+- `develop.filter.graduated` — `supports_dry_run=True` を追加
+- `develop.filter.radial` — `supports_dry_run=True` を追加
+- `develop.filter.brush` — `supports_dry_run=True` を追加
+- `develop.filter.range` — `supports_dry_run=True` を追加
+- `develop.debug.monitor` — `supports_dry_run=True` を追加
+- `develop.color.greenSwatch` — `supports_dry_run=True` を追加
+- `develop.color.cyanSwatch` — `supports_dry_run=True` を追加
+- `develop.color.enhance` — `supports_dry_run=True` を追加
+- `develop.reset.gradient` — `supports_dry_run=True` を追加
+- `develop.reset.circular` — `supports_dry_run=True` を追加
+- `develop.reset.brush` — `supports_dry_run=True` を追加
+- `develop.reset.masking` — `supports_dry_run=True` を追加
+- `develop.reset.crop` — `supports_dry_run=True` を追加
+- `develop.reset.transforms` — `supports_dry_run=True` を追加
+- `develop.reset.spot` — `supports_dry_run=True` を追加
+- `develop.reset.redeye` — `supports_dry_run=True` を追加
+- `develop.reset.healing` — `supports_dry_run=True` を追加
+- `develop.editInPhotoshop` — `supports_dry_run=True` を追加
+
+**selection系 (C2追加):**
+- `selection.flagAsPick` — `supports_dry_run=True` を追加
+- `selection.flagAsReject` — `supports_dry_run=True` を追加
+- `selection.removeFlag` — `supports_dry_run=True` を追加
+- `selection.setColorLabel` — `supports_dry_run=True` を追加
+- `selection.selectAll` — `supports_dry_run=True` を追加
+- `selection.selectNone` — `supports_dry_run=True` を追加
+- `selection.selectInverse` — `supports_dry_run=True` を追加
+- `selection.increaseRating` — `supports_dry_run=True` を追加
+- `selection.decreaseRating` — `supports_dry_run=True` を追加
+- `selection.toggleColorLabel` — `supports_dry_run=True` を追加
+- `selection.extendSelection` — `supports_dry_run=True` を追加
+- `selection.deselectActive` — `supports_dry_run=True` を追加
+- `selection.deselectOthers` — `supports_dry_run=True` を追加
+- `selection.setRating` — `supports_dry_run=True` を追加
+
+**preview系 (C2追加):**
+- `preview.generatePreview` — `supports_dry_run=True` を追加
+- `preview.generateBatchPreviews` — `supports_dry_run=True` を追加
+
+**develop.ai系 (C2追加):**
+- `develop.ai.*` (全AIマスクタイプ) — `supports_dry_run=True` を追加
+- `develop.ai.reset` — `supports_dry_run=True` を追加
+- `develop.batchAIMask` — `supports_dry_run=True` を追加
 
 以下のコマンドに `requires_confirm=True` を追加:
 
@@ -1002,8 +1075,8 @@ class TestOutputSanitize:
         assert parsed["active"] is True
         assert parsed["value"] == 3.14
 
-    def test_overlong_string_truncated(self):
-        """50,000 文字超の文字列は truncate"""
+    def test_overlong_string_truncated_in_json_mode(self):
+        """C3修正: 50,000 文字超の文字列は json モードのみ truncate"""
         long_str = "a" * 60_000
         data = {"content": long_str}
         result = OutputFormatter.format(data, "json")
@@ -1011,6 +1084,13 @@ class TestOutputSanitize:
         assert len(parsed["content"]) < 60_000
         assert "truncated" in parsed["content"]
         assert "60000" in parsed["content"]
+
+    def test_overlong_string_not_truncated_in_text_mode(self):
+        """C3修正: text モードでは長文 truncate しない"""
+        long_str = "a" * 60_000
+        data = {"content": long_str}
+        result = OutputFormatter.format(data, "text")
+        assert "truncated" not in result
 
     def test_exactly_max_length_not_truncated(self):
         """ちょうど 50,000 文字は truncate されない"""
@@ -1067,26 +1147,30 @@ class OutputFormatter:
 
 ```python
     @staticmethod
-    def _sanitize_output(data: Any) -> Any:
-        """出力データから制御文字を除去"""
+    def _sanitize_output(data: Any, *, truncate: bool = False) -> Any:
+        """出力データから制御文字を除去。truncate=True の場合のみ長文をカットする。
+
+        C3修正 (Codex指摘): 制御文字除去は全モードで常時適用（安全措置）。
+        長文truncateはjsonモードのみ適用（設計書の意図に合わせる）。
+        """
         if isinstance(data, str):
             s = OutputFormatter._OUTPUT_CONTROL_CHAR_RE.sub('', data)
-            if len(s) > OutputFormatter._MAX_OUTPUT_STRING_LENGTH:
+            if truncate and len(s) > OutputFormatter._MAX_OUTPUT_STRING_LENGTH:
                 return s[:OutputFormatter._MAX_OUTPUT_STRING_LENGTH] + f"... (truncated, {len(data)} chars total)"
             return s
         if isinstance(data, dict):
-            return {k: OutputFormatter._sanitize_output(v) for k, v in data.items()}
+            return {k: OutputFormatter._sanitize_output(v, truncate=truncate) for k, v in data.items()}
         if isinstance(data, list):
-            return [OutputFormatter._sanitize_output(item) for item in data]
+            return [OutputFormatter._sanitize_output(item, truncate=truncate) for item in data]
         return data
 ```
 
-`format()` の冒頭にサニタイズ呼び出しを追加:
+`format()` の冒頭にサニタイズ呼び出しを追加（`truncate` はjsonモードのみ `True`）:
 
 ```python
     @staticmethod
     def format(data: Any, mode: str = "text", fields: list[str] | None = None) -> str:
-        data = OutputFormatter._sanitize_output(data)
+        data = OutputFormatter._sanitize_output(data, truncate=(mode == "json"))
         if fields is not None:
             # ... 以下既存コードそのまま
 ```
@@ -1212,7 +1296,7 @@ git commit -m "feat: add get_schema_hash() for schema version tracking (P2-7)"
 ## Task 8: lr system status に schema_hash / cli_version 付与
 
 **Files:**
-- Modify: `cli/commands/system.py`
+- Modify: `cli/commands/system.py`, `cli/helpers.py`
 - Test: `tests/test_system_status_metadata.py`
 
 **Step 1: 失敗するテストを書く**
@@ -1236,12 +1320,14 @@ class TestSystemStatusMetadata:
         return CliRunner()
 
     def test_status_includes_schema_hash(self, runner):
+        """C1修正: patchパスは cli.helpers.get_bridge（execute_command経由）"""
         mock_bridge = AsyncMock()
         mock_bridge.send_command.return_value = {
+            "id": "1", "success": True,
             "result": {"status": "connected", "uptime": 100}
         }
 
-        with patch("cli.commands.system.get_bridge", return_value=mock_bridge):
+        with patch("cli.helpers.get_bridge", return_value=mock_bridge):
             result = runner.invoke(cli, ["-o", "json", "system", "status"])
 
         assert result.exit_code == 0
@@ -1251,12 +1337,14 @@ class TestSystemStatusMetadata:
         assert len(data["schema_hash"]) == 12
 
     def test_status_includes_cli_version(self, runner):
+        """C1修正: patchパスは cli.helpers.get_bridge（execute_command経由）"""
         mock_bridge = AsyncMock()
         mock_bridge.send_command.return_value = {
+            "id": "1", "success": True,
             "result": {"status": "connected", "uptime": 100}
         }
 
-        with patch("cli.commands.system.get_bridge", return_value=mock_bridge):
+        with patch("cli.helpers.get_bridge", return_value=mock_bridge):
             result = runner.invoke(cli, ["-o", "json", "system", "status"])
 
         assert result.exit_code == 0
@@ -1265,19 +1353,23 @@ class TestSystemStatusMetadata:
         assert isinstance(data["cli_version"], str)
 
     def test_status_preserves_bridge_data(self, runner):
+        """C1修正: bridge応答のフィールド（plugin_version含む）がそのまま残る"""
         mock_bridge = AsyncMock()
         mock_bridge.send_command.return_value = {
-            "result": {"status": "connected", "uptime": 100, "version": "1.0.0"}
+            "id": "1", "success": True,
+            "result": {"status": "connected", "uptime": 100, "plugin_version": "1.0.0"}
         }
 
-        with patch("cli.commands.system.get_bridge", return_value=mock_bridge):
+        with patch("cli.helpers.get_bridge", return_value=mock_bridge):
             result = runner.invoke(cli, ["-o", "json", "system", "status"])
 
         assert result.exit_code == 0
         data = json.loads(result.output)
         assert data["status"] == "connected"
         assert data["uptime"] == 100
-        assert data["version"] == "1.0.0"
+        assert data["plugin_version"] == "1.0.0"
+        # W1: plugin_version(Lua側) と cli_version(Python側) は別フィールド
+        assert "cli_version" in data
 ```
 
 **Step 2: 失敗を確認**
@@ -1287,9 +1379,31 @@ Expected: FAIL (status に schema_hash がない)
 
 **Step 3: 最小限の実装**
 
-Modify `cli/commands/system.py` — `status` コマンドを `execute_command()` 呼び出しから手動実装に変更。
+Modify `cli/commands/system.py` — `execute_command()` を維持しつつ、応答に `schema_hash` / `cli_version` を付与する `post_process` コールバック方式を採用。
 
-変更後の `status` コマンドと `_get_cli_version()` ヘルパー:
+> **C1修正 (Codex指摘)**: 手動実装だと `execute_command()` の `--json/--json-stdin` パース・バリデーション・dry-runチェックが無効化され、`tests/test_cli_system.py::test_system_status` の `@patch("cli.helpers.get_bridge")` も壊れる。`execute_command()` に `post_process` 引数を追加する方式に変更。
+
+3a. `cli/helpers.py` の `execute_command()` に `post_process` 引数を追加:
+
+```python
+def execute_command(ctx, command: str, params: dict, *, timeout: float | None = None,
+                    post_process: callable | None = None):
+    """共通コマンド実行ヘルパー。
+    ...
+    post_process: 応答 data を加工するコールバック（省略時は何もしない）
+    """
+    # ... 既存コードそのまま ...
+
+    async def _run():
+        # ... 既存の validate / bridge.connect / send_command ...
+            data = result.get("result", result)
+            if post_process is not None:
+                data = post_process(data)
+            click.echo(OutputFormatter.format(data, fmt, fields=fields))
+        # ... 既存のエラーハンドリングそのまま ...
+```
+
+3b. `cli/commands/system.py` の `status` コマンドを変更:
 
 ```python
 @system.command()
@@ -1297,25 +1411,14 @@ Modify `cli/commands/system.py` — `status` コマンドを `execute_command()`
 @click.pass_context
 def status(ctx, **kwargs):
     """Get Lightroom bridge status"""
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-    fields = ctx.obj.get("fields") if ctx.obj else None
+    from lightroom_sdk.schema import get_schema_hash
 
-    async def _run():
-        from lightroom_sdk.schema import get_schema_hash
-        bridge = get_bridge()
-        try:
-            await bridge.connect()
-            result = await bridge.send_command("system.status", timeout=5.0)
-            data = result.get("result", result)
-            data["schema_hash"] = get_schema_hash()
-            data["cli_version"] = _get_cli_version()
-            click.echo(OutputFormatter.format(data, fmt, fields=fields))
-        except Exception as e:
-            handle_error(ctx, e, fmt)
-        finally:
-            await bridge.disconnect()
+    def _enrich(data):
+        data["schema_hash"] = get_schema_hash()
+        data["cli_version"] = _get_cli_version()
+        return data
 
-    run_async(_run())
+    execute_command(ctx, "system.status", {}, post_process=_enrich)
 
 
 def _get_cli_version() -> str:
@@ -1326,6 +1429,12 @@ def _get_cli_version() -> str:
     except Exception:
         return "dev"
 ```
+
+> **W1修正**: `system.status` 応答には bridge から返る `plugin_version` フィールド（Luaプラグイン側が返す）がそのまま残り、CLI側で `cli_version`（Pythonパッケージバージョン）と `schema_hash` を付与する。最終的な応答は `{...bridge応答..., "cli_version": "0.3.0", "schema_hash": "abc123...", "plugin_version": "1.0.0"}` の形になる。
+
+**利点**: `execute_command()` を通るため:
+- `@patch("cli.helpers.get_bridge")` がそのまま機能（既存テストのデグレなし）
+- `--json/--json-stdin` パース・バリデーション・dry-runチェックも有効
 
 **Step 4: 通過を確認**
 
@@ -1419,5 +1528,5 @@ Expected: 全 744+ 件 + 新規テスト約 30 件 = 全 PASS
 | 5 | `cli/helpers.py`, `cli/decorators.py` | `tests/test_dry_run_risk_level.py` | `feat: add risk_level to --dry-run` |
 | 6 | `cli/output.py` | `tests/test_output_sanitize.py` | `feat: add output sanitization layer` |
 | 7 | `lightroom_sdk/schema.py` | `tests/test_schema_hash.py` | `feat: add get_schema_hash()` |
-| 8 | `cli/commands/system.py` | `tests/test_system_status_metadata.py` | `feat: add schema_hash to system status` |
+| 8 | `cli/commands/system.py`, `cli/helpers.py` | `tests/test_system_status_metadata.py` | `feat: add schema_hash to system status` |
 | 9 | `SKILLS.md` | なし | `docs: add Agent Quick Contract` |
