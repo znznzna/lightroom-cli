@@ -51,3 +51,46 @@ class TestSchemaDataStructures:
         from lightroom_sdk.schema import get_all_schemas
         schemas = get_all_schemas()
         assert len(schemas) > 0
+
+
+class TestSchemaIntegrity:
+    """スキーマ定義の整合性テスト"""
+
+    def test_all_schemas_have_command(self):
+        from lightroom_sdk.schema import get_all_schemas
+        for name, schema in get_all_schemas().items():
+            assert schema.command == name, f"Key mismatch: {name} != {schema.command}"
+
+    def test_all_schemas_have_cli_path(self):
+        from lightroom_sdk.schema import get_all_schemas
+        for name, schema in get_all_schemas().items():
+            assert schema.cli_path, f"Missing cli_path for {name}"
+
+    def test_all_schemas_have_description(self):
+        from lightroom_sdk.schema import get_all_schemas
+        for name, schema in get_all_schemas().items():
+            assert schema.description, f"Missing description for {name}"
+
+    def test_enum_params_have_values(self):
+        from lightroom_sdk.schema import get_all_schemas, ParamType
+        for name, schema in get_all_schemas().items():
+            for param in schema.params:
+                if param.type == ParamType.ENUM:
+                    assert param.enum_values, (
+                        f"ENUM param '{param.name}' in '{name}' has no enum_values"
+                    )
+
+    def test_no_duplicate_cli_paths(self):
+        from lightroom_sdk.schema import get_all_schemas
+        paths = [s.cli_path for s in get_all_schemas().values()]
+        non_template = [p for p in paths if "<" not in p]
+        assert len(non_template) == len(set(non_template)), (
+            f"Duplicate cli_paths found: "
+            f"{[p for p in non_template if non_template.count(p) > 1]}"
+        )
+
+    def test_mutating_commands_count(self):
+        """mutating コマンドが一定数以上定義されていることを確認"""
+        from lightroom_sdk.schema import get_all_schemas
+        mutating = [s for s in get_all_schemas().values() if s.mutating]
+        assert len(mutating) >= 30, f"Expected >=30 mutating commands, got {len(mutating)}"
