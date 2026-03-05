@@ -46,11 +46,13 @@ def execute_command(ctx, command: str, params: dict, *, timeout: float | None = 
     else:
         cmd_timeout = global_timeout
 
-    # --json 入力チェック
+    # --json / --json-stdin 入力チェック
     json_str = getattr(ctx, "params", {}).get("json_str")
-    if json_str is not None:
+    json_stdin = getattr(ctx, "params", {}).get("json_stdin", False)
+    if json_str is not None or json_stdin:
         from cli.decorators import parse_json_input
-        if not json_str.strip():
+        import sys
+        if json_str is not None and not json_str.strip():
             click.echo(
                 OutputFormatter.format_error(
                     "Empty --json value", fmt, code="VALIDATION_ERROR"
@@ -59,8 +61,9 @@ def execute_command(ctx, command: str, params: dict, *, timeout: float | None = 
             )
             ctx.exit(2)
             return
+        stdin = sys.stdin if json_stdin else None
         try:
-            json_params = parse_json_input(json_str, None)
+            json_params = parse_json_input(json_str, stdin)
             if json_params is not None:
                 params = json_params
         except click.BadParameter as e:
