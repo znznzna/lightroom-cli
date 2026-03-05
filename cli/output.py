@@ -55,7 +55,22 @@ class OutputFormatter:
         return console.file.getvalue()
 
     @staticmethod
-    def format_error(message: str, mode: str = "text") -> str:
+    def format_error(
+        message: str,
+        mode: str = "text",
+        *,
+        code: str = "ERROR",
+        command: str | None = None,
+        suggestions: list[str] | None = None,
+    ) -> str:
         if mode == "json":
-            return json.dumps({"error": message})
+            error_obj: dict[str, Any] = {
+                "code": code,
+                "message": message,
+            }
+            if command:
+                error_obj["command"] = command
+            if suggestions:
+                error_obj["suggestions"] = suggestions
+            return json.dumps({"error": error_obj})
         return f"Error: {message}"

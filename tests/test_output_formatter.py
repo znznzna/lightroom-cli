@@ -72,3 +72,37 @@ class TestFieldsFiltering:
         result = OutputFormatter.format(data, "json", fields=[])
         parsed = json.loads(result)
         assert parsed == {}
+
+
+class TestStructuredError:
+    """構造化エラー出力のテスト"""
+
+    def test_json_error_is_structured(self):
+        result = OutputFormatter.format_error("Something went wrong", mode="json")
+        parsed = json.loads(result)
+        assert "error" in parsed
+        assert parsed["error"]["message"] == "Something went wrong"
+
+    def test_json_error_with_code(self):
+        result = OutputFormatter.format_error(
+            "Unknown param", mode="json", code="VALIDATION_ERROR"
+        )
+        parsed = json.loads(result)
+        assert parsed["error"]["code"] == "VALIDATION_ERROR"
+
+    def test_json_error_with_suggestions(self):
+        result = OutputFormatter.format_error(
+            "Unknown param 'Exposre'", mode="json",
+            code="VALIDATION_ERROR", suggestions=["Exposure"]
+        )
+        parsed = json.loads(result)
+        assert parsed["error"]["suggestions"] == ["Exposure"]
+
+    def test_text_error_unchanged(self):
+        result = OutputFormatter.format_error("Something went wrong", mode="text")
+        assert result == "Error: Something went wrong"
+
+    def test_json_error_backward_compat(self):
+        """既存呼び出し (mode 未指定) が壊れないことを確認"""
+        result = OutputFormatter.format_error("fail")
+        assert "fail" in result
