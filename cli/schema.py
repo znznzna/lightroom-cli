@@ -65,6 +65,9 @@ def schema_cmd(ctx, path):
             "description": target.description,
             "mutating": target.mutating,
             "timeout": target.timeout,
+            "supports_dry_run": target.supports_dry_run,
+            "requires_confirm": target.requires_confirm,
+            "risk_level": target.risk_level,
             "params": [
                 {
                     "name": p.name,
