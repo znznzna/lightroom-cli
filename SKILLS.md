@@ -249,14 +249,58 @@ lr selection next
 lr selection flag
 ```
 
-## Output Formats
+## Schema Introspection
 
-All commands support `-o json` for machine-readable output:
+Use `lr schema` to discover available commands without reading documentation:
 
 ```bash
-lr -o json develop get-settings    # Full JSON
+lr schema                      # List all command groups
+lr schema develop              # List commands in develop group
+lr schema develop.setValue     # Show command detail with parameters
+```
+
+## Output Formats
+
+The CLI auto-detects TTY vs pipe and chooses the appropriate format:
+
+- **TTY (interactive)**: Human-readable text output
+- **Pipe / non-TTY**: JSON output (machine-readable, ideal for agents)
+
+Override with `-o`:
+
+```bash
+lr -o json develop get-settings    # Force JSON
 lr -o table catalog list           # Table format
-lr develop get-settings            # Human-readable text
+lr develop get-settings            # Auto-detect (text in TTY, JSON in pipe)
+```
+
+### Field Filtering
+
+Use `--fields` to select specific fields from the response:
+
+```bash
+lr --fields status,timestamp system ping    # Only return status and timestamp
+lr --fields Exposure,Contrast develop get-settings
+```
+
+## Input Options
+
+### --dry-run
+
+All mutating commands support `--dry-run` to preview what would be executed:
+
+```bash
+lr develop set Exposure 1.0 --dry-run
+lr catalog set-rating PHOTO_ID 5 --dry-run
+```
+
+### --json Input
+
+Pass parameters as JSON instead of CLI arguments:
+
+```bash
+lr develop set --json '{"parameter": "Exposure", "value": 1.0}'
+echo '{"parameter": "Contrast", "value": 25}' | lr develop set --json-stdin
 ```
 
 ## Environment Variables
@@ -265,9 +309,15 @@ lr develop get-settings            # Human-readable text
 |----------|-------------|---------|
 | `LR_PORT_FILE` | Port file path | `/tmp/lightroom_ports.txt` |
 | `LR_PLUGIN_DIR` | Lightroom Modules dir | Auto-detected |
+| `LR_OUTPUT` | Default output format (`json`/`text`/`table`) | Auto-detect (TTY) |
+| `LR_TIMEOUT` | Default timeout in seconds | `30` |
+| `LR_FIELDS` | Default fields filter (comma-separated) | None |
+| `LR_VERBOSE` | Enable verbose output (`1`/`true`) | Off |
 
 ## Error Handling
 
+- **Structured errors**: JSON errors with `code`, `message`, and `suggestions` fields
+- **Exit codes**: 0=success, 1=general error, 2=validation error, 3=connection error, 4=timeout
 - Connection errors: The CLI auto-retries with exponential backoff
 - Timeout: Use `-t SECONDS` to increase timeout for slow operations
 - Plugin not running: `lr system check-connection` for diagnostics
