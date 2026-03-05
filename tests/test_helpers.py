@@ -165,6 +165,18 @@ class TestExecuteCommand:
         assert call_args[0][1]["parameter"] == "Contrast"
         assert call_args[0][1]["value"] == 50
 
+    def test_empty_json_string_rejected(self):
+        from cli.helpers import execute_command
+        mock_ctx = self._make_ctx(params={"json_str": ""})
+        mock_bridge = AsyncMock()
+
+        with patch("cli.helpers.get_bridge", return_value=mock_bridge):
+            execute_command(mock_ctx, "system.ping", {})
+
+        # Empty JSON should not execute the bridge command
+        mock_bridge.send_command.assert_not_called()
+        mock_ctx.exit.assert_called_with(2)
+
     def test_zero_timeout_not_treated_as_falsy(self):
         from cli.helpers import execute_command
         mock_ctx = self._make_ctx()

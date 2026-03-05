@@ -32,8 +32,17 @@ def execute_command(ctx, command: str, params: dict, *, timeout: float | None = 
 
     # --json 入力チェック
     json_str = getattr(ctx, "params", {}).get("json_str")
-    if json_str:
+    if json_str is not None:
         from cli.decorators import parse_json_input
+        if not json_str.strip():
+            click.echo(
+                OutputFormatter.format_error(
+                    "Empty --json value", fmt, code="VALIDATION_ERROR"
+                ),
+                err=True,
+            )
+            ctx.exit(2)
+            return
         try:
             json_params = parse_json_input(json_str, None)
             if json_params is not None:
