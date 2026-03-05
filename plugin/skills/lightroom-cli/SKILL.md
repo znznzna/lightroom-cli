@@ -224,3 +224,17 @@ Structured JSON errors with `code`, `message`, and `suggestions` fields:
 | `LR_TIMEOUT` | Default timeout in seconds | `30` |
 | `LR_FIELDS` | Default fields filter (comma-separated) | None |
 | `LR_VERBOSE` | Enable verbose output (`1`/`true`) | Off |
+
+## MCP Server (Claude Desktop / Cowork)
+
+For non-CLI environments (Claude Desktop, Cowork), use the MCP Server:
+
+1. `pip install lightroom-cli[mcp]`
+2. `lr mcp install`
+3. Restart Claude Desktop / Cowork
+
+MCP tool names use `lr_` prefix + snake_case (e.g., `lr_system_ping`, `lr_catalog_list`).
+Parameters are identical to CLI. Use `dry_run=true` for mutating commands.
+
+To check status: `lr mcp status`
+To uninstall: `lr mcp uninstall`
