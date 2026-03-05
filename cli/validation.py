@@ -99,6 +99,17 @@ def _sanitize_string(name: str, value: str) -> str:
     return value
 
 
+def _sanitize_json_strings(param_name: str, data: object) -> object:
+    """JSON_OBJECT/JSON_ARRAY 内の文字列を再帰的にサニタイズ。"""
+    if isinstance(data, str):
+        return _sanitize_string(param_name, data)
+    if isinstance(data, dict):
+        return {k: _sanitize_json_strings(param_name, v) for k, v in data.items()}
+    if isinstance(data, list):
+        return [_sanitize_json_strings(param_name, item) for item in data]
+    return data
+
+
 def _coerce_type(name: str, value: object, schema: ParamSchema) -> object:
     """型変換を試みる。失敗時は ValidationError。"""
     try:
@@ -136,7 +147,7 @@ def _coerce_type(name: str, value: object, schema: ParamSchema) -> object:
                         f"got {type(value).__name__}",
                         param=name,
                     )
-                return value
+                return _sanitize_json_strings(name, value)
             case ParamType.JSON_ARRAY:
                 if not isinstance(value, list):
                     raise ValidationError(
@@ -144,7 +155,7 @@ def _coerce_type(name: str, value: object, schema: ParamSchema) -> object:
                         f"got {type(value).__name__}",
                         param=name,
                     )
-                return value
+                return _sanitize_json_strings(name, value)
             case ParamType.ENUM:
                 if str(value) not in (schema.enum_values or []):
                     raise ValidationError(

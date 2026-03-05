@@ -108,6 +108,16 @@ lr catalog set-rating 12345 5
 | `lr catalog get-view-filter` | Get current view filter |
 | `lr catalog remove-from-catalog PHOTO_ID --confirm` | Remove photo from catalog (irreversible, requires --confirm) |
 
+#### JSON parameter examples
+
+```bash
+# Smart collection: 5-star photos
+lr catalog create-smart-collection "5-star" --search-desc '{"criteria": "rating", "operation": ">=", "value": 5}'
+
+# View filter: show only picked photos
+lr catalog set-view-filter --filter '{"pick": true}'
+```
+
 #### catalog find Options
 
 | Option | Values | Description |
@@ -487,6 +497,12 @@ echo '{"parameter": "Contrast", "value": 25}' | lr develop set --json-stdin
 - Timeout: Use `-t SECONDS` to increase timeout for slow operations
 - Plugin not running: `lr system check-connection` for diagnostics
 
+**Exit code 3 (connection error) recovery:**
+1. `lr system check-connection` — diagnose the issue
+2. Ensure Lightroom Classic is running with the plugin active
+3. `lr system reconnect` — force reconnect
+4. If still failing, report to the user
+
 Error response example:
 ```json
 {"error": {"code": "CONFIRMATION_REQUIRED", "message": "This operation is irreversible. Pass --confirm to proceed.", "suggestions": ["Add --confirm flag: lr catalog remove-from-catalog PHOTO_ID --confirm"]}}
@@ -508,6 +524,18 @@ Error response example:
 ```json
 {"Exposure": 0.5, "Contrast": 25, "Highlights": -10, "Shadows": 30, "Whites": 0, "Blacks": 0, "Temperature": 5500, "Tint": 0, ...}
 ```
+
+### develop set (mutating)
+```json
+{"parameter": "Exposure", "value": 0.5, "previousValue": 0.0}
+```
+
+### catalog set-rating (mutating)
+```json
+{"photoId": "12345", "rating": 5, "previousRating": 3}
+```
+
+> **Tip:** Use `lr schema CMD` to see `response_fields` for any command's response structure.
 
 ### preview generate
 ```json

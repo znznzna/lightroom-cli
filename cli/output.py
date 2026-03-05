@@ -11,21 +11,26 @@ class OutputFormatter:
     _MAX_OUTPUT_STRING_LENGTH = 50_000
 
     @staticmethod
-    def _sanitize_output(data: Any, *, truncate: bool = False) -> Any:
+    def _sanitize_output(data: Any, *, truncate: bool = False, _truncated: list | None = None) -> Any:
         """Sanitize output data: strip control chars, optionally truncate long strings."""
         if isinstance(data, str):
             s = OutputFormatter._OUTPUT_CONTROL_CHAR_RE.sub('', data)
             if truncate and len(s) > OutputFormatter._MAX_OUTPUT_STRING_LENGTH:
+                if _truncated is not None:
+                    _truncated.append(True)
                 return s[:OutputFormatter._MAX_OUTPUT_STRING_LENGTH] + f"... (truncated, {len(data)} chars total)"
             return s
         if isinstance(data, dict):
-            return {k: OutputFormatter._sanitize_output(v, truncate=truncate) for k, v in data.items()}
+            return {k: OutputFormatter._sanitize_output(v, truncate=truncate, _truncated=_truncated) for k, v in data.items()}
         if isinstance(data, list):
-            return [OutputFormatter._sanitize_output(item, truncate=truncate) for item in data]
+            return [OutputFormatter._sanitize_output(item, truncate=truncate, _truncated=_truncated) for item in data]
         return data
     @staticmethod
     def format(data: Any, mode: str = "text", fields: list[str] | None = None) -> str:
-        data = OutputFormatter._sanitize_output(data, truncate=(mode == "json"))
+        truncated_tracker: list = []
+        data = OutputFormatter._sanitize_output(data, truncate=(mode == "json"), _truncated=truncated_tracker)
+        if truncated_tracker and isinstance(data, dict):
+            data["_truncated"] = True
         if fields is not None:
             filtered = OutputFormatter._filter_fields(data, fields)
             if isinstance(filtered, dict) and not filtered and isinstance(data, dict) and data and fields:
