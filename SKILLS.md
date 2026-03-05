@@ -74,6 +74,35 @@
 | `lr develop tool TOOL` | Select tool (loupe/crop/dust/redeye/gradient/circularGradient) |
 | `lr develop edit-in-photoshop` | Edit selected photo in Photoshop |
 
+#### Develop Parameters Reference
+
+Use `lr develop range PARAM` to get the exact min/max for any parameter.
+
+| Parameter | Range | Description |
+|-----------|-------|-------------|
+| Exposure | -5.0 to +5.0 | Overall brightness |
+| Contrast | -100 to +100 | Tonal contrast |
+| Highlights | -100 to +100 | Bright area recovery |
+| Shadows | -100 to +100 | Shadow detail |
+| Whites | -100 to +100 | White point |
+| Blacks | -100 to +100 | Black point |
+| Temperature | 2000 to 50000 | Color temperature (Kelvin) |
+| Tint | -150 to +150 | Green/magenta tint |
+| Vibrance | -100 to +100 | Subtle saturation |
+| Saturation | -100 to +100 | Overall saturation |
+| Clarity | -100 to +100 | Midtone contrast |
+| Dehaze | -100 to +100 | Haze removal |
+| Texture | -100 to +100 | Detail texture |
+| Sharpness | 0 to 150 | Sharpening amount |
+| LuminanceSmoothing | 0 to 100 | Luminance noise reduction |
+| ColorNoiseReduction | 0 to 100 | Color noise reduction |
+| VignetteAmount | -100 to +100 | Post-crop vignetting |
+| SplitToningHighlightHue | 0 to 360 | Split tone highlight hue |
+| SplitToningShadowHue | 0 to 360 | Split tone shadow hue |
+
+> **Note:** Use the internal Lightroom parameter names exactly as shown.
+> Get the full list dynamically: `lr develop debug probe`
+
 #### Tone Curve
 
 | Command | Description |
