@@ -1,21 +1,7 @@
-import asyncio
+import json
 import click
+from cli.helpers import execute_command
 from cli.output import OutputFormatter
-
-
-def get_bridge():
-    """ResilientSocketBridgeインスタンスを取得（遅延import）"""
-    from lightroom_sdk.resilient_bridge import ResilientSocketBridge
-    return ResilientSocketBridge()
-
-
-def run_async(coro):
-    """CLIからasync関数を実行するヘルパー（コマンドごとに1回だけ呼ぶ）"""
-    loop = asyncio.new_event_loop()
-    try:
-        return loop.run_until_complete(coro)
-    finally:
-        loop.close()
 
 
 def _parse_pairs(pairs: tuple) -> dict:
@@ -42,70 +28,34 @@ develop.add_command(ai)
 @click.pass_context
 def get_settings(ctx):
     """Get all current develop settings"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command("develop.getSettings", {}, timeout=timeout)
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "develop.getSettings", {})
 
 
 @develop.command("set")
 @click.argument("pairs", nargs=-1, required=True)
+@click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @click.pass_context
-def set_values(ctx, pairs):
+def set_values(ctx, pairs, dry_run):
     """Set develop parameter(s): lr develop set <param> <value> [<param2> <value2> ...]"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            parsed = _parse_pairs(pairs)
-            if len(parsed) == 1:
-                param, value = next(iter(parsed.items()))
-                result = await bridge.send_command(
-                    "develop.setValue", {"parameter": param, "value": value}, timeout=timeout
-                )
-            else:
-                result = await bridge.send_command(
-                    "develop.batchApplySettings", {"settings": parsed}, timeout=timeout
-                )
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    try:
+        parsed = _parse_pairs(pairs)
+    except click.BadParameter as e:
+        click.echo(OutputFormatter.format_error(str(e), ctx.obj.get("output", "text") if ctx.obj else "text", code="VALIDATION_ERROR"), err=True)
+        ctx.exit(2)
+        return
+    if len(parsed) == 1:
+        param, value = next(iter(parsed.items()))
+        execute_command(ctx, "develop.setValue", {"parameter": param, "value": value})
+    else:
+        execute_command(ctx, "develop.batchApplySettings", {"settings": parsed})
 
 
 @develop.command("auto-tone")
+@click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @click.pass_context
-def auto_tone(ctx):
+def auto_tone(ctx, dry_run):
     """Apply auto tone adjustments"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command("develop.setAutoTone", {}, timeout=timeout)
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "develop.setAutoTone", {})
 
 
 @develop.command("get")
@@ -113,75 +63,30 @@ def auto_tone(ctx):
 @click.pass_context
 def get_value(ctx, parameter):
     """Get a single develop parameter value"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command(
-                "develop.getValue", {"param": parameter}, timeout=timeout
-            )
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "develop.getValue", {"param": parameter})
 
 
 @develop.command("apply")
 @click.option("--settings", required=True, help="JSON string of settings to apply")
+@click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @click.pass_context
-def apply_settings(ctx, settings):
+def apply_settings(ctx, settings, dry_run):
     """Apply develop settings from JSON"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    import json
     try:
         parsed = json.loads(settings)
     except json.JSONDecodeError as e:
-        click.echo(OutputFormatter.format_error(f"Invalid JSON: {e}"))
+        click.echo(OutputFormatter.format_error(f"Invalid JSON: {e}", ctx.obj.get("output", "text") if ctx.obj else "text", code="VALIDATION_ERROR"), err=True)
         ctx.exit(1)
         return
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command(
-                "develop.applySettings", {"settings": parsed}, timeout=timeout
-            )
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "develop.applySettings", {"settings": parsed})
 
 
 @develop.command("auto-wb")
+@click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @click.pass_context
-def auto_wb(ctx):
+def auto_wb(ctx, dry_run):
     """Apply auto white balance"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command(
-                "develop.setAutoWhiteBalance", {}, timeout=timeout
-            )
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "develop.setAutoWhiteBalance", {})
 
 
 @develop.command("tool")
@@ -189,132 +94,49 @@ def auto_wb(ctx):
 @click.pass_context
 def select_tool(ctx, tool_name):
     """Select a develop tool (loupe/crop/dust/redeye/gradient/circularGradient/localized/upright)"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command(
-                "develop.selectTool", {"tool": tool_name}, timeout=timeout
-            )
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "develop.selectTool", {"tool": tool_name})
 
 
 @develop.command("reset")
+@click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @click.pass_context
-def reset(ctx):
+def reset(ctx, dry_run):
     """Reset develop settings to defaults"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command("develop.resetAllDevelopAdjustments", {}, timeout=timeout)
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "develop.resetAllDevelopAdjustments", {})
 
 
 @develop.command("preset")
 @click.argument("preset_name")
+@click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @click.pass_context
-def preset(ctx, preset_name):
+def preset(ctx, preset_name, dry_run):
     """Apply a develop preset by name"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command(
-                "catalog.applyDevelopPreset", {"presetName": preset_name}, timeout=timeout
-            )
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "catalog.applyDevelopPreset", {"presetName": preset_name})
 
 
 @develop.command("snapshot")
 @click.argument("name")
+@click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @click.pass_context
-def snapshot(ctx, name):
+def snapshot(ctx, name, dry_run):
     """Create a develop snapshot"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command(
-                "catalog.createDevelopSnapshot", {"name": name}, timeout=timeout
-            )
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "catalog.createDevelopSnapshot", {"name": name})
 
 
 @develop.command("copy-settings")
+@click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @click.pass_context
-def copy_settings(ctx):
+def copy_settings(ctx, dry_run):
     """Copy develop settings from selected photo"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command(
-                "catalog.copySettings", {}, timeout=timeout
-            )
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "catalog.copySettings", {})
 
 
 @develop.command("paste-settings")
+@click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @click.pass_context
-def paste_settings(ctx):
+def paste_settings(ctx, dry_run):
     """Paste develop settings to selected photo"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command(
-                "catalog.pasteSettings", {}, timeout=timeout
-            )
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "catalog.pasteSettings", {})
 
 
 @develop.command("range")
@@ -322,82 +144,32 @@ def paste_settings(ctx):
 @click.pass_context
 def get_range(ctx, param):
     """Get min/max range for a develop parameter"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command("develop.getRange", {"param": param}, timeout=timeout)
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "develop.getRange", {"param": param})
 
 
 @develop.command("reset-param")
 @click.argument("param")
+@click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @click.pass_context
-def reset_param(ctx, param):
+def reset_param(ctx, param, dry_run):
     """Reset a develop parameter to its default value"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command("develop.resetToDefault", {"param": param}, timeout=timeout)
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "develop.resetToDefault", {"param": param})
 
 
 @develop.command("process-version")
 @click.pass_context
 def process_version(ctx):
     """Get the current process version"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command("develop.getProcessVersion", {}, timeout=timeout)
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "develop.getProcessVersion", {})
 
 
 @develop.command("set-process-version")
 @click.argument("version")
+@click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @click.pass_context
-def set_process_version(ctx, version):
+def set_process_version(ctx, version, dry_run):
     """Set the process version"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command("develop.setProcessVersion", {"version": version}, timeout=timeout)
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "develop.setProcessVersion", {"version": version})
 
 
 CHANNEL_TO_PARAM = {
@@ -419,149 +191,63 @@ def curve():
 @click.pass_context
 def curve_get(ctx, channel):
     """Get tone curve points"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command(
-                "develop.getCurvePoints", {"param": CHANNEL_TO_PARAM.get(channel, channel)}, timeout=timeout
-            )
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "develop.getCurvePoints", {"param": CHANNEL_TO_PARAM.get(channel, channel)})
 
 
 @curve.command("set")
 @click.option("--points", required=True, help="JSON array of [x,y] points")
 @click.option("--channel", default="RGB", help="Channel (RGB/Red/Green/Blue)")
+@click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @click.pass_context
-def curve_set(ctx, points, channel):
+def curve_set(ctx, points, channel, dry_run):
     """Set tone curve points"""
-    import json
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
     try:
         parsed = json.loads(points)
     except json.JSONDecodeError as e:
-        click.echo(OutputFormatter.format_error(f"Invalid JSON: {e}"))
+        click.echo(OutputFormatter.format_error(f"Invalid JSON: {e}", ctx.obj.get("output", "text") if ctx.obj else "text", code="VALIDATION_ERROR"), err=True)
         ctx.exit(1)
         return
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command(
-                "develop.setCurvePoints", {"param": CHANNEL_TO_PARAM.get(channel, channel), "points": [{"x": p[0], "y": p[1]} if isinstance(p, list) else p for p in parsed]}, timeout=timeout
-            )
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    curve_points = [{"x": p[0], "y": p[1]} if isinstance(p, list) else p for p in parsed]
+    execute_command(ctx, "develop.setCurvePoints", {"param": CHANNEL_TO_PARAM.get(channel, channel), "points": curve_points})
 
 
 @curve.command("linear")
 @click.option("--channel", default="RGB", help="Channel")
+@click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @click.pass_context
-def curve_linear(ctx, channel):
+def curve_linear(ctx, channel, dry_run):
     """Reset curve to linear"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command(
-                "develop.setCurveLinear", {"param": CHANNEL_TO_PARAM.get(channel, channel)}, timeout=timeout
-            )
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "develop.setCurveLinear", {"param": CHANNEL_TO_PARAM.get(channel, channel)})
 
 
 @curve.command("s-curve")
 @click.option("--channel", default="RGB", help="Channel")
+@click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @click.pass_context
-def curve_s_curve(ctx, channel):
+def curve_s_curve(ctx, channel, dry_run):
     """Apply S-curve preset"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command(
-                "develop.setCurveSCurve", {"param": CHANNEL_TO_PARAM.get(channel, channel)}, timeout=timeout
-            )
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "develop.setCurveSCurve", {"param": CHANNEL_TO_PARAM.get(channel, channel)})
 
 
 @curve.command("add-point")
 @click.argument("x", type=float)
 @click.argument("y", type=float)
 @click.option("--channel", default="RGB", help="Channel")
+@click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @click.pass_context
-def curve_add_point(ctx, x, y, channel):
+def curve_add_point(ctx, x, y, channel, dry_run):
     """Add a point to the tone curve"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command(
-                "develop.addCurvePoint", {"param": CHANNEL_TO_PARAM.get(channel, channel), "x": x, "y": y}, timeout=timeout
-            )
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "develop.addCurvePoint", {"param": CHANNEL_TO_PARAM.get(channel, channel), "x": x, "y": y})
 
 
 @curve.command("remove-point")
 @click.argument("index", type=int)
 @click.option("--channel", default="RGB", help="Channel")
+@click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @click.pass_context
-def curve_remove_point(ctx, index, channel):
+def curve_remove_point(ctx, index, channel, dry_run):
     """Remove a point from the tone curve"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command(
-                "develop.removeCurvePoint", {"param": CHANNEL_TO_PARAM.get(channel, channel), "index": index}, timeout=timeout
-            )
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "develop.removeCurvePoint", {"param": CHANNEL_TO_PARAM.get(channel, channel), "index": index})
 
 
 # --- Masking commands ---
@@ -578,80 +264,30 @@ def mask():
 def mask_list(ctx):
     """List all masks (DEPRECATED: use 'lr develop ai list')"""
     click.echo("Warning: 'lr develop mask list' is deprecated. Use 'lr develop ai list' instead.", err=True)
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command("develop.getAllMasks", {}, timeout=timeout)
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "develop.getAllMasks", {})
 
 
 @mask.command("selected")
 @click.pass_context
 def mask_selected(ctx):
     """Get selected mask"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command("develop.getSelectedMask", {}, timeout=timeout)
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "develop.getSelectedMask", {})
 
 
 @mask.command("go-to")
+@click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @click.pass_context
-def mask_go_to(ctx):
+def mask_go_to(ctx, dry_run):
     """Go to masking view"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command("develop.goToMasking", {}, timeout=timeout)
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "develop.goToMasking", {})
 
 
 @mask.command("toggle-overlay")
+@click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @click.pass_context
-def mask_toggle_overlay(ctx):
+def mask_toggle_overlay(ctx, dry_run):
     """Toggle mask overlay"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command("develop.toggleOverlay", {}, timeout=timeout)
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "develop.toggleOverlay", {})
 
 
 # --- Local adjustment commands ---
@@ -668,110 +304,48 @@ def local_adj():
 @click.pass_context
 def local_get(ctx, parameter):
     """Get a local adjustment parameter value"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command(
-                "develop.getLocalValue", {"parameter": parameter}, timeout=timeout
-            )
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "develop.getLocalValue", {"parameter": parameter})
 
 
 @local_adj.command("set")
 @click.argument("parameter")
 @click.argument("value", type=float)
+@click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @click.pass_context
-def local_set(ctx, parameter, value):
+def local_set(ctx, parameter, value, dry_run):
     """Set a local adjustment parameter value"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command(
-                "develop.setLocalValue", {"parameter": parameter, "value": value}, timeout=timeout
-            )
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "develop.setLocalValue", {"parameter": parameter, "value": value})
 
 
 @local_adj.command("apply")
 @click.option("--settings", required=True, help="JSON string of local adjustment settings")
+@click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @click.pass_context
-def local_apply(ctx, settings):
+def local_apply(ctx, settings, dry_run):
     """Apply multiple local adjustment settings from JSON"""
-    import json
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
     try:
         parsed = json.loads(settings)
     except json.JSONDecodeError as e:
-        click.echo(OutputFormatter.format_error(f"Invalid JSON: {e}"))
+        click.echo(OutputFormatter.format_error(f"Invalid JSON: {e}", ctx.obj.get("output", "text") if ctx.obj else "text", code="VALIDATION_ERROR"), err=True)
         ctx.exit(1)
         return
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command(
-                "develop.applyLocalSettings", {"settings": parsed}, timeout=timeout
-            )
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "develop.applyLocalSettings", {"settings": parsed})
 
 
 @local_adj.command("params")
 @click.pass_context
 def local_params(ctx):
     """List available local adjustment parameters"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command(
-                "develop.getAvailableLocalParameters", {}, timeout=timeout
-            )
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "develop.getAvailableLocalParameters", {})
 
 
 @local_adj.command("create-mask")
 @click.option("--tool", "mask_type", default=None, help="Mask type (brush/gradient/radial)")
 @click.option("--settings", default=None, help="JSON local adjustment settings")
+@click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @click.pass_context
-def local_create_mask(ctx, mask_type, settings):
+def local_create_mask(ctx, mask_type, settings, dry_run):
     """Create mask with local adjustments"""
-    import json
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
     params = {}
     if mask_type:
         params["maskType"] = mask_type
@@ -779,21 +353,10 @@ def local_create_mask(ctx, mask_type, settings):
         try:
             params["localSettings"] = json.loads(settings)
         except json.JSONDecodeError as e:
-            click.echo(OutputFormatter.format_error(f"Invalid JSON: {e}"))
+            click.echo(OutputFormatter.format_error(f"Invalid JSON: {e}", ctx.obj.get("output", "text") if ctx.obj else "text", code="VALIDATION_ERROR"), err=True)
             ctx.exit(1)
             return
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command("develop.createMaskWithLocalAdjustments", params, timeout=timeout)
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "develop.createMaskWithLocalAdjustments", params)
 
 
 # --- Filter creation commands ---
@@ -806,90 +369,41 @@ def filter_cmds():
 
 
 @filter_cmds.command("graduated")
+@click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @click.pass_context
-def filter_graduated(ctx):
+def filter_graduated(ctx, dry_run):
     """Create a graduated filter"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command("develop.createGraduatedFilter", {}, timeout=timeout)
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "develop.createGraduatedFilter", {})
 
 
 @filter_cmds.command("radial")
+@click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @click.pass_context
-def filter_radial(ctx):
+def filter_radial(ctx, dry_run):
     """Create a radial filter"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command("develop.createRadialFilter", {}, timeout=timeout)
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "develop.createRadialFilter", {})
 
 
 @filter_cmds.command("brush")
+@click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @click.pass_context
-def filter_brush(ctx):
+def filter_brush(ctx, dry_run):
     """Create an adjustment brush"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command("develop.createAdjustmentBrush", {}, timeout=timeout)
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "develop.createAdjustmentBrush", {})
 
 
 @filter_cmds.command("range")
 @click.option("--type", "range_type", default=None,
               type=click.Choice(["luminance", "color", "depth"]),
               help="Range mask type (luminance/color/depth)")
+@click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @click.pass_context
-def filter_range(ctx, range_type):
+def filter_range(ctx, range_type, dry_run):
     """Create a range mask"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
     params = {}
     if range_type is not None:
         params["rangeType"] = range_type
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command("develop.createRangeMask", params, timeout=timeout)
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "develop.createRangeMask", params)
 
 
 # --- Debug/introspection commands ---
@@ -905,81 +419,30 @@ def debug_cmds():
 @click.pass_context
 def debug_dump(ctx):
     """Dump LrDevelopController info"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command("develop.dumpLrDevelopController", {}, timeout=timeout)
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "develop.dumpLrDevelopController", {})
 
 
 @debug_cmds.command("gradient-params")
 @click.pass_context
 def debug_gradient_params(ctx):
     """Discover gradient parameters"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command("develop.discoverGradientParameters", {}, timeout=timeout)
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "develop.discoverGradientParameters", {})
 
 
 @debug_cmds.command("monitor")
 @click.option("--duration", default=10, type=int, help="Monitor duration in seconds")
+@click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @click.pass_context
-def debug_monitor(ctx, duration):
+def debug_monitor(ctx, duration, dry_run):
     """Monitor parameter changes"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command("develop.monitorParameterChanges", {"duration": duration}, timeout=timeout)
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "develop.monitorParameterChanges", {"duration": duration})
 
 
 @debug_cmds.command("probe")
 @click.pass_context
 def debug_probe(ctx):
     """Probe all develop parameters"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command("develop.probeAllDevelopParameters", {}, timeout=timeout)
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "develop.probeAllDevelopParameters", {})
 
 
 # --- Color operation commands ---
@@ -992,270 +455,113 @@ def color_cmds():
 
 
 @color_cmds.command("green-swatch")
+@click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @click.pass_context
-def color_green_swatch(ctx):
+def color_green_swatch(ctx, dry_run):
     """Create green color swatch"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command("develop.createGreenSwatch", {}, timeout=timeout)
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "develop.createGreenSwatch", {})
 
 
 @color_cmds.command("cyan-swatch")
+@click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @click.pass_context
-def color_cyan_swatch(ctx):
+def color_cyan_swatch(ctx, dry_run):
     """Create cyan color swatch"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command("develop.createCyanSwatch", {}, timeout=timeout)
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "develop.createCyanSwatch", {})
 
 
 @color_cmds.command("enhance")
 @click.option("--preset", default=None, help="Enhancement preset (natural/vivid/muted)")
+@click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @click.pass_context
-def color_enhance(ctx, preset):
+def color_enhance(ctx, preset, dry_run):
     """Enhance colors"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
     params = {"preset": preset} if preset else {}
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command("develop.enhanceColors", params, timeout=timeout)
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "develop.enhanceColors", params)
 
 
 # --- Mask/filter reset commands ---
 
 
 @develop.command("reset-gradient")
+@click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @click.pass_context
-def reset_gradient(ctx):
+def reset_gradient(ctx, dry_run):
     """Reset gradient filter"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command("develop.resetGradient", {}, timeout=timeout)
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "develop.resetGradient", {})
 
 
 @develop.command("reset-circular")
+@click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @click.pass_context
-def reset_circular(ctx):
+def reset_circular(ctx, dry_run):
     """Reset circular gradient filter"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command("develop.resetCircularGradient", {}, timeout=timeout)
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "develop.resetCircularGradient", {})
 
 
 @develop.command("reset-brush")
+@click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @click.pass_context
-def reset_brush(ctx):
+def reset_brush(ctx, dry_run):
     """Reset adjustment brush"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command("develop.resetBrushing", {}, timeout=timeout)
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "develop.resetBrushing", {})
 
 
 @develop.command("reset-masking")
+@click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @click.pass_context
-def reset_masking(ctx):
+def reset_masking(ctx, dry_run):
     """Reset masking (DEPRECATED: use 'lr develop ai reset')"""
     click.echo("Warning: 'lr develop reset-masking' is deprecated. Use 'lr develop ai reset' instead.", err=True)
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command("develop.resetMasking", {}, timeout=timeout)
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "develop.resetMasking", {})
 
 
 # --- LrDevelopController reset/edit commands ---
 
 
 @develop.command("reset-crop")
+@click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @click.pass_context
-def reset_crop(ctx):
+def reset_crop(ctx, dry_run):
     """Reset crop"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command("develop.resetCrop", {}, timeout=timeout)
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "develop.resetCrop", {})
 
 
 @develop.command("reset-transforms")
+@click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @click.pass_context
-def reset_transforms(ctx):
+def reset_transforms(ctx, dry_run):
     """Reset transforms"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command("develop.resetTransforms", {}, timeout=timeout)
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "develop.resetTransforms", {})
 
 
 @develop.command("reset-spot")
+@click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @click.pass_context
-def reset_spot(ctx):
+def reset_spot(ctx, dry_run):
     """Reset spot removal"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command("develop.resetSpotRemoval", {}, timeout=timeout)
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "develop.resetSpotRemoval", {})
 
 
 @develop.command("reset-redeye")
+@click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @click.pass_context
-def reset_redeye(ctx):
+def reset_redeye(ctx, dry_run):
     """Reset red eye removal"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command("develop.resetRedeye", {}, timeout=timeout)
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "develop.resetRedeye", {})
 
 
 @develop.command("reset-healing")
+@click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @click.pass_context
-def reset_healing(ctx):
+def reset_healing(ctx, dry_run):
     """Reset healing"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command("develop.resetHealing", {}, timeout=timeout)
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "develop.resetHealing", {})
 
 
 @develop.command("edit-in-photoshop")
+@click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @click.pass_context
-def edit_in_photoshop(ctx):
+def edit_in_photoshop(ctx, dry_run):
     """Open current photo in Photoshop"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command("develop.editInPhotoshop", {}, timeout=timeout)
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "develop.editInPhotoshop", {})

@@ -9,7 +9,7 @@ def runner():
     return CliRunner()
 
 
-@patch("cli.commands.develop.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_develop_reset_crop(mock_get_bridge, runner):
     mock_bridge = AsyncMock()
     mock_bridge.send_command.return_value = {"id": "1", "success": True, "result": {"message": "Crop reset"}}
@@ -19,7 +19,7 @@ def test_develop_reset_crop(mock_get_bridge, runner):
     mock_bridge.send_command.assert_called_once_with("develop.resetCrop", {}, timeout=30.0)
 
 
-@patch("cli.commands.develop.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_develop_reset_transforms(mock_get_bridge, runner):
     mock_bridge = AsyncMock()
     mock_bridge.send_command.return_value = {"id": "2", "success": True, "result": {"message": "Transforms reset"}}
@@ -29,7 +29,7 @@ def test_develop_reset_transforms(mock_get_bridge, runner):
     mock_bridge.send_command.assert_called_once_with("develop.resetTransforms", {}, timeout=30.0)
 
 
-@patch("cli.commands.develop.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_develop_reset_spot(mock_get_bridge, runner):
     mock_bridge = AsyncMock()
     mock_bridge.send_command.return_value = {"id": "3", "success": True, "result": {"message": "Spot removal reset"}}
@@ -39,7 +39,7 @@ def test_develop_reset_spot(mock_get_bridge, runner):
     mock_bridge.send_command.assert_called_once_with("develop.resetSpotRemoval", {}, timeout=30.0)
 
 
-@patch("cli.commands.develop.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_develop_reset_redeye(mock_get_bridge, runner):
     mock_bridge = AsyncMock()
     mock_bridge.send_command.return_value = {"id": "4", "success": True, "result": {"message": "Red eye reset"}}
@@ -49,7 +49,7 @@ def test_develop_reset_redeye(mock_get_bridge, runner):
     mock_bridge.send_command.assert_called_once_with("develop.resetRedeye", {}, timeout=30.0)
 
 
-@patch("cli.commands.develop.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_develop_reset_healing(mock_get_bridge, runner):
     mock_bridge = AsyncMock()
     mock_bridge.send_command.return_value = {"id": "5", "success": True, "result": {"message": "Healing reset"}}
@@ -59,7 +59,7 @@ def test_develop_reset_healing(mock_get_bridge, runner):
     mock_bridge.send_command.assert_called_once_with("develop.resetHealing", {}, timeout=30.0)
 
 
-@patch("cli.commands.develop.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_develop_edit_in_photoshop(mock_get_bridge, runner):
     mock_bridge = AsyncMock()
     mock_bridge.send_command.return_value = {"id": "6", "success": True, "result": {"message": "Opened in Photoshop"}}

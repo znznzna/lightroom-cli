@@ -9,7 +9,7 @@ def runner():
     return CliRunner()
 
 
-@patch("cli.commands.develop.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_develop_mask_list(mock_get_bridge, runner):
     """lr develop mask list が全マスク一覧を返す"""
     mock_bridge = AsyncMock()
@@ -25,7 +25,7 @@ def test_develop_mask_list(mock_get_bridge, runner):
     )
 
 
-@patch("cli.commands.develop.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_develop_mask_selected(mock_get_bridge, runner):
     """lr develop mask selected が選択中マスクを返す"""
     mock_bridge = AsyncMock()
@@ -36,7 +36,7 @@ def test_develop_mask_selected(mock_get_bridge, runner):
     mock_bridge.send_command.assert_called_once_with("develop.getSelectedMask", {}, timeout=30.0)
 
 
-@patch("cli.commands.develop.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_develop_mask_go_to(mock_get_bridge, runner):
     """lr develop mask go-to がマスキング画面に遷移する"""
     mock_bridge = AsyncMock()
@@ -47,7 +47,7 @@ def test_develop_mask_go_to(mock_get_bridge, runner):
     mock_bridge.send_command.assert_called_once_with("develop.goToMasking", {}, timeout=30.0)
 
 
-@patch("cli.commands.develop.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_develop_mask_toggle_overlay(mock_get_bridge, runner):
     """lr develop mask toggle-overlay がオーバーレイ表示を切り替える"""
     mock_bridge = AsyncMock()

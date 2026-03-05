@@ -1,24 +1,9 @@
 """AI Mask CLI commands — lr develop ai <type>"""
 
-import asyncio
 import json
 import click
+from cli.helpers import execute_command
 from cli.output import OutputFormatter
-
-
-def get_bridge():
-    """ResilientSocketBridge インスタンスを取得（遅延 import）"""
-    from lightroom_sdk.resilient_bridge import ResilientSocketBridge
-    return ResilientSocketBridge()
-
-
-def run_async(coro):
-    """CLI から async 関数を実行するヘルパー"""
-    loop = asyncio.new_event_loop()
-    try:
-        return loop.run_until_complete(coro)
-    finally:
-        loop.close()
 
 
 AI_SELECTION_TYPES = ["subject", "sky", "background", "objects", "people", "landscape"]
@@ -36,6 +21,7 @@ def _make_ai_type_command(selection_type: str, has_part: bool = False, part_choi
     params = [
         click.Option(["--adjust"], default=None, help="JSON adjustment settings"),
         click.Option(["--adjust-preset"], default=None, help="Named preset (darken-sky, brighten-subject, etc)"),
+        click.Option(["--dry-run"], is_flag=True, default=False, help="Preview without executing"),
     ]
     # --part is hidden until SDK support is verified
     if has_part and part_choices:
@@ -51,8 +37,6 @@ def _make_ai_type_command(selection_type: str, has_part: bool = False, part_choi
         adjust = kwargs.get("adjust")
         adjust_preset = kwargs.get("adjust_preset")
         part = kwargs.get("part")
-        timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-        fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
 
         # Build params
         cmd_params: dict = {"selectionType": selection_type}
@@ -68,21 +52,7 @@ def _make_ai_type_command(selection_type: str, has_part: bool = False, part_choi
         if adjustments:
             cmd_params["adjustments"] = adjustments
 
-        async def _run():
-            bridge = get_bridge()
-            try:
-                result = await bridge.send_command(
-                    "develop.createAIMaskWithAdjustments",
-                    cmd_params,
-                    timeout=max(timeout, 60.0),
-                )
-                click.echo(OutputFormatter.format(result.get("result", result), fmt))
-            except Exception as e:
-                click.echo(OutputFormatter.format_error(str(e)))
-            finally:
-                await bridge.disconnect()
-
-        run_async(_run())
+        execute_command(ctx, "develop.createAIMaskWithAdjustments", cmd_params, timeout=60.0)
 
     cmd = click.Command(
         name=selection_type,
@@ -144,43 +114,18 @@ def ai_presets(ctx):
 
 
 @ai.command("reset")
+@click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @click.pass_context
-def ai_reset(ctx):
+def ai_reset(ctx, dry_run):
     """Remove all masks from the current photo"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command("develop.resetMasking", {}, timeout=timeout)
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "develop.resetMasking", {})
 
 
 @ai.command("list")
 @click.pass_context
 def ai_list(ctx):
     """List all masks on the current photo"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command("develop.getAllMasks", {}, timeout=timeout)
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "develop.getAllMasks", {})
 
 
 @ai.command("batch")
@@ -194,10 +139,8 @@ def ai_list(ctx):
 @click.pass_context
 def ai_batch(ctx, type, photos, all_selected, adjust, adjust_preset, dry_run, continue_on_error):
     """Apply AI mask to multiple photos"""
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-
     if not photos and not all_selected:
+        fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
         click.echo(OutputFormatter.format_error("Specify --photos or --all-selected"))
         return
 
@@ -222,18 +165,4 @@ def ai_batch(ctx, type, photos, all_selected, adjust, adjust_preset, dry_run, co
     if adjustments:
         cmd_params["adjustments"] = adjustments
 
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command(
-                "develop.batchAIMask",
-                cmd_params,
-                timeout=max(timeout, 300.0),
-            )
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "develop.batchAIMask", cmd_params, timeout=300.0)

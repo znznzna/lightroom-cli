@@ -9,7 +9,7 @@ def runner():
     return CliRunner()
 
 
-@patch("cli.commands.develop.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_develop_get_settings(mock_get_bridge, runner):
     """lr develop get-settings が現在の設定を返す"""
     mock_bridge = AsyncMock()
@@ -26,7 +26,7 @@ def test_develop_get_settings(mock_get_bridge, runner):
     )
 
 
-@patch("cli.commands.develop.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_develop_set_single_param(mock_get_bridge, runner):
     """lr develop set Exposure 1.5 が単一パラメータを設定する"""
     mock_bridge = AsyncMock()
@@ -42,7 +42,7 @@ def test_develop_set_single_param(mock_get_bridge, runner):
     )
 
 
-@patch("cli.commands.develop.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_develop_set_multiple_params(mock_get_bridge, runner):
     """lr develop set Exposure 1.5 Contrast 25 が複数パラメータを一括設定する"""
     mock_bridge = AsyncMock()
@@ -60,7 +60,7 @@ def test_develop_set_multiple_params(mock_get_bridge, runner):
     )
 
 
-@patch("cli.commands.develop.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_develop_auto_tone(mock_get_bridge, runner):
     """lr develop auto-tone がautoToneを実行する"""
     mock_bridge = AsyncMock()
@@ -76,7 +76,7 @@ def test_develop_auto_tone(mock_get_bridge, runner):
     )
 
 
-@patch("cli.commands.develop.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_develop_get_value(mock_get_bridge, runner):
     """lr develop get Exposure が単一パラメータ値を取得する"""
     mock_bridge = AsyncMock()
@@ -93,7 +93,7 @@ def test_develop_get_value(mock_get_bridge, runner):
     )
 
 
-@patch("cli.commands.develop.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_develop_apply(mock_get_bridge, runner):
     """lr develop apply がJSON設定を適用する"""
     mock_bridge = AsyncMock()
@@ -110,7 +110,7 @@ def test_develop_apply(mock_get_bridge, runner):
     )
 
 
-@patch("cli.commands.develop.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_develop_auto_wb(mock_get_bridge, runner):
     """lr develop auto-wb がオートホワイトバランスを適用する"""
     mock_bridge = AsyncMock()
@@ -127,7 +127,7 @@ def test_develop_auto_wb(mock_get_bridge, runner):
     )
 
 
-@patch("cli.commands.develop.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_develop_tool(mock_get_bridge, runner):
     """lr develop tool crop がツールを選択する"""
     mock_bridge = AsyncMock()
@@ -151,7 +151,7 @@ def test_develop_apply_invalid_json(runner):
     assert "Invalid JSON" in result.output
 
 
-@patch("cli.commands.develop.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_develop_preset(mock_get_bridge, runner):
     """lr develop preset がプリセット適用コマンドを送信する"""
     mock_bridge = AsyncMock()
@@ -168,7 +168,7 @@ def test_develop_preset(mock_get_bridge, runner):
     )
 
 
-@patch("cli.commands.develop.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_develop_snapshot(mock_get_bridge, runner):
     """lr develop snapshot がスナップショット作成コマンドを送信する"""
     mock_bridge = AsyncMock()
@@ -185,7 +185,7 @@ def test_develop_snapshot(mock_get_bridge, runner):
     )
 
 
-@patch("cli.commands.develop.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_develop_copy_settings(mock_get_bridge, runner):
     """lr develop copy-settings が設定コピーコマンドを送信する"""
     mock_bridge = AsyncMock()
@@ -202,7 +202,7 @@ def test_develop_copy_settings(mock_get_bridge, runner):
     )
 
 
-@patch("cli.commands.develop.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_develop_paste_settings(mock_get_bridge, runner):
     """lr develop paste-settings が設定ペーストコマンドを送信する"""
     mock_bridge = AsyncMock()
@@ -219,7 +219,7 @@ def test_develop_paste_settings(mock_get_bridge, runner):
     )
 
 
-@patch("cli.commands.develop.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_develop_range(mock_get_bridge, runner):
     """lr develop range Exposure がパラメータ範囲を返す"""
     mock_bridge = AsyncMock()
@@ -236,7 +236,7 @@ def test_develop_range(mock_get_bridge, runner):
     )
 
 
-@patch("cli.commands.develop.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_develop_reset_param(mock_get_bridge, runner):
     """lr develop reset-param Exposure がパラメータをデフォルトにリセットする"""
     mock_bridge = AsyncMock()
@@ -253,7 +253,7 @@ def test_develop_reset_param(mock_get_bridge, runner):
     )
 
 
-@patch("cli.commands.develop.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_develop_process_version(mock_get_bridge, runner):
     """lr develop process-version がプロセスバージョンを返す"""
     mock_bridge = AsyncMock()
@@ -270,7 +270,7 @@ def test_develop_process_version(mock_get_bridge, runner):
     )
 
 
-@patch("cli.commands.develop.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_develop_set_process_version(mock_get_bridge, runner):
     """lr develop set-process-version がプロセスバージョンを設定する"""
     mock_bridge = AsyncMock()

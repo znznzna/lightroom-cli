@@ -351,6 +351,8 @@ _register(
                                      "objects", "people", "landscape"]),
             ParamSchema("adjustments", ParamType.JSON_OBJECT,
                         description="Optional adjustment settings"),
+            ParamSchema("part", ParamType.STRING,
+                        description="Specific part to mask (e.g. eyes, hair)"),
         ],
         mutating=True, timeout=60.0,
     ),

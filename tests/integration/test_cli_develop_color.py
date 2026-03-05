@@ -9,7 +9,7 @@ def runner():
     return CliRunner()
 
 
-@patch("cli.commands.develop.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_develop_color_green_swatch(mock_get_bridge, runner):
     mock_bridge = AsyncMock()
     mock_bridge.send_command.return_value = {"id": "1", "success": True, "result": {}}
@@ -19,7 +19,7 @@ def test_develop_color_green_swatch(mock_get_bridge, runner):
     mock_bridge.send_command.assert_called_once_with("develop.createGreenSwatch", {}, timeout=30.0)
 
 
-@patch("cli.commands.develop.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_develop_color_cyan_swatch(mock_get_bridge, runner):
     mock_bridge = AsyncMock()
     mock_bridge.send_command.return_value = {"id": "2", "success": True, "result": {}}
@@ -29,7 +29,7 @@ def test_develop_color_cyan_swatch(mock_get_bridge, runner):
     mock_bridge.send_command.assert_called_once_with("develop.createCyanSwatch", {}, timeout=30.0)
 
 
-@patch("cli.commands.develop.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_develop_color_enhance(mock_get_bridge, runner):
     mock_bridge = AsyncMock()
     mock_bridge.send_command.return_value = {"id": "3", "success": True, "result": {}}
@@ -39,7 +39,7 @@ def test_develop_color_enhance(mock_get_bridge, runner):
     mock_bridge.send_command.assert_called_once_with("develop.enhanceColors", {"preset": "vivid"}, timeout=30.0)
 
 
-@patch("cli.commands.develop.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_develop_reset_gradient(mock_get_bridge, runner):
     mock_bridge = AsyncMock()
     mock_bridge.send_command.return_value = {"id": "4", "success": True, "result": {}}
@@ -49,7 +49,7 @@ def test_develop_reset_gradient(mock_get_bridge, runner):
     mock_bridge.send_command.assert_called_once_with("develop.resetGradient", {}, timeout=30.0)
 
 
-@patch("cli.commands.develop.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_develop_reset_circular(mock_get_bridge, runner):
     mock_bridge = AsyncMock()
     mock_bridge.send_command.return_value = {"id": "5", "success": True, "result": {}}
@@ -59,7 +59,7 @@ def test_develop_reset_circular(mock_get_bridge, runner):
     mock_bridge.send_command.assert_called_once_with("develop.resetCircularGradient", {}, timeout=30.0)
 
 
-@patch("cli.commands.develop.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_develop_reset_brush(mock_get_bridge, runner):
     mock_bridge = AsyncMock()
     mock_bridge.send_command.return_value = {"id": "6", "success": True, "result": {}}
@@ -69,7 +69,7 @@ def test_develop_reset_brush(mock_get_bridge, runner):
     mock_bridge.send_command.assert_called_once_with("develop.resetBrushing", {}, timeout=30.0)
 
 
-@patch("cli.commands.develop.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_develop_reset_masking(mock_get_bridge, runner):
     mock_bridge = AsyncMock()
     mock_bridge.send_command.return_value = {"id": "7", "success": True, "result": {}}

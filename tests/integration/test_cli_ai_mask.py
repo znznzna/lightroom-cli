@@ -10,7 +10,7 @@ def runner():
     return CliRunner()
 
 
-@patch("cli.commands.ai_mask.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_ai_subject_creates_mask(mock_get_bridge, runner):
     """lr develop ai subject が develop.createAIMaskWithAdjustments を呼ぶ"""
     mock_bridge = AsyncMock()
@@ -32,7 +32,7 @@ def test_ai_subject_creates_mask(mock_get_bridge, runner):
     )
 
 
-@patch("cli.commands.ai_mask.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_ai_sky_creates_mask(mock_get_bridge, runner):
     """lr develop ai sky が正しい selectionType で呼ばれる"""
     mock_bridge = AsyncMock()
@@ -50,7 +50,7 @@ def test_ai_sky_creates_mask(mock_get_bridge, runner):
     )
 
 
-@patch("cli.commands.ai_mask.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_ai_background_creates_mask(mock_get_bridge, runner):
     """lr develop ai background"""
     mock_bridge = AsyncMock()
@@ -68,7 +68,7 @@ def test_ai_background_creates_mask(mock_get_bridge, runner):
     )
 
 
-@patch("cli.commands.ai_mask.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_ai_objects_creates_mask(mock_get_bridge, runner):
     """lr develop ai objects"""
     mock_bridge = AsyncMock()
@@ -86,7 +86,7 @@ def test_ai_objects_creates_mask(mock_get_bridge, runner):
     )
 
 
-@patch("cli.commands.ai_mask.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_ai_people_with_part(mock_get_bridge, runner):
     """lr develop ai people --part eyes がパラメータに part を含む"""
     mock_bridge = AsyncMock()
@@ -104,7 +104,7 @@ def test_ai_people_with_part(mock_get_bridge, runner):
     )
 
 
-@patch("cli.commands.ai_mask.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_ai_people_without_part(mock_get_bridge, runner):
     """lr develop ai people (part なし) は part をパラメータに含まない"""
     mock_bridge = AsyncMock()
@@ -122,7 +122,7 @@ def test_ai_people_without_part(mock_get_bridge, runner):
     )
 
 
-@patch("cli.commands.ai_mask.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_ai_landscape_with_part(mock_get_bridge, runner):
     """lr develop ai landscape --part water"""
     mock_bridge = AsyncMock()
@@ -140,7 +140,7 @@ def test_ai_landscape_with_part(mock_get_bridge, runner):
     )
 
 
-@patch("cli.commands.ai_mask.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_ai_sky_with_adjust_json(mock_get_bridge, runner):
     """lr develop ai sky --adjust '{"Exposure": -0.5}' が adjustments を含む"""
     mock_bridge = AsyncMock()
@@ -158,7 +158,7 @@ def test_ai_sky_with_adjust_json(mock_get_bridge, runner):
     )
 
 
-@patch("cli.commands.ai_mask.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_ai_subject_with_adjust_preset(mock_get_bridge, runner):
     """lr develop ai subject --adjust-preset brighten-subject がプリセットを展開する"""
     mock_bridge = AsyncMock()
@@ -224,7 +224,7 @@ def test_ai_presets_json_format(runner):
     assert "darken-sky" in data
 
 
-@patch("cli.commands.ai_mask.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_ai_list_calls_get_all_masks(mock_get_bridge, runner):
     """lr develop ai list が develop.getAllMasks を呼ぶ"""
     mock_bridge = AsyncMock()
@@ -240,7 +240,7 @@ def test_ai_list_calls_get_all_masks(mock_get_bridge, runner):
     )
 
 
-@patch("cli.commands.ai_mask.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_ai_reset_calls_reset_masking(mock_get_bridge, runner):
     """lr develop ai reset が develop.resetMasking を呼ぶ"""
     mock_bridge = AsyncMock()
@@ -256,7 +256,7 @@ def test_ai_reset_calls_reset_masking(mock_get_bridge, runner):
     )
 
 
-@patch("cli.commands.ai_mask.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_ai_batch_all_selected(mock_get_bridge, runner):
     """lr develop ai batch sky --all-selected"""
     mock_bridge = AsyncMock()
@@ -273,7 +273,7 @@ def test_ai_batch_all_selected(mock_get_bridge, runner):
     assert call_args[0][1]["allSelected"] is True
 
 
-@patch("cli.commands.ai_mask.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_ai_batch_with_photos(mock_get_bridge, runner):
     """lr develop ai batch subject --photos 1,2,3"""
     mock_bridge = AsyncMock()
@@ -288,7 +288,7 @@ def test_ai_batch_with_photos(mock_get_bridge, runner):
     assert call_args[0][1]["photoIds"] == ["1", "2", "3"]
 
 
-@patch("cli.commands.ai_mask.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_ai_batch_with_adjust_preset(mock_get_bridge, runner):
     """lr develop ai batch sky --all-selected --adjust-preset darken-sky"""
     mock_bridge = AsyncMock()
@@ -306,7 +306,7 @@ def test_ai_batch_with_adjust_preset(mock_get_bridge, runner):
     assert call_args[0][1]["adjustments"] == {"Exposure": -0.7, "Highlights": -30, "Saturation": 15}
 
 
-@patch("cli.commands.ai_mask.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_ai_batch_dry_run(mock_get_bridge, runner):
     """lr develop ai batch sky --all-selected --dry-run は実行せず対象を表示"""
     mock_bridge = AsyncMock()
@@ -324,7 +324,7 @@ def test_ai_batch_no_target(runner):
     assert "Specify --photos or --all-selected" in result.output
 
 
-@patch("cli.commands.develop.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_deprecated_mask_list_shows_warning(mock_get_bridge, runner):
     """lr develop mask list が deprecated 警告を出す"""
     mock_bridge = AsyncMock()
@@ -338,7 +338,7 @@ def test_deprecated_mask_list_shows_warning(mock_get_bridge, runner):
     assert "deprecated" in result.output.lower() or "lr develop ai list" in result.output
 
 
-@patch("cli.commands.develop.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_deprecated_reset_masking_shows_warning(mock_get_bridge, runner):
     """lr develop reset-masking が deprecated 警告を出す"""
     mock_bridge = AsyncMock()

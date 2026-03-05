@@ -9,7 +9,7 @@ def runner():
     return CliRunner()
 
 
-@patch("cli.commands.develop.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_develop_debug_dump(mock_get_bridge, runner):
     mock_bridge = AsyncMock()
     mock_bridge.send_command.return_value = {"id": "1", "success": True, "result": {"functions": [], "properties": []}}
@@ -19,7 +19,7 @@ def test_develop_debug_dump(mock_get_bridge, runner):
     mock_bridge.send_command.assert_called_once_with("develop.dumpLrDevelopController", {}, timeout=30.0)
 
 
-@patch("cli.commands.develop.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_develop_debug_gradient_params(mock_get_bridge, runner):
     mock_bridge = AsyncMock()
     mock_bridge.send_command.return_value = {"id": "2", "success": True, "result": {}}
@@ -29,7 +29,7 @@ def test_develop_debug_gradient_params(mock_get_bridge, runner):
     mock_bridge.send_command.assert_called_once_with("develop.discoverGradientParameters", {}, timeout=30.0)
 
 
-@patch("cli.commands.develop.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_develop_debug_monitor(mock_get_bridge, runner):
     mock_bridge = AsyncMock()
     mock_bridge.send_command.return_value = {"id": "3", "success": True, "result": {}}
@@ -39,7 +39,7 @@ def test_develop_debug_monitor(mock_get_bridge, runner):
     mock_bridge.send_command.assert_called_once_with("develop.monitorParameterChanges", {"duration": 5}, timeout=30.0)
 
 
-@patch("cli.commands.develop.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_develop_debug_probe(mock_get_bridge, runner):
     mock_bridge = AsyncMock()
     mock_bridge.send_command.return_value = {"id": "4", "success": True, "result": {}}

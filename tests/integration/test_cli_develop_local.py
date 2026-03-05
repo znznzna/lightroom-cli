@@ -9,7 +9,7 @@ def runner():
     return CliRunner()
 
 
-@patch("cli.commands.develop.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_develop_local_get(mock_get_bridge, runner):
     """lr develop local get <param> がローカル調整値を取得する"""
     mock_bridge = AsyncMock()
@@ -26,7 +26,7 @@ def test_develop_local_get(mock_get_bridge, runner):
     )
 
 
-@patch("cli.commands.develop.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_develop_local_set(mock_get_bridge, runner):
     """lr develop local set <param> <value> がローカル調整値を設定する"""
     mock_bridge = AsyncMock()
@@ -43,7 +43,7 @@ def test_develop_local_set(mock_get_bridge, runner):
     )
 
 
-@patch("cli.commands.develop.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_develop_local_apply(mock_get_bridge, runner):
     """lr develop local apply --settings '{...}' が複数のローカル調整を適用する"""
     mock_bridge = AsyncMock()
@@ -60,7 +60,7 @@ def test_develop_local_apply(mock_get_bridge, runner):
     )
 
 
-@patch("cli.commands.develop.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_develop_local_params(mock_get_bridge, runner):
     """lr develop local params が利用可能なローカルパラメータ一覧を返す"""
     mock_bridge = AsyncMock()

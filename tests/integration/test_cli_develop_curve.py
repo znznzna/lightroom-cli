@@ -9,7 +9,7 @@ def runner():
     return CliRunner()
 
 
-@patch("cli.commands.develop.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_develop_curve_get(mock_get_bridge, runner):
     """lr develop curve get がカーブポイントを取得する"""
     mock_bridge = AsyncMock()
@@ -26,7 +26,7 @@ def test_develop_curve_get(mock_get_bridge, runner):
     )
 
 
-@patch("cli.commands.develop.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_develop_curve_set(mock_get_bridge, runner):
     """lr develop curve set がカーブポイントを設定する"""
     mock_bridge = AsyncMock()
@@ -43,7 +43,7 @@ def test_develop_curve_set(mock_get_bridge, runner):
     )
 
 
-@patch("cli.commands.develop.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_develop_curve_linear(mock_get_bridge, runner):
     """lr develop curve linear がリニアカーブをセットする"""
     mock_bridge = AsyncMock()
@@ -60,7 +60,7 @@ def test_develop_curve_linear(mock_get_bridge, runner):
     )
 
 
-@patch("cli.commands.develop.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_develop_curve_s_curve(mock_get_bridge, runner):
     """lr develop curve s-curve がSカーブをセットする"""
     mock_bridge = AsyncMock()
@@ -77,7 +77,7 @@ def test_develop_curve_s_curve(mock_get_bridge, runner):
     )
 
 
-@patch("cli.commands.develop.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_develop_curve_add_point(mock_get_bridge, runner):
     """lr develop curve add-point がカーブにポイントを追加する"""
     mock_bridge = AsyncMock()
@@ -94,7 +94,7 @@ def test_develop_curve_add_point(mock_get_bridge, runner):
     )
 
 
-@patch("cli.commands.develop.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_develop_curve_remove_point(mock_get_bridge, runner):
     """lr develop curve remove-point がカーブからポイントを削除する"""
     mock_bridge = AsyncMock()

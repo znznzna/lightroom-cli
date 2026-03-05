@@ -9,7 +9,7 @@ def runner():
     return CliRunner()
 
 
-@patch("cli.commands.develop.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_develop_filter_graduated(mock_get_bridge, runner):
     mock_bridge = AsyncMock()
     mock_bridge.send_command.return_value = {"id": "1", "success": True, "result": {"maskId": "m1", "maskType": "gradient"}}
@@ -19,7 +19,7 @@ def test_develop_filter_graduated(mock_get_bridge, runner):
     mock_bridge.send_command.assert_called_once_with("develop.createGraduatedFilter", {}, timeout=30.0)
 
 
-@patch("cli.commands.develop.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_develop_filter_radial(mock_get_bridge, runner):
     mock_bridge = AsyncMock()
     mock_bridge.send_command.return_value = {"id": "2", "success": True, "result": {"maskId": "m2", "maskType": "radialGradient"}}
@@ -29,7 +29,7 @@ def test_develop_filter_radial(mock_get_bridge, runner):
     mock_bridge.send_command.assert_called_once_with("develop.createRadialFilter", {}, timeout=30.0)
 
 
-@patch("cli.commands.develop.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_develop_filter_brush(mock_get_bridge, runner):
     mock_bridge = AsyncMock()
     mock_bridge.send_command.return_value = {"id": "3", "success": True, "result": {"maskId": "m3", "maskType": "brush"}}
@@ -39,7 +39,7 @@ def test_develop_filter_brush(mock_get_bridge, runner):
     mock_bridge.send_command.assert_called_once_with("develop.createAdjustmentBrush", {}, timeout=30.0)
 
 
-@patch("cli.commands.develop.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_develop_filter_range(mock_get_bridge, runner):
     mock_bridge = AsyncMock()
     mock_bridge.send_command.return_value = {"id": "5", "success": True, "result": {"maskId": "m5"}}
