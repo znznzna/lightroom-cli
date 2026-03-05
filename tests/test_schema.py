@@ -96,6 +96,19 @@ class TestSchemaIntegrity:
         assert len(mutating) >= 30, f"Expected >=30 mutating commands, got {len(mutating)}"
 
 
+class TestParamDescriptions:
+    """パラメータ description 非空テスト"""
+
+    def test_all_params_have_descriptions(self):
+        from lightroom_sdk.schema import get_all_schemas
+        missing = []
+        for cmd_name, schema in get_all_schemas().items():
+            for p in schema.params:
+                if not p.description:
+                    missing.append(f"{cmd_name}.{p.name}")
+        assert missing == [], f"Empty descriptions: {missing}"
+
+
 class TestResponseFields:
     """response_fields の充実テスト"""
 
