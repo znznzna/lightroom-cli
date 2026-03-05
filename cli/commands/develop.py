@@ -34,6 +34,10 @@ def develop():
     pass
 
 
+from cli.commands.ai_mask import ai
+develop.add_command(ai)
+
+
 @develop.command("get-settings")
 @click.pass_context
 def get_settings(ctx):
