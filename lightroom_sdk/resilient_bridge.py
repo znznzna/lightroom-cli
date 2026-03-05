@@ -71,6 +71,9 @@ class ResilientSocketBridge:
             from .exceptions import ConnectionError as LRConnectionError
             raise LRConnectionError("Lightroom is shutting down")
 
+        if self._state == ConnectionState.DISCONNECTED:
+            await self.connect()
+
         try:
             return await self._bridge.send_command(command, params, timeout)
         except (ConnectionError, OSError, EOFError) as e:
