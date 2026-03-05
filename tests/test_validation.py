@@ -136,3 +136,43 @@ class TestFindSimilar:
         from cli.validation import _find_similar
         suggestions = _find_similar("zzzzz", {"Exposure", "Contrast"})
         assert suggestions == []
+
+
+class TestSuggestions:
+    """suggestions フィールドの発火テスト"""
+
+    def test_unknown_param_has_suggestions(self):
+        from cli.validation import validate_params, ValidationError
+        with pytest.raises(ValidationError) as exc_info:
+            validate_params("develop.setValue", {"Exposre": 0.5})
+        assert len(exc_info.value.suggestions) > 0
+        assert "Exposure" in exc_info.value.suggestions[0] or "parameter" in exc_info.value.suggestions[0]
+
+    def test_enum_error_has_suggestions(self):
+        """enum バリデーションエラー時に有効な値の一覧が suggestions に含まれる"""
+        from cli.validation import validate_params, ValidationError
+        with pytest.raises(ValidationError) as exc_info:
+            validate_params("develop.selectTool", {"tool": "invalid_tool"})
+        assert len(exc_info.value.suggestions) > 0
+        all_suggestions = " ".join(exc_info.value.suggestions)
+        assert "crop" in all_suggestions or "loupe" in all_suggestions
+
+    def test_type_error_has_suggestions(self):
+        """型変換エラー時に期待される型の例が suggestions に含まれる"""
+        from cli.validation import validate_params, ValidationError
+        with pytest.raises(ValidationError) as exc_info:
+            validate_params("develop.setValue", {"parameter": "Exposure", "value": "not_a_number"})
+        assert len(exc_info.value.suggestions) > 0
+
+    def test_format_error_json_includes_suggestions(self):
+        """format_error JSON モードで suggestions が実際に出力される"""
+        from cli.output import OutputFormatter
+        import json
+        result = OutputFormatter.format_error(
+            "test error", "json",
+            code="VALIDATION_ERROR",
+            suggestions=["try Exposure", "try Contrast"],
+        )
+        parsed = json.loads(result)
+        assert "suggestions" in parsed["error"]
+        assert len(parsed["error"]["suggestions"]) == 2

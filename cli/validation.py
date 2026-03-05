@@ -31,6 +31,8 @@ def validate_params(command: str, params: dict) -> dict:
     for key in params:
         if key not in valid_names:
             suggestions = _find_similar(key, valid_names)
+            if not suggestions:
+                suggestions = [f"Valid parameters: {', '.join(sorted(valid_names))}"]
             raise ValidationError(
                 f"Unknown parameter '{key}' for command '{command}'. "
                 f"Valid parameters: {', '.join(sorted(valid_names))}",
@@ -102,6 +104,7 @@ def _coerce_type(name: str, value: object, schema: ParamSchema) -> object:
                         f"Invalid value '{value}' for '{name}'. "
                         f"Must be one of: {', '.join(schema.enum_values or [])}",
                         param=name,
+                        suggestions=[f"Valid values: {', '.join(schema.enum_values or [])}"],
                     )
                 return str(value)
             case _:
@@ -109,10 +112,19 @@ def _coerce_type(name: str, value: object, schema: ParamSchema) -> object:
     except ValidationError:
         raise
     except (ValueError, TypeError):
+        type_examples = {
+            ParamType.STRING: 'e.g., "hello"',
+            ParamType.INTEGER: "e.g., 42",
+            ParamType.FLOAT: "e.g., 0.5, -1.0",
+            ParamType.BOOLEAN: "e.g., true, false",
+        }
+        example = type_examples.get(schema.type, "")
+        suggestions = [f"Expected type: {schema.type.value} ({example})"] if example else [f"Expected type: {schema.type.value}"]
         raise ValidationError(
             f"Invalid type for '{name}': expected {schema.type.value}, "
             f"got {type(value).__name__}",
             param=name,
+            suggestions=suggestions,
         )
 
 
