@@ -30,6 +30,19 @@ def execute_command(ctx, command: str, params: dict, *, timeout: float | None = 
     fields = ctx.obj.get("fields") if ctx.obj else None
     cmd_timeout = timeout if timeout is not None else (ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0)
 
+    # dry-run チェック
+    if getattr(ctx, "params", {}).get("dry_run", False):
+        from lightroom_sdk.schema import get_schema
+        schema = get_schema(command)
+        preview = {
+            "dry_run": True,
+            "command": command,
+            "mutating": schema.mutating if schema else None,
+            "params": {k: v for k, v in params.items() if v is not None},
+        }
+        click.echo(OutputFormatter.format(preview, fmt))
+        return
+
     async def _run():
         # バリデーション（スキーマ未定義コマンドはスキップ）
         from cli.validation import validate_params, ValidationError
