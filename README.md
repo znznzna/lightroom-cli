@@ -52,6 +52,13 @@ pip install lightroom-cli
 lr plugin install
 ```
 
+#### Claude Code Plugin (for AI agents)
+
+```bash
+/plugin marketplace add znznzna/lightroom-cli
+/plugin install lightroom-cli@lightroom-cli
+```
+
 ### Verify Connection
 
 ```bash
