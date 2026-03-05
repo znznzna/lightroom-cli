@@ -322,3 +322,31 @@ def test_ai_batch_no_target(runner):
     result = runner.invoke(cli, ["develop", "ai", "batch", "sky"])
     assert result.exit_code == 0
     assert "Specify --photos or --all-selected" in result.output
+
+
+@patch("cli.commands.develop.get_bridge")
+def test_deprecated_mask_list_shows_warning(mock_get_bridge, runner):
+    """lr develop mask list が deprecated 警告を出す"""
+    mock_bridge = AsyncMock()
+    mock_bridge.send_command.return_value = {
+        "id": "1", "success": True,
+        "result": {"masks": []},
+    }
+    mock_get_bridge.return_value = mock_bridge
+    result = runner.invoke(cli, ["develop", "mask", "list"])
+    assert result.exit_code == 0
+    assert "deprecated" in result.output.lower() or "lr develop ai list" in result.output
+
+
+@patch("cli.commands.develop.get_bridge")
+def test_deprecated_reset_masking_shows_warning(mock_get_bridge, runner):
+    """lr develop reset-masking が deprecated 警告を出す"""
+    mock_bridge = AsyncMock()
+    mock_bridge.send_command.return_value = {
+        "id": "1", "success": True,
+        "result": {"message": "Reset"},
+    }
+    mock_get_bridge.return_value = mock_bridge
+    result = runner.invoke(cli, ["develop", "reset-masking"])
+    assert result.exit_code == 0
+    assert "deprecated" in result.output.lower() or "lr develop ai reset" in result.output

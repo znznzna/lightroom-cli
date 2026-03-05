@@ -576,7 +576,8 @@ def mask():
 @mask.command("list")
 @click.pass_context
 def mask_list(ctx):
-    """List all masks"""
+    """List all masks (DEPRECATED: use 'lr develop ai list')"""
+    click.echo("Warning: 'lr develop mask list' is deprecated. Use 'lr develop ai list' instead.", err=True)
     timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
     fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
 
@@ -1413,7 +1414,8 @@ def reset_brush(ctx):
 @develop.command("reset-masking")
 @click.pass_context
 def reset_masking(ctx):
-    """Reset masking"""
+    """Reset masking (DEPRECATED: use 'lr develop ai reset')"""
+    click.echo("Warning: 'lr develop reset-masking' is deprecated. Use 'lr develop ai reset' instead.", err=True)
     timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
     fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
 
