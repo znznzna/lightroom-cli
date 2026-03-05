@@ -24,7 +24,22 @@ def ping(ctx, **kwargs):
 @click.pass_context
 def status(ctx, **kwargs):
     """Get Lightroom bridge status"""
-    execute_command(ctx, "system.status", {})
+    def _add_cli_metadata(data):
+        from lightroom_sdk.schema import get_schema_hash
+        if isinstance(data, dict):
+            data["schema_hash"] = get_schema_hash()
+            data["cli_version"] = _get_cli_version()
+        return data
+
+    execute_command(ctx, "system.status", {}, post_process=_add_cli_metadata)
+
+
+def _get_cli_version() -> str:
+    try:
+        from importlib.metadata import version
+        return version("lightroom-cli")
+    except Exception:
+        return "dev"
 
 
 @system.command()

@@ -30,7 +30,7 @@ def run_async(coro):
         loop.close()
 
 
-def execute_command(ctx, command: str, params: dict, *, timeout: float | None = None):
+def execute_command(ctx, command: str, params: dict, *, timeout: float | None = None, post_process=None):
     """共通コマンド実行ヘルパー。
 
     - エラーハンドリング（構造化エラー + 終了コード）
@@ -109,6 +109,8 @@ def execute_command(ctx, command: str, params: dict, *, timeout: float | None = 
             await bridge.connect()
             result = await bridge.send_command(command, validated, timeout=cmd_timeout)
             data = result.get("result", result)
+            if post_process is not None:
+                data = post_process(data)
             click.echo(OutputFormatter.format(data, fmt, fields=fields))
         except Exception as e:
             if _is_connection_error(e):
