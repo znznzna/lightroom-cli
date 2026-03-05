@@ -28,7 +28,7 @@ def execute_command(ctx, command: str, params: dict, *, timeout: float | None = 
     """
     fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
     fields = ctx.obj.get("fields") if ctx.obj else None
-    cmd_timeout = timeout or (ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0)
+    cmd_timeout = timeout if timeout is not None else (ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0)
 
     async def _run():
         bridge = get_bridge()

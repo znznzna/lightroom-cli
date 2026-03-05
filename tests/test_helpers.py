@@ -101,3 +101,19 @@ class TestExecuteCommand:
         mock_bridge.send_command.assert_called_once_with(
             "preview.generatePreview", {}, timeout=120.0
         )
+
+    def test_zero_timeout_not_treated_as_falsy(self):
+        from cli.helpers import execute_command
+
+        mock_ctx = MagicMock()
+        mock_ctx.obj = {"output": "json", "timeout": 30.0, "fields": None}
+
+        mock_bridge = AsyncMock()
+        mock_bridge.send_command.return_value = {"result": {}}
+
+        with patch("cli.helpers.get_bridge", return_value=mock_bridge):
+            execute_command(mock_ctx, "system.ping", {}, timeout=0.0)
+
+        mock_bridge.send_command.assert_called_once_with(
+            "system.ping", {}, timeout=0.0
+        )
