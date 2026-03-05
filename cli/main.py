@@ -2,9 +2,10 @@ import os
 import click
 import logging
 from cli.middleware import resolve_output_format, resolve_timeout, resolve_fields
+from cli.structured_group import StructuredErrorGroup
 
 
-@click.group()
+@click.group(cls=StructuredErrorGroup)
 @click.version_option(version="0.3.0", prog_name="lr")
 @click.option("--output", "-o", type=click.Choice(["json", "text", "table"]),
               default=None, help="Output format (default: json for non-TTY, text for TTY)")
