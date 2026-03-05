@@ -1,23 +1,28 @@
+import os
 import click
 import logging
+from cli.middleware import resolve_output_format, resolve_timeout, resolve_fields
 
 
 @click.group()
-@click.version_option(version="0.2.0", prog_name="lr")
+@click.version_option(version="0.3.0", prog_name="lr")
 @click.option("--output", "-o", type=click.Choice(["json", "text", "table"]),
-              default="text", help="Output format")
+              default=None, help="Output format (default: json for non-TTY, text for TTY)")
 @click.option("--verbose", "-v", is_flag=True, help="Enable verbose logging")
-@click.option("--timeout", "-t", type=float, default=30.0,
+@click.option("--timeout", "-t", type=float, default=None,
               help="Default command timeout in seconds")
+@click.option("--fields", "-f", default=None,
+              help="Comma-separated response fields to include")
 @click.pass_context
-def cli(ctx, output, verbose, timeout):
+def cli(ctx, output, verbose, timeout, fields):
     """Lightroom Classic CLI - control Lightroom from the command line."""
     ctx.ensure_object(dict)
-    ctx.obj["output"] = output
-    ctx.obj["verbose"] = verbose
-    ctx.obj["timeout"] = timeout
+    ctx.obj["output"] = resolve_output_format(output)
+    ctx.obj["verbose"] = verbose or bool(os.environ.get("LR_VERBOSE"))
+    ctx.obj["timeout"] = resolve_timeout(timeout)
+    ctx.obj["fields"] = resolve_fields(fields)
 
-    if verbose:
+    if ctx.obj["verbose"]:
         logging.basicConfig(level=logging.DEBUG)
 
 
