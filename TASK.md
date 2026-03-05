@@ -64,7 +64,20 @@
 
 ## In Progress
 
-(なし)
+### Agent-First CLI 最適化 (2026-03-05 ~)
+
+設計書: `docs/plans/2026-03-05-agent-first-cli-design.md`
+実装計画: `docs/plans/2026-03-05-agent-first-cli-implementation.md` (22タスク / 9 Phase)
+
+- [x] Phase 1: TTY検出 + 環境変数 (Task 1-3) — middleware, main.py統合
+- [ ] Phase 2: --fields レスポンスフィルタ + 構造化エラー + execute_command (Task 4-6)
+- [ ] Phase 3: スキーマ定義 + lr schema コマンド (Task 7-9)
+- [ ] Phase 4: 入力バリデーション (Task 10-11)
+- [ ] Phase 5: --dry-run 全mutating (Task 12-13)
+- [ ] Phase 6: --json 入力統一 (Task 14-15)
+- [ ] Phase 7: 既存コマンド移行 (Task 16-20)
+- [ ] Phase 8: SKILLS.md 更新 (Task 21)
+- [ ] Phase 9: 全テスト + バージョンバンプ (Task 22)
 
 ---
 
@@ -72,9 +85,8 @@
 
 ### CLI 最適化
 
-- [ ] CLI パフォーマンス改善 (起動時間、接続ハンドリング等)
-- [ ] コマンド構造の見直し・整理
-- [ ] エラーメッセージの統一・改善
+- [x] コードレビュー (Codex CLI) — P1-P3 修正済み
+- [ ] CLI パフォーマンス改善 (起動時間等) — Agent-First最適化とは別
 
 ### 配布
 
@@ -104,6 +116,6 @@
 
 ### 品質
 
-- [ ] コードレビュー (Codex CLI)
+- [x] コードレビュー (Codex CLI) — AI mask 実装レビュー完了
 - [ ] カバレッジレポート
 - [ ] ruff / mypy 導入
