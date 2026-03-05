@@ -1,4 +1,5 @@
 import json
+import re
 from io import StringIO
 from typing import Any
 from rich.console import Console
@@ -6,8 +7,25 @@ from rich.table import Table
 
 
 class OutputFormatter:
+    _OUTPUT_CONTROL_CHAR_RE = re.compile(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]')
+    _MAX_OUTPUT_STRING_LENGTH = 50_000
+
+    @staticmethod
+    def _sanitize_output(data: Any, *, truncate: bool = False) -> Any:
+        """Sanitize output data: strip control chars, optionally truncate long strings."""
+        if isinstance(data, str):
+            s = OutputFormatter._OUTPUT_CONTROL_CHAR_RE.sub('', data)
+            if truncate and len(s) > OutputFormatter._MAX_OUTPUT_STRING_LENGTH:
+                return s[:OutputFormatter._MAX_OUTPUT_STRING_LENGTH] + f"... (truncated, {len(data)} chars total)"
+            return s
+        if isinstance(data, dict):
+            return {k: OutputFormatter._sanitize_output(v, truncate=truncate) for k, v in data.items()}
+        if isinstance(data, list):
+            return [OutputFormatter._sanitize_output(item, truncate=truncate) for item in data]
+        return data
     @staticmethod
     def format(data: Any, mode: str = "text", fields: list[str] | None = None) -> str:
+        data = OutputFormatter._sanitize_output(data, truncate=(mode == "json"))
         if fields is not None:
             filtered = OutputFormatter._filter_fields(data, fields)
             if isinstance(filtered, dict) and not filtered and isinstance(data, dict) and data and fields:
