@@ -78,5 +78,5 @@ class StructuredErrorGroup(click.Group):
                 "message": error.format_message(),
             }
         }
-        click.echo(json.dumps(error_obj))
+        click.echo(json.dumps(error_obj), err=True)
         ctx.exit(2)

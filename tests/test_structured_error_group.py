@@ -9,7 +9,10 @@ class TestStructuredErrors:
         runner = CliRunner()
         result = runner.invoke(cli, ["-o", "json", "nonexistent"])
         assert result.exit_code == 2
-        data = json.loads(result.output.strip())
+        # err=True で stderr に出力されるが、CliRunner のデフォルトでは
+        # output に混在する。JSON パース可能であることを確認。
+        lines = [l for l in result.output.strip().splitlines() if l.strip()]
+        data = json.loads(lines[-1])
         assert "error" in data
         assert data["error"]["code"] == "USAGE_ERROR"
 
@@ -17,7 +20,8 @@ class TestStructuredErrors:
         runner = CliRunner()
         result = runner.invoke(cli, ["-o", "json", "catalog", "get-info"])
         assert result.exit_code == 2
-        data = json.loads(result.output.strip())
+        lines = [l for l in result.output.strip().splitlines() if l.strip()]
+        data = json.loads(lines[-1])
         assert "error" in data
         assert data["error"]["code"] == "USAGE_ERROR"
 
@@ -25,7 +29,6 @@ class TestStructuredErrors:
         runner = CliRunner()
         result = runner.invoke(cli, ["-o", "text", "nonexistent"])
         assert result.exit_code == 2
-        # Click standard error format (not JSON)
         assert "no such command" in result.output.lower() or "error" in result.output.lower()
 
     def test_help_flag_not_affected(self):
@@ -43,6 +46,7 @@ class TestStructuredErrors:
         runner = CliRunner()
         result = runner.invoke(cli, ["-o", "json", "develop", "nonexistent"])
         assert result.exit_code == 2
-        data = json.loads(result.output.strip())
+        lines = [l for l in result.output.strip().splitlines() if l.strip()]
+        data = json.loads(lines[-1])
         assert "error" in data
         assert data["error"]["code"] == "USAGE_ERROR"
