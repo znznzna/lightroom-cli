@@ -53,6 +53,16 @@ _register(
                   response_fields=["status", "timestamp"]),
     CommandSchema("system.status", "system.status", "Get bridge status", timeout=5.0,
                   response_fields=["status", "uptime", "version", "connections"]),
+    CommandSchema("system.reconnect", "system.reconnect",
+                  "Force reconnection to Lightroom", timeout=10.0),
+    CommandSchema("system.checkConnection", "system.check-connection",
+                  "Check if Lightroom is available",
+                  params=[
+                      ParamSchema("portFile", ParamType.STRING,
+                                  description="Path to port file (default: auto-detect)"),
+                  ],
+                  timeout=5.0,
+                  response_fields=["status", "reason"]),
 )
 
 # --- develop (主要) ---
