@@ -112,18 +112,22 @@ class TestParamDescriptions:
 class TestDevelopAISchema:
     """develop.ai スキーマのテスト"""
 
-    def test_ai_mask_schema_exists(self):
+    def test_ai_subject_schema_exists(self):
         from lightroom_sdk.schema import get_schema
-        schema = get_schema("develop.createAIMaskWithAdjustments")
+        schema = get_schema("develop.ai.subject")
         assert schema is not None
-        assert schema.cli_path == "develop.ai.mask"
+        assert schema.cli_path == "develop.ai.subject"
 
-    def test_ai_group_lists_mask_and_batch(self):
+    def test_ai_group_lists_individual_types_and_batch(self):
         from lightroom_sdk.schema import get_schemas_by_group
         schemas = get_schemas_by_group("develop.ai")
         cli_paths = [s.cli_path for s in schemas.values()]
-        assert "develop.ai.mask" in cli_paths
+        assert "develop.ai.subject" in cli_paths
+        assert "develop.ai.sky" in cli_paths
         assert "develop.ai.batch" in cli_paths
+        assert "develop.ai.presets" in cli_paths
+        assert "develop.ai.reset" in cli_paths
+        assert "develop.ai.list" in cli_paths
 
 
 class TestResponseFields:

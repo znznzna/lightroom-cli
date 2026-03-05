@@ -40,11 +40,13 @@ class CommandSchema:
 # ---------------------------------------------------------------------------
 
 COMMAND_SCHEMAS: dict[str, CommandSchema] = {}
+_CLI_PATH_INDEX: dict[str, CommandSchema] = {}
 
 
 def _register(*schemas: CommandSchema) -> None:
     for s in schemas:
         COMMAND_SCHEMAS[s.command] = s
+        _CLI_PATH_INDEX[s.cli_path] = s
 
 
 # --- system ---
@@ -375,23 +377,38 @@ _register(
                   mutating=True),
 )
 
-# --- develop.ai ---
+# --- develop.ai (individual types) ---
+_AI_TYPES = ["subject", "sky", "background", "objects", "people", "landscape"]
+
+for _ai_type in _AI_TYPES:
+    _extra_params: list[ParamSchema] = []
+    if _ai_type == "people":
+        _extra_params = [ParamSchema("part", ParamType.STRING,
+                                     description="Specific part to mask (e.g. eyes, hair)")]
+    elif _ai_type == "landscape":
+        _extra_params = [ParamSchema("part", ParamType.STRING,
+                                     description="Specific part to mask (e.g. mountain, tree)")]
+
+    _register(
+        CommandSchema(
+            f"develop.ai.{_ai_type}", f"develop.ai.{_ai_type}",
+            f"Create AI {_ai_type} mask with optional adjustments",
+            params=[
+                *_extra_params,
+                ParamSchema("adjustments", ParamType.JSON_OBJECT,
+                            description="Optional develop adjustments to apply"),
+            ],
+            mutating=True, timeout=60.0,
+        ),
+    )
+
 _register(
-    CommandSchema(
-        "develop.createAIMaskWithAdjustments", "develop.ai.mask",
-        "Create AI mask with optional adjustments",
-        params=[
-            ParamSchema("selectionType", ParamType.ENUM, required=True,
-                        description="AI mask selection type",
-                        enum_values=["subject", "sky", "background",
-                                     "objects", "people", "landscape"]),
-            ParamSchema("adjustments", ParamType.JSON_OBJECT,
-                        description="Optional develop adjustments to apply"),
-            ParamSchema("part", ParamType.STRING,
-                        description="Specific part to mask (e.g. eyes, hair)"),
-        ],
-        mutating=True, timeout=60.0,
-    ),
+    CommandSchema("develop.ai.presets", "develop.ai.presets",
+                  "List available adjustment presets"),
+    CommandSchema("develop.ai.reset", "develop.ai.reset",
+                  "Remove all masks from the current photo", mutating=True),
+    CommandSchema("develop.ai.list", "develop.ai.list",
+                  "List all masks on the current photo"),
     CommandSchema(
         "develop.batchAIMask", "develop.ai.batch",
         "Apply AI mask to multiple photos",
@@ -751,8 +768,9 @@ _register(
 # Lookup functions
 # ---------------------------------------------------------------------------
 
-def get_schema(command: str) -> CommandSchema | None:
-    return COMMAND_SCHEMAS.get(command)
+def get_schema(key: str) -> CommandSchema | None:
+    """コマンド名または cli_path でスキーマを取得（dual lookup）"""
+    return COMMAND_SCHEMAS.get(key) or _CLI_PATH_INDEX.get(key)
 
 
 def get_schemas_by_group(group: str) -> dict[str, CommandSchema]:
