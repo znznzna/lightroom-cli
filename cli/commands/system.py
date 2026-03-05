@@ -1,6 +1,6 @@
 import click
 from pathlib import Path
-from cli.helpers import execute_command, get_bridge, run_async
+from cli.helpers import execute_command, get_bridge, handle_error, run_async
 from cli.output import OutputFormatter
 
 
@@ -25,8 +25,11 @@ def status(ctx):
 
 
 @system.command()
-def reconnect():
+@click.pass_context
+def reconnect(ctx):
     """Force reconnection to Lightroom"""
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
     async def _run():
         bridge = get_bridge()
         try:
@@ -35,7 +38,7 @@ def reconnect():
             await bridge.connect()
             click.echo("Reconnected")
         except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)), err=True)
+            handle_error(ctx, e, fmt)
         finally:
             await bridge.disconnect()
 
@@ -47,13 +50,22 @@ def reconnect():
 @click.pass_context
 def check_connection(ctx, port_file):
     """Check if Lightroom is available"""
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+
     if port_file is None:
         from lightroom_sdk.paths import get_port_file
         port_path = get_port_file()
     else:
         port_path = Path(port_file)
     if not port_path.exists():
-        click.echo("Lightroom connection unavailable: port file not found")
+        click.echo(
+            OutputFormatter.format(
+                {"status": "unavailable", "reason": "port file not found"},
+                fmt,
+            ),
+            err=True,
+        )
+        ctx.exit(3)
         return
     timeout = ctx.obj.get("timeout", 5.0) if ctx.obj else 5.0
 
@@ -64,7 +76,7 @@ def check_connection(ctx, port_file):
             await bridge.send_command("system.ping", timeout=timeout)
             click.echo("Lightroom connection: ok")
         except Exception as e:
-            click.echo(f"Lightroom connection unavailable: {e}")
+            handle_error(ctx, e, fmt)
         finally:
             await bridge.disconnect()
 

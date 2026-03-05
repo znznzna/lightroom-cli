@@ -119,6 +119,28 @@ def execute_command(ctx, command: str, params: dict, *, timeout: float | None = 
     run_async(_run())
 
 
+def handle_error(ctx, error: Exception, fmt: str = "text"):
+    """共通エラーハンドリング（execute_command を使わないコマンド用）"""
+    if isinstance(error, ConnectionError):
+        click.echo(
+            OutputFormatter.format_error(str(error), fmt, code="CONNECTION_ERROR"),
+            err=True,
+        )
+        ctx.exit(3)
+    elif isinstance(error, TimeoutError):
+        click.echo(
+            OutputFormatter.format_error(str(error), fmt, code="TIMEOUT_ERROR"),
+            err=True,
+        )
+        ctx.exit(4)
+    else:
+        click.echo(
+            OutputFormatter.format_error(str(error), fmt),
+            err=True,
+        )
+        ctx.exit(1)
+
+
 def bridge_command(bridge_cmd: str, timeout: float = 30.0):
     """CLIコマンドのボイラープレートを削減するデコレータ。
 

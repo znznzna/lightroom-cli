@@ -1,4 +1,5 @@
 import pytest
+import json
 from unittest.mock import AsyncMock, patch
 from click.testing import CliRunner
 from cli.main import cli
@@ -41,6 +42,40 @@ def test_system_check_connection_no_port_file(runner):
     """ポートファイルがない場合にエラーメッセージ表示"""
     result = runner.invoke(cli, ["system", "check-connection",
                                   "--port-file", "/tmp/nonexistent_test.txt"])
-    assert result.exit_code == 0 or result.exit_code == 1
-    assert "not" in result.output.lower() or "error" in result.output.lower() \
-        or "unavailable" in result.output.lower()
+    assert result.exit_code == 3
+    # エラー出力は stderr に出る
+    output = result.output + (result.stderr if hasattr(result, 'stderr') and result.stderr else "")
+    assert "unavailable" in output.lower() or "not found" in output.lower() \
+        or "port file" in output.lower()
+
+
+class TestExitCodes:
+    """system コマンドの exit code テスト"""
+
+    @pytest.fixture
+    def runner(self):
+        return CliRunner()
+
+    @patch("cli.commands.system.get_bridge")
+    def test_reconnect_connection_error_exit_3(self, mock_get_bridge, runner):
+        mock_bridge = AsyncMock()
+        mock_bridge.connect.side_effect = ConnectionError("refused")
+        mock_get_bridge.return_value = mock_bridge
+        result = runner.invoke(cli, ["system", "reconnect"])
+        assert result.exit_code == 3
+
+    @patch("cli.commands.system.get_bridge")
+    def test_reconnect_timeout_error_exit_4(self, mock_get_bridge, runner):
+        mock_bridge = AsyncMock()
+        mock_bridge.connect.side_effect = TimeoutError("timed out")
+        mock_get_bridge.return_value = mock_bridge
+        result = runner.invoke(cli, ["system", "reconnect"])
+        assert result.exit_code == 4
+
+    @patch("cli.commands.system.get_bridge")
+    def test_reconnect_generic_error_exit_1(self, mock_get_bridge, runner):
+        mock_bridge = AsyncMock()
+        mock_bridge.connect.side_effect = RuntimeError("unknown")
+        mock_get_bridge.return_value = mock_bridge
+        result = runner.invoke(cli, ["system", "reconnect"])
+        assert result.exit_code == 1
