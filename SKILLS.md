@@ -6,6 +6,53 @@
 - Lightroom Classic running with plugin active
 - Connection verified (`lr system check-connection`)
 
+## Getting Started for Agents
+
+### Step 1: Verify connection
+
+```bash
+lr system check-connection
+```
+
+If unavailable, ensure Lightroom Classic is running with the plugin active.
+
+### Step 2: Get photo IDs
+
+```bash
+# Get currently selected photos (most common)
+lr -o json catalog get-selected
+# Returns: {"photos": [{"id": "12345", "filename": "IMG_001.jpg", ...}], "count": 1}
+
+# Or list all photos
+lr -o json catalog list --limit 10
+```
+
+The `id` field in each photo object is the PHOTO_ID used in subsequent commands.
+
+### Step 3: Operate on photos
+
+```bash
+# Read settings
+lr -o json develop get-settings
+
+# Modify settings
+lr develop set Exposure 0.5 Contrast 25
+
+# Set metadata
+lr catalog set-rating 12345 5
+```
+
+### catalog vs selection: Which to use?
+
+| | catalog | selection |
+|---|---------|-----------|
+| **Target** | Specific photo by ID | Currently selected photo(s) |
+| **Use when** | You know the exact photo ID | Operating on what the user is viewing |
+| **Agent preference** | Recommended (explicit, predictable) | Use for navigation workflows |
+| **Example** | `lr catalog set-rating PHOTO_ID 5` | `lr selection set-rating 5` |
+
+**Recommendation for agents:** Prefer `catalog` commands with explicit photo IDs for predictable, auditable operations. Use `selection` commands only for navigation (next/previous) or when operating on "whatever the user selected."
+
 ## Available Modules
 
 ### system — Connection & status
