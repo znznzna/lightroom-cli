@@ -138,3 +138,67 @@ def test_ai_landscape_with_part(mock_get_bridge, runner):
         {"selectionType": "landscape", "part": "water"},
         timeout=60.0,
     )
+
+
+@patch("cli.commands.ai_mask.get_bridge")
+def test_ai_sky_with_adjust_json(mock_get_bridge, runner):
+    """lr develop ai sky --adjust '{"Exposure": -0.5}' が adjustments を含む"""
+    mock_bridge = AsyncMock()
+    mock_bridge.send_command.return_value = {
+        "id": "1", "success": True,
+        "result": {"selectionType": "sky", "adjustments": {"Exposure": -0.5}},
+    }
+    mock_get_bridge.return_value = mock_bridge
+    result = runner.invoke(cli, ["develop", "ai", "sky", "--adjust", '{"Exposure": -0.5}'])
+    assert result.exit_code == 0
+    mock_bridge.send_command.assert_called_once_with(
+        "develop.createAIMaskWithAdjustments",
+        {"selectionType": "sky", "adjustments": {"Exposure": -0.5}},
+        timeout=60.0,
+    )
+
+
+@patch("cli.commands.ai_mask.get_bridge")
+def test_ai_subject_with_adjust_preset(mock_get_bridge, runner):
+    """lr develop ai subject --adjust-preset brighten-subject がプリセットを展開する"""
+    mock_bridge = AsyncMock()
+    mock_bridge.send_command.return_value = {
+        "id": "1", "success": True,
+        "result": {"selectionType": "subject"},
+    }
+    mock_get_bridge.return_value = mock_bridge
+    result = runner.invoke(cli, ["develop", "ai", "subject", "--adjust-preset", "brighten-subject"])
+    assert result.exit_code == 0
+    mock_bridge.send_command.assert_called_once_with(
+        "develop.createAIMaskWithAdjustments",
+        {
+            "selectionType": "subject",
+            "adjustments": {"Exposure": 0.5, "Shadows": 20, "Clarity": 10},
+        },
+        timeout=60.0,
+    )
+
+
+def test_ai_adjust_invalid_json(runner):
+    """--adjust に不正な JSON を渡すとエラーメッセージが出る"""
+    result = runner.invoke(cli, ["develop", "ai", "sky", "--adjust", "not-json"])
+    assert result.exit_code == 0
+    assert "Invalid JSON" in result.output
+
+
+def test_ai_adjust_unknown_preset(runner):
+    """--adjust-preset に存在しないプリセット名でエラー"""
+    result = runner.invoke(cli, ["develop", "ai", "sky", "--adjust-preset", "nonexistent"])
+    assert result.exit_code == 0
+    assert "Unknown preset" in result.output
+
+
+def test_ai_adjust_and_preset_conflict(runner):
+    """--adjust と --adjust-preset の同時指定でエラー"""
+    result = runner.invoke(cli, [
+        "develop", "ai", "sky",
+        "--adjust", '{"Exposure": 1}',
+        "--adjust-preset", "darken-sky",
+    ])
+    assert result.exit_code == 0
+    assert "Cannot use both" in result.output
