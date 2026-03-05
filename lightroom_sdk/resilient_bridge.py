@@ -60,7 +60,7 @@ class ResilientSocketBridge:
         # シャットダウンイベント監視
         self._bridge.on_event("server.shutdown", self._handle_shutdown_event)
 
-        await self._bridge.connect(retry_attempts=1)
+        await self._bridge.connect(retry_attempts=3, retry_delay=0.5)
         self._state = ConnectionState.CONNECTED
 
         if self._heartbeat_interval > 0:

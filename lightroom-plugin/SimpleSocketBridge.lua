@@ -1,21 +1,25 @@
 -- SimpleSocketBridge.lua
--- Enhanced socket bridge with Phase 3 JSON protocol and command routing
+-- Socket bridge with fixed ports, deferred restart, and Phase 3 command routing
 
 local LrSocket = import 'LrSocket'
 local LrTasks = import 'LrTasks'
 local LrFunctionContext = import 'LrFunctionContext'
 local LrDialogs = import 'LrDialogs'
 local PlatformPaths = require("PlatformPaths")
+local Config = require("Config")
 
--- Module-level variables for Phase 3
+-- Module-level state
 local commandRouter = nil
 local senderSocket = nil
-local globalSender = nil  -- Store sender socket reference
-local bothSocketsReady = false  -- Track when both sockets are connected
-local messageQueue = {}  -- Queue messages until both sockets ready
-local isRestarting = false  -- Flag to prevent multiple concurrent restarts
+local globalSender = nil
+local bothSocketsReady = false
+local messageQueue = {}
+local restartPending = false
 
--- Get Phase 3 modules from global state (loaded in PluginInit.lua)
+-- Fixed ports from Config
+local SENDER_PORT = nil   -- set in startSocketServer
+local RECEIVER_PORT = nil -- set in startSocketServer
+
 local function getPhase3Modules()
     local bridge = _G.LightroomPythonBridge
     if not bridge or not bridge.phase3Loaded then
@@ -24,7 +28,6 @@ local function getPhase3Modules()
     return bridge.MessageProtocol, bridge.CommandRouter
 end
 
--- Get logger from global state
 local function getLogger()
     local bridge = _G.LightroomPythonBridge
     if bridge and bridge.logger then
@@ -36,36 +39,28 @@ local function getLogger()
     return logger
 end
 
--- Forward declaration for restart function (defined after startSocketServer)
-local restartSocketServer
+-- Forward declaration
+local requestRestart
 
--- Process queued messages when both sockets are ready
 local function processQueuedMessages()
     local logger = getLogger()
-
     if #messageQueue > 0 then
         logger:info("Processing " .. #messageQueue .. " queued messages")
-
         local MessageProtocol, _ = getPhase3Modules()
         if MessageProtocol and commandRouter then
             for _, message in ipairs(messageQueue) do
                 local decoded = MessageProtocol:decode(tostring(message))
                 if decoded then
-                    logger:debug("Processing queued message: " .. (decoded.command or "unknown"))
                     commandRouter:dispatch(decoded)
                 else
                     logger:error("Failed to decode queued message: " .. tostring(message))
                 end
             end
         end
-
-        -- Clear the queue
         messageQueue = {}
-        logger:info("Message queue processed and cleared")
     end
 end
 
--- Write port info for Python client
 local function writePortFile(senderPort, receiverPort)
     local logger = getLogger()
     local success, err = LrTasks.pcall(function()
@@ -78,386 +73,319 @@ local function writePortFile(senderPort, receiverPort)
             logger:error("Failed to create port file")
         end
     end)
-
     if not success then
         logger:error("Error writing port file: " .. tostring(err))
     end
 end
 
--- Enhanced socket server with Phase 3 command routing
+-- Socket callbacks: request deferred restart on close, self-reconnect on timeout
+local function onSocketClosed(socketName)
+    local logger = getLogger()
+    logger:info(socketName .. " socket closed")
+    local bridge = _G.LightroomPythonBridge
+    if bridge and bridge.shuttingDown then return end
+    if bridge and bridge.socketServerRunning then
+        requestRestart(socketName .. "_closed")
+    end
+end
+
+local function onSocketError(socketName, socket, err)
+    local logger = getLogger()
+    logger:error(socketName .. " socket error: " .. err)
+    local bridge = _G.LightroomPythonBridge
+    if bridge and bridge.shuttingDown then return end
+    if err == "timeout" and bridge and bridge.socketServerRunning then
+        logger:info(socketName .. " timeout - self reconnect")
+        socket:reconnect()
+    end
+end
+
 local function startSocketServer()
     local logger = getLogger()
 
-    logger:info("Starting enhanced socket server with Phase 3 command routing")
+    -- Guard against multiple concurrent starts
+    if _G.LightroomPythonBridge and _G.LightroomPythonBridge.socketServerRunning then
+        logger:info("Socket server already running - skipping start")
+        return
+    end
 
-    -- Phase 3: Get modules from global state and initialize command router
+    logger:info("Starting socket server with fixed ports")
+
+    -- Read fixed ports from Config
+    Config:init()
+    SENDER_PORT = Config:get("pluginSendPort")
+    RECEIVER_PORT = Config:get("pluginReceivePort")
+    logger:info("Fixed ports: sender=" .. SENDER_PORT .. ", receiver=" .. RECEIVER_PORT)
+
+    -- Initialize command router
     local MessageProtocol, CommandRouter = getPhase3Modules()
     if CommandRouter then
         commandRouter = CommandRouter
         commandRouter:init()
         _G.LightroomPythonBridge.commandRouter = commandRouter
-        logger:info("Phase 3 command router initialized")
-        
-        -- Register commands on router initialization/restart
+        logger:info("Command router initialized")
+
         local bridge = _G.LightroomPythonBridge
         if bridge then
             if bridge.registerSystemCommands then
-                logger:info("Registering system commands on restart")
                 bridge.registerSystemCommands()
             end
-            
             if bridge.registerApiCommands and bridge.phase4Loaded then
-                logger:info("Registering API commands on restart")
                 bridge.registerApiCommands()
             end
         end
     else
-        logger:error("Phase 3 modules not available - falling back to basic mode")
+        logger:error("Phase 3 modules not available")
     end
 
-    -- Use the exact same pattern as Adobe's working sample
     LrTasks.startAsyncTask(function()
-
         LrFunctionContext.callWithContext('lightroom_python_bridge', function(context)
             logger:info("Socket context created")
 
-            local senderPort, receiverPort
             local sender, receiver
 
-            -- Create sender socket (Python connects to send TO Lightroom)
+            -- Create sender socket with FIXED port
             sender = LrSocket.bind {
                 functionContext = context,
                 address = "localhost",
-                port = 0,  -- AUTO_PORT - let OS assign
+                port = SENDER_PORT,
                 mode = "send",
                 plugin = _PLUGIN,
 
                 onConnecting = function(socket, port)
                     logger:info("Sender socket listening on port " .. port)
-                    senderPort = port
-
-                    -- Write port file when both ports are available
-                    if senderPort and receiverPort then
-                        writePortFile(senderPort, receiverPort)
-                    end
                 end,
 
                 onConnected = function(socket, port)
                     logger:info("Python connected to sender socket")
-
-                    -- Phase 3: Store socket and connect command router
                     senderSocket = socket
-                    globalSender = socket  -- Store the connected socket object
+                    globalSender = socket
 
                     if commandRouter then
                         commandRouter:setSocketBridge({
                             send = function(jsonData)
                                 if globalSender and jsonData then
-                                    logger:debug("Send function received jsonData type: " .. type(jsonData))
-                                    -- Truncate large messages for logging (like base64 image data)
-                                    local logMessage = tostring(jsonData)
-                                    if string.len(logMessage) > 500 then
-                                        logMessage = string.sub(logMessage, 1, 200) .. "... [" .. string.len(logMessage) .. " chars total] ..." .. string.sub(logMessage, -100)
-                                    end
-                                    logger:debug("Send function received jsonData value: " .. logMessage)
-
-                                    -- Ensure jsonData is a string
                                     if type(jsonData) ~= "string" then
-                                        logger:error("ERROR: jsonData is not a string! Type: " .. type(jsonData))
+                                        logger:error("jsonData is not a string: " .. type(jsonData))
                                         return false
                                     end
-
-                                    -- Ensure jsonData ends with newline for socket protocol
                                     if not string.match(jsonData, "\n$") then
                                         jsonData = jsonData .. "\n"
                                     end
-                                    -- Truncate large messages for logging (like base64 image data)
                                     local logData = jsonData
                                     if string.len(logData) > 500 then
-                                        logData = string.sub(logData, 1, 200) .. "... [" .. string.len(logData) .. " chars total] ..." .. string.sub(logData, -100)
+                                        logData = string.sub(logData, 1, 200) .. "... [" .. string.len(logData) .. " chars] ..." .. string.sub(logData, -100)
                                     end
-                                    logger:debug("Sending JSON string via socket: " .. logData)
+                                    logger:debug("Sending: " .. logData)
                                     globalSender:send(jsonData)
                                     return true
                                 else
-                                    logger:error("Cannot send - socket or jsonData is nil")
+                                    logger:error("Cannot send - socket or data is nil")
                                     return false
                                 end
                             end
                         })
 
-                        -- Mark both sockets as ready and process queued messages
                         bothSocketsReady = true
-                        logger:info("Both sockets now ready - processing any queued messages")
+                        logger:info("Both sockets ready")
                         processQueuedMessages()
 
-                        -- Send connection established event
                         commandRouter:sendEvent("connection.established", {
-                            senderPort = senderPort,
-                            receiverPort = receiverPort
+                            senderPort = SENDER_PORT,
+                            receiverPort = RECEIVER_PORT
                         })
                     end
                 end,
 
                 onClosed = function(socket)
-                    logger:info("Sender socket closed - client disconnected")
-                    local bridge = _G.LightroomPythonBridge
-                    if bridge and bridge.shuttingDown then
-                        logger:info("shuttingDown=true, not restarting")
-                        return
-                    end
-                    if bridge and bridge.socketServerRunning then
-                        restartSocketServer()
-                    else
-                        logger:info("Socket closed during shutdown - not restarting")
-                    end
+                    onSocketClosed("Sender")
                 end,
 
                 onError = function(socket, err)
-                    logger:error("Sender socket error: " .. err)
-                    local bridge = _G.LightroomPythonBridge
-                    if bridge and bridge.shuttingDown then
-                        logger:info("shuttingDown=true, not reconnecting")
-                        return
-                    end
-                    if err == "timeout" and bridge and bridge.socketServerRunning then
-                        logger:info("Attempting sender socket reconnect")
-                        socket:reconnect()
-                    else
-                        logger:info("Sender socket error during shutdown - not reconnecting")
-                    end
+                    onSocketError("Sender", socket, err)
                 end
             }
 
-            -- Create receiver socket (Python connects to receive FROM Lightroom)
+            -- Create receiver socket with FIXED port
             receiver = LrSocket.bind {
                 functionContext = context,
                 address = "localhost",
-                port = 0,  -- AUTO_PORT - let OS assign
+                port = RECEIVER_PORT,
                 mode = "receive",
                 plugin = _PLUGIN,
 
                 onConnecting = function(socket, port)
                     logger:info("Receiver socket listening on port " .. port)
-                    receiverPort = port
-
-                    -- Write port file when both ports are available
-                    if senderPort and receiverPort then
-                        writePortFile(senderPort, receiverPort)
-                    end
                 end,
 
                 onConnected = function(socket, port)
                     logger:info("Python connected to receiver socket")
-                    logger:info("Receiver socket ready to receive messages")
                 end,
 
                 onMessage = function(socket, message)
-                    logger:info("\n\n")
-                    logger:info("*** JSON MESSAGE RECEIVED ***")
-                    logger:debug("Raw message: " .. tostring(message))
+                    logger:debug("Message received")
 
-                    -- Check if both sockets are ready before processing
                     if not bothSocketsReady then
-                        logger:warn("Both sockets not ready yet - queuing message")
+                        logger:warn("Sockets not ready - queuing message")
                         table.insert(messageQueue, message)
                         return
                     end
 
-                    -- Phase 3: Decode JSON and dispatch to command router
                     local MessageProtocol, _ = getPhase3Modules()
                     if MessageProtocol and commandRouter then
                         local decoded = MessageProtocol:decode(tostring(message))
                         if decoded then
-                            logger:debug("Decoded JSON message - dispatching to command router")
                             commandRouter:dispatch(decoded)
                         else
-                            logger:error("Failed to decode JSON message: " .. tostring(message))
+                            logger:error("Failed to decode message: " .. tostring(message))
                         end
-                    else
-                        logger:warn("Phase 3 not available - ignoring message")
                     end
                 end,
 
                 onClosed = function(socket)
-                    logger:info("*** RECEIVER SOCKET CLOSED - CLIENT DISCONNECTED ***")
-                    local bridge = _G.LightroomPythonBridge
-                    if bridge and bridge.shuttingDown then
-                        logger:info("shuttingDown=true, not restarting receiver")
-                        return
-                    end
-                    if bridge and bridge.socketServerRunning then
-                        restartSocketServer()
-                    else
-                        logger:info("Receiver socket closed during shutdown - not restarting")
-                    end
+                    onSocketClosed("Receiver")
                 end,
 
                 onError = function(socket, err)
-                    logger:error("*** RECEIVER SOCKET ERROR: " .. err)
-                    local bridge = _G.LightroomPythonBridge
-                    if bridge and bridge.shuttingDown then
-                        logger:info("shuttingDown=true, not reconnecting receiver")
-                        return
-                    end
-                    if err == "timeout" and bridge and bridge.socketServerRunning then
-                        logger:info("Receiver socket timeout - attempting reconnect")
-                        socket:reconnect()
-                    else
-                        logger:info("Receiver socket error during shutdown - not reconnecting")
-                    end
+                    onSocketError("Receiver", socket, err)
                 end
             }
 
+            -- Write port file with fixed ports
+            writePortFile(SENDER_PORT, RECEIVER_PORT)
+
             logger:info("Both sockets created - entering keep-alive loop")
 
-            -- Phase 3: Start command router cleanup task
+            _G.LightroomPythonBridge.socketServerRunning = true
+
             if commandRouter then
                 commandRouter:startCleanupTask()
             end
 
-            -- Use exact Adobe pattern: global control variable + simple loop
-            _G.LightroomPythonBridge.socketServerRunning = true
-
             while _G.LightroomPythonBridge.socketServerRunning do
-                LrTasks.sleep(0.2)  -- 200ms - faster shutdown response (was 500ms)
+                LrTasks.sleep(0.2)
             end
 
             logger:info("Socket server loop ended - cleaning up")
 
-            -- Cleanup
-            if sender then
-                sender:close()
-            end
-            if receiver then
-                receiver:close()
-            end
+            if sender then sender:close() end
+            if receiver then receiver:close() end
 
-            -- Remove port file
-            pcall(function()
-                local LrFileUtils = import 'LrFileUtils'
-                local portFile = PlatformPaths.getPortFilePath()
-                if LrFileUtils.exists(portFile) then
-                    LrFileUtils.delete(portFile)
-                end
-            end)
-
-            logger:info("Socket server stopped")
-            LrDialogs.showBezel("Python Bridge Disconnected", 2)
+            -- Only remove port file on actual shutdown, not on restart
+            local bridge = _G.LightroomPythonBridge
+            if bridge and bridge.shuttingDown then
+                pcall(function()
+                    local LrFileUtils = import 'LrFileUtils'
+                    local portFile = PlatformPaths.getPortFilePath()
+                    if LrFileUtils.exists(portFile) then
+                        LrFileUtils.delete(portFile)
+                    end
+                end)
+                logger:info("Socket server stopped (shutdown)")
+                LrDialogs.showBezel("Python Bridge Disconnected", 2)
+            else
+                logger:info("Socket server stopped (restart pending)")
+            end
         end)
     end)
 end
 
--- Function to restart socket server after client disconnect
-restartSocketServer = function()
+-- Deferred restart: never called inside socket callbacks directly
+-- Uses LrTasks.startAsyncTask to escape the callback context
+requestRestart = function(reason)
     local logger = getLogger()
 
-    -- FIRST CHECK: Don't restart if shutting down (before spawning async task)
     if not (_G.LightroomPythonBridge and _G.LightroomPythonBridge.socketServerRunning) then
-        logger:info("Shutdown in progress - not restarting socket server")
+        logger:info("Shutdown in progress - not restarting")
         return
     end
 
-    -- Prevent multiple concurrent restarts
-    if isRestarting then
-        logger:info("Socket server restart already in progress - skipping")
+    if restartPending then
+        logger:info("Restart already pending - skipping (" .. reason .. ")")
         return
     end
 
-    isRestarting = true
-    logger:info("Initiating socket server restart after client disconnect...")
+    restartPending = true
+    logger:info("Restart requested: " .. reason)
 
     LrTasks.startAsyncTask(function()
-        -- SECOND CHECK: Verify still running inside async task
+        local logger = getLogger()
+
         if not (_G.LightroomPythonBridge and _G.LightroomPythonBridge.socketServerRunning) then
-            logger:info("Shutdown detected in restart task - aborting restart")
-            isRestarting = false
+            restartPending = false
             return
         end
 
-        -- Reset state for clean restart
+        -- Stop current server loop
+        _G.LightroomPythonBridge.socketServerRunning = false
+
+        -- Reset state
         bothSocketsReady = false
         messageQueue = {}
         globalSender = nil
         senderSocket = nil
 
-        -- Small delay to allow socket cleanup
-        LrTasks.sleep(2)
+        -- Wait for old server loop (0.2s poll) to exit and sockets to close
+        LrTasks.sleep(0.3)
 
-        -- THIRD CHECK: Verify still running after sleep
-        if not (_G.LightroomPythonBridge and _G.LightroomPythonBridge.socketServerRunning) then
-            logger:info("Shutdown detected after sleep - aborting restart")
-            isRestarting = false
+        if _G.LightroomPythonBridge and _G.LightroomPythonBridge.shuttingDown then
+            restartPending = false
             return
         end
 
-        logger:info("Restarting socket server...")
+        logger:info("Restarting socket server (fixed ports)...")
         startSocketServer()
 
-        isRestarting = false
+        restartPending = false
         logger:info("Socket server restart completed")
     end)
 end
 
--- Stop the socket server
 local function stopSocketServer()
     local logger = getLogger()
-    logger:info("Stopping socket server - initiating shutdown")
+    logger:info("Stopping socket server")
 
+    -- Set flags immediately (non-blocking)
     if _G.LightroomPythonBridge then
+        _G.LightroomPythonBridge.shuttingDown = true
         _G.LightroomPythonBridge.socketServerRunning = false
-        logger:info("Socket server shutdown flag set")
     end
 
-    -- Send shutdown notification to Python client before closing sockets
+    -- Best-effort shutdown event (no sleep/wait)
     if commandRouter and commandRouter.socketBridge then
-        logger:info("Sending shutdown notification to Python client")
         pcall(function()
             commandRouter:sendEvent("server.shutdown", { reason = "Lightroom closing" })
         end)
-        -- Give Python client 500ms to disconnect gracefully
-        LrTasks.sleep(0.5)
     end
 
-    -- Reset socket state
+    -- Reset state immediately
     bothSocketsReady = false
     messageQueue = {}
-    isRestarting = false  -- Reset restart flag
-
-    -- Force cleanup of global socket references
+    restartPending = false
     globalSender = nil
     senderSocket = nil
+    commandRouter = nil
 
-    -- Clean up command router
-    if commandRouter then
-        logger:info("Cleaning up command router")
-        commandRouter = nil
-    end
-
-    -- Remove port file immediately
+    -- Remove port file
     pcall(function()
         local LrFileUtils = import 'LrFileUtils'
         local portFile = PlatformPaths.getPortFilePath()
         if LrFileUtils.exists(portFile) then
             LrFileUtils.delete(portFile)
-            logger:info("Port file removed")
         end
     end)
 
-    logger:info("Socket server stop initiated - waiting for cleanup")
+    logger:info("Socket server stopped")
 end
 
--- Check if server is running
 local function isRunning()
     return _G.LightroomPythonBridge and _G.LightroomPythonBridge.socketServerRunning
 end
 
--- Phase 3: Expose command router functionality
 local function getCommandRouter()
     return commandRouter
 end
 
--- Send message via socket bridge (for command router)
 local function sendMessage(message)
     if senderSocket then
         senderSocket:send(message)
@@ -470,7 +398,6 @@ return {
     start = startSocketServer,
     stop = stopSocketServer,
     isRunning = isRunning,
-    -- Phase 3: Command routing interface
     getRouter = getCommandRouter,
     send = sendMessage
 }

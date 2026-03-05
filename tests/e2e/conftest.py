@@ -53,15 +53,32 @@ def pytest_addoption(parser):
 # --- Skip Logic ---
 
 
+def _lightroom_reachable() -> bool:
+    """Check if Lightroom is actually reachable by attempting TCP connections to both ports."""
+    import socket
+    port_file = get_port_file()
+    if not port_file.exists():
+        return False
+    try:
+        ports = port_file.read_text().strip().split(",")
+        if len(ports) < 2:
+            return False
+        for port_str in ports:
+            sock = socket.create_connection(("127.0.0.1", int(port_str)), timeout=2)
+            sock.close()
+        return True
+    except (OSError, ValueError, IndexError):
+        return False
+
+
 def pytest_collection_modifyitems(config, items):
     """Auto-skip e2e tests when Lightroom is not running.
     Auto-skip destructive tests unless --run-destructive is passed.
     """
-    port_file = get_port_file()
     skip_e2e = None
-    if not port_file.exists():
+    if not _lightroom_reachable():
         skip_e2e = pytest.mark.skip(
-            reason=f"Lightroom not running (port file not found: {port_file})"
+            reason="Lightroom not reachable (port file missing or connection refused)"
         )
 
     skip_destructive = None

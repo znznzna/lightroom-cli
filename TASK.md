@@ -19,6 +19,19 @@
 - [x] プラグイン名変更: Lightroom CLI Bridge (`com.znznzna.lightroom.cli-bridge`)
 - [x] Lightroom 実機接続成功 (ping/status OK)
 - [x] `bridge.connect()` 抜け修正 (全CLIコマンド)
+- [x] E2E テストコード修正 (conftest の auto-skip 改善 + ScopeMismatch 修正)
+- [x] SKILLS.md をスキルとして実際に使ってみる → 検証完了、65+コマンド追加修正済み
+- [x] 145 E2Eテスト実装完了 (10 phase files)
+
+### ソケット安定化 (2026-03-05)
+
+- [x] 固定ポート化 (port=0 → Config.lua: 54322/54323)
+- [x] 非同期リスタートパターン導入 (onClosed内のreconnect全廃)
+- [x] Lightroomハング問題修正 (別ソケットコールバックからの操作禁止)
+- [x] startSocketServer多重起動ガード
+- [x] Python側リトライ強化 (retry_attempts=3, retry_delay=0.5)
+- [x] シャットダウン高速化 (PluginShutdown/AppShutdown フラグセットのみ)
+- [x] 5連続ping + 全systemコマンド動作確認済み
 
 ### 発見・修正した問題
 
@@ -27,15 +40,17 @@
 - シンリンクは Modules ディレクトリで認識されない → コピーインストール必須
 - Plugin Manager の「Add」でソースフォルダ直接読み込みに失敗する → 要調査
 - CLI コマンドが `connect()` なしで `send_command()` を呼んでいた → 修正済み
+- LrSocket `reconnect()` を別ソケットのコールバックから呼ぶと Lightroom がハング → 非同期リスタートに変更
+- LrSocket mode="send" はクライアント切断を検知しない → 仕様として受容、フルリスタートで対応
+- シャットダウン時 `LrTasks.sleep()` が「応答していません」ダイアログを引き起こす → フラグセットのみに簡素化
 
 ---
 
 ## In Progress
 
-### E2E テスト実行
-- [x] `_lr-cli-test` コレクションの写真で全コマンド網羅テスト → 145 E2Eテスト実装完了 (10 phase files)
-- [x] E2E テストコード修正 (conftest の lr_bridge fixture がポートファイル存在時にスキップされない問題)
-- [x] SKILLS.md をスキルとして実際に使ってみる → 検証完了、65+コマンド追加修正済み
+### E2Eテスト実機実行
+- [ ] Lightroom起動状態で全145テスト実行 (`python -m pytest tests/e2e/ -v`)
+- [ ] ソケット安定化修正のコミット
 
 ---
 
