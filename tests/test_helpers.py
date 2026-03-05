@@ -177,15 +177,16 @@ class TestExecuteCommand:
         mock_bridge.send_command.assert_not_called()
         mock_ctx.exit.assert_called_with(2)
 
-    def test_zero_timeout_not_treated_as_falsy(self):
+    def test_command_timeout_uses_max_of_global_and_command(self):
         from cli.helpers import execute_command
-        mock_ctx = self._make_ctx()
+        mock_ctx = self._make_ctx(obj={"output": "json", "timeout": 120.0, "fields": None})
         mock_bridge = AsyncMock()
         mock_bridge.send_command.return_value = {"result": {}}
 
         with patch("cli.helpers.get_bridge", return_value=mock_bridge):
-            execute_command(mock_ctx, "system.ping", {}, timeout=0.0)
+            execute_command(mock_ctx, "system.ping", {}, timeout=60.0)
 
+        # max(60.0, 120.0) = 120.0 — user's global timeout wins
         mock_bridge.send_command.assert_called_once_with(
-            "system.ping", {}, timeout=0.0
+            "system.ping", {}, timeout=120.0
         )

@@ -28,7 +28,11 @@ def execute_command(ctx, command: str, params: dict, *, timeout: float | None = 
     """
     fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
     fields = ctx.obj.get("fields") if ctx.obj else None
-    cmd_timeout = timeout if timeout is not None else (ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0)
+    global_timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+    if timeout is not None:
+        cmd_timeout = max(timeout, global_timeout)
+    else:
+        cmd_timeout = global_timeout
 
     # --json 入力チェック
     json_str = getattr(ctx, "params", {}).get("json_str")
