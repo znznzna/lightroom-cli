@@ -10,7 +10,13 @@ def _parse_pairs(pairs: tuple) -> dict:
         raise click.BadParameter("Parameters must be in 'param value' pairs")
     result = {}
     for i in range(0, len(pairs), 2):
-        result[pairs[i]] = float(pairs[i + 1])
+        try:
+            result[pairs[i]] = float(pairs[i + 1])
+        except ValueError:
+            raise click.BadParameter(
+                f"Invalid numeric value '{pairs[i + 1]}' for parameter '{pairs[i]}'. "
+                f"Expected a number (e.g., 0.5, -1.0, 100)"
+            )
     return result
 
 

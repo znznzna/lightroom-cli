@@ -285,3 +285,33 @@ def test_develop_set_process_version(mock_get_bridge, runner):
     mock_bridge.send_command.assert_called_once_with(
         "develop.setProcessVersion", {"version": "Version 6"}, timeout=30.0
     )
+
+
+class TestParsePairsErrorHandling:
+    """_parse_pairs() のエラーハンドリングテスト"""
+
+    @pytest.fixture
+    def runner(self):
+        return CliRunner()
+
+    def test_invalid_numeric_value_shows_structured_error(self, runner):
+        """lr develop set Exposure abc が構造化エラーを返す（traceback なし）"""
+        result = runner.invoke(cli, ["-o", "json", "develop", "set", "Exposure", "abc"])
+        assert result.exit_code == 2
+        assert "Traceback" not in result.output
+        error_output = result.output if result.output else ""
+        stderr_output = result.stderr if hasattr(result, "stderr") else ""
+        combined = error_output + stderr_output
+        assert "VALIDATION_ERROR" in combined or "Invalid numeric value" in combined
+
+    def test_odd_number_of_args_shows_error(self, runner):
+        """lr develop set Exposure が構造化エラーを返す"""
+        result = runner.invoke(cli, ["-o", "json", "develop", "set", "Exposure"])
+        assert result.exit_code == 2
+        assert "Traceback" not in result.output
+
+    def test_special_chars_in_value_show_error(self, runner):
+        """特殊文字が値の場合のエラーハンドリング"""
+        result = runner.invoke(cli, ["-o", "json", "develop", "set", "Exposure", "!@#"])
+        assert result.exit_code == 2
+        assert "Traceback" not in result.output
