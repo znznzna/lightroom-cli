@@ -1,6 +1,5 @@
 """lr plugin — Lightroom プラグインの管理コマンド"""
 
-import os
 import shutil
 
 import click
@@ -40,14 +39,20 @@ def install(dev, quiet):
             shutil.rmtree(dest)
 
     if dev:
-        if os.name == "nt":
+        try:
+            dest.symlink_to(source)
+        except OSError:
+            # Windows で symlink 権限がない場合は copytree にフォールバック
             click.echo(
-                "Warning: --dev (symlink) may require admin privileges on Windows",
+                "Warning: Symlink creation failed. Falling back to copy.",
                 err=True,
             )
-        dest.symlink_to(source)
-        if not quiet:
-            click.echo(f"Plugin symlinked: {dest} -> {source}")
+            shutil.copytree(source, dest)
+            if not quiet:
+                click.echo(f"Plugin installed (copy fallback) to {dest}")
+        else:
+            if not quiet:
+                click.echo(f"Plugin symlinked: {dest} -> {source}")
     else:
         shutil.copytree(source, dest)
         if not quiet:
