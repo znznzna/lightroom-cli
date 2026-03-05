@@ -1,5 +1,7 @@
 """Command schema definitions -- Single Source of Truth for validation and introspection."""
 from __future__ import annotations
+import hashlib
+import json as json_module
 from dataclasses import dataclass, field
 from enum import Enum
 
@@ -876,3 +878,17 @@ def get_schemas_by_group(group: str) -> dict[str, CommandSchema]:
 
 def get_all_schemas() -> dict[str, CommandSchema]:
     return COMMAND_SCHEMAS
+
+
+def get_schema_hash() -> str:
+    """COMMAND_SCHEMAS の安定ハッシュを計算（SHA256の先頭12文字）"""
+    keys = sorted(COMMAND_SCHEMAS.keys())
+    content = json_module.dumps(
+        [{
+            "command": COMMAND_SCHEMAS[k].command,
+            "cli_path": COMMAND_SCHEMAS[k].cli_path,
+            "params": [(p.name, p.type.value) for p in COMMAND_SCHEMAS[k].params],
+        } for k in keys],
+        sort_keys=True,
+    )
+    return hashlib.sha256(content.encode()).hexdigest()[:12]
