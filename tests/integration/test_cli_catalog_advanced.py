@@ -9,7 +9,7 @@ def runner():
     return CliRunner()
 
 
-@patch("cli.commands.catalog.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_catalog_create_collection(mock_get_bridge, runner):
     mock_bridge = AsyncMock()
     mock_bridge.send_command.return_value = {"id": "1", "success": True, "result": {"name": "My Collection"}}
@@ -19,7 +19,7 @@ def test_catalog_create_collection(mock_get_bridge, runner):
     mock_bridge.send_command.assert_called_once_with("catalog.createCollection", {"name": "My Collection"}, timeout=30.0)
 
 
-@patch("cli.commands.catalog.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_catalog_create_smart_collection(mock_get_bridge, runner):
     mock_bridge = AsyncMock()
     mock_bridge.send_command.return_value = {"id": "2", "success": True, "result": {"name": "Smart"}}
@@ -29,7 +29,7 @@ def test_catalog_create_smart_collection(mock_get_bridge, runner):
     mock_bridge.send_command.assert_called_once_with("catalog.createSmartCollection", {"name": "Smart"}, timeout=30.0)
 
 
-@patch("cli.commands.catalog.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_catalog_create_collection_set(mock_get_bridge, runner):
     mock_bridge = AsyncMock()
     mock_bridge.send_command.return_value = {"id": "3", "success": True, "result": {"name": "Set"}}
@@ -39,7 +39,7 @@ def test_catalog_create_collection_set(mock_get_bridge, runner):
     mock_bridge.send_command.assert_called_once_with("catalog.createCollectionSet", {"name": "Set"}, timeout=30.0)
 
 
-@patch("cli.commands.catalog.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_catalog_create_keyword(mock_get_bridge, runner):
     mock_bridge = AsyncMock()
     mock_bridge.send_command.return_value = {"id": "4", "success": True, "result": {"keyword": "sunset"}}
@@ -49,7 +49,7 @@ def test_catalog_create_keyword(mock_get_bridge, runner):
     mock_bridge.send_command.assert_called_once_with("catalog.createKeyword", {"keyword": "sunset"}, timeout=30.0)
 
 
-@patch("cli.commands.catalog.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_catalog_remove_keyword(mock_get_bridge, runner):
     mock_bridge = AsyncMock()
     mock_bridge.send_command.return_value = {"id": "5", "success": True, "result": {}}
@@ -59,7 +59,7 @@ def test_catalog_remove_keyword(mock_get_bridge, runner):
     mock_bridge.send_command.assert_called_once_with("catalog.removeKeyword", {"photoId": "123", "keyword": "sunset"}, timeout=30.0)
 
 
-@patch("cli.commands.catalog.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_catalog_set_view_filter(mock_get_bridge, runner):
     mock_bridge = AsyncMock()
     mock_bridge.send_command.return_value = {"id": "6", "success": True, "result": {}}
@@ -69,7 +69,7 @@ def test_catalog_set_view_filter(mock_get_bridge, runner):
     mock_bridge.send_command.assert_called_once_with("catalog.setViewFilter", {"filter": {"rating": 3}}, timeout=30.0)
 
 
-@patch("cli.commands.catalog.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_catalog_get_view_filter(mock_get_bridge, runner):
     mock_bridge = AsyncMock()
     mock_bridge.send_command.return_value = {"id": "7", "success": True, "result": {"filter": {}}}
@@ -79,7 +79,7 @@ def test_catalog_get_view_filter(mock_get_bridge, runner):
     mock_bridge.send_command.assert_called_once_with("catalog.getCurrentViewFilter", {}, timeout=30.0)
 
 
-@patch("cli.commands.catalog.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_catalog_remove_from_catalog(mock_get_bridge, runner):
     mock_bridge = AsyncMock()
     mock_bridge.send_command.return_value = {"id": "8", "success": True, "result": {"message": "Removed"}}

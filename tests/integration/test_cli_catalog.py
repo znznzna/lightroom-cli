@@ -9,7 +9,7 @@ def runner():
     return CliRunner()
 
 
-@patch("cli.commands.catalog.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_catalog_get_selected(mock_get_bridge, runner):
     """lr catalog get-selected が選択中の写真を返す"""
     mock_bridge = AsyncMock()
@@ -26,7 +26,7 @@ def test_catalog_get_selected(mock_get_bridge, runner):
     )
 
 
-@patch("cli.commands.catalog.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_catalog_list_with_options(mock_get_bridge, runner):
     """lr catalog list --limit 10 --offset 5 がパラメータを渡す"""
     mock_bridge = AsyncMock()
@@ -38,11 +38,11 @@ def test_catalog_list_with_options(mock_get_bridge, runner):
     result = runner.invoke(cli, ["catalog", "list", "--limit", "10", "--offset", "5"])
     assert result.exit_code == 0
     mock_bridge.send_command.assert_called_once_with(
-        "catalog.getAllPhotos", {"limit": 10, "offset": 5}, timeout=30.0
+        "catalog.getAllPhotos", {"limit": 10, "offset": 5}, timeout=60.0
     )
 
 
-@patch("cli.commands.catalog.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_catalog_set_rating(mock_get_bridge, runner):
     """lr catalog set-rating photo-1 5 がratingを設定する"""
     mock_bridge = AsyncMock()
@@ -58,7 +58,7 @@ def test_catalog_set_rating(mock_get_bridge, runner):
     )
 
 
-@patch("cli.commands.catalog.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_catalog_set_rating_sends_correct_command(mock_get_bridge, runner):
     """lr catalog set-rating がcatalog.setRatingコマンドを送信する"""
     mock_bridge = AsyncMock()
@@ -74,7 +74,7 @@ def test_catalog_set_rating_sends_correct_command(mock_get_bridge, runner):
     )
 
 
-@patch("cli.commands.catalog.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_catalog_add_keywords_sends_correct_command(mock_get_bridge, runner):
     """lr catalog add-keywords がcatalog.addKeywordsコマンドを送信する"""
     mock_bridge = AsyncMock()

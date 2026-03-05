@@ -9,7 +9,7 @@ def runner():
     return CliRunner()
 
 
-@patch("cli.commands.catalog.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_catalog_get_info_includes_pick_status(mock_get_bridge, runner):
     """lr catalog get-info がpickStatusを含むメタデータを返す"""
     mock_bridge = AsyncMock()
@@ -31,7 +31,7 @@ def test_catalog_get_info_includes_pick_status(mock_get_bridge, runner):
     assert "pickStatus" in result.output
 
 
-@patch("cli.commands.catalog.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_catalog_set_flag_pick(mock_get_bridge, runner):
     """lr catalog set-flag <id> pick がフラグを設定する"""
     mock_bridge = AsyncMock()
@@ -49,7 +49,7 @@ def test_catalog_set_flag_pick(mock_get_bridge, runner):
     )
 
 
-@patch("cli.commands.catalog.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_catalog_set_flag_reject(mock_get_bridge, runner):
     """lr catalog set-flag <id> reject がRejectフラグを設定する"""
     mock_bridge = AsyncMock()
@@ -67,7 +67,7 @@ def test_catalog_set_flag_reject(mock_get_bridge, runner):
     )
 
 
-@patch("cli.commands.catalog.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_catalog_set_flag_none(mock_get_bridge, runner):
     """lr catalog set-flag <id> none がフラグを解除する"""
     mock_bridge = AsyncMock()
@@ -85,7 +85,7 @@ def test_catalog_set_flag_none(mock_get_bridge, runner):
     )
 
 
-@patch("cli.commands.catalog.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_catalog_get_flag(mock_get_bridge, runner):
     """lr catalog get-flag <id> がフラグ状態を取得する"""
     mock_bridge = AsyncMock()
@@ -103,7 +103,7 @@ def test_catalog_get_flag(mock_get_bridge, runner):
     )
 
 
-@patch("cli.commands.catalog.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_catalog_find_with_flag_option(mock_get_bridge, runner):
     """lr catalog find --flag pick がフラグ条件検索を実行する"""
     mock_bridge = AsyncMock()
@@ -126,7 +126,7 @@ def test_catalog_find_with_flag_option(mock_get_bridge, runner):
     assert call_args[0][1]["searchDesc"]["flag"] == "pick"
 
 
-@patch("cli.commands.catalog.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_catalog_find_with_rating_option(mock_get_bridge, runner):
     """lr catalog find --rating 5 がレーティング条件検索を実行する"""
     mock_bridge = AsyncMock()
@@ -143,7 +143,7 @@ def test_catalog_find_with_rating_option(mock_get_bridge, runner):
     assert call_args[0][1]["searchDesc"]["rating"] == 5
 
 
-@patch("cli.commands.catalog.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_catalog_find_with_multiple_options(mock_get_bridge, runner):
     """lr catalog find --flag pick --rating 5 --color-label red が複合条件検索を実行する"""
     mock_bridge = AsyncMock()

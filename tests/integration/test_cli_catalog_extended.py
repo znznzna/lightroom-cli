@@ -9,7 +9,7 @@ def runner():
     return CliRunner()
 
 
-@patch("cli.commands.catalog.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_catalog_select(mock_get_bridge, runner):
     """lr catalog select がphotoIdでの写真選択を実行する"""
     mock_bridge = AsyncMock()
@@ -26,7 +26,7 @@ def test_catalog_select(mock_get_bridge, runner):
     )
 
 
-@patch("cli.commands.catalog.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_catalog_find_by_path(mock_get_bridge, runner):
     """lr catalog find-by-path がパスで写真を検索する"""
     mock_bridge = AsyncMock()
@@ -43,7 +43,7 @@ def test_catalog_find_by_path(mock_get_bridge, runner):
     )
 
 
-@patch("cli.commands.catalog.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_catalog_collections(mock_get_bridge, runner):
     """lr catalog collections がコレクション一覧を返す"""
     mock_bridge = AsyncMock()
@@ -60,7 +60,7 @@ def test_catalog_collections(mock_get_bridge, runner):
     )
 
 
-@patch("cli.commands.catalog.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_catalog_keywords(mock_get_bridge, runner):
     """lr catalog keywords がキーワード一覧を返す"""
     mock_bridge = AsyncMock()
@@ -77,7 +77,7 @@ def test_catalog_keywords(mock_get_bridge, runner):
     )
 
 
-@patch("cli.commands.catalog.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_catalog_folders(mock_get_bridge, runner):
     """lr catalog folders がフォルダ一覧を返す"""
     mock_bridge = AsyncMock()
@@ -94,7 +94,7 @@ def test_catalog_folders(mock_get_bridge, runner):
     )
 
 
-@patch("cli.commands.catalog.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_catalog_folders_recursive(mock_get_bridge, runner):
     """lr catalog folders --recursive がサブフォルダ付きで返す"""
     mock_bridge = AsyncMock()
@@ -111,7 +111,7 @@ def test_catalog_folders_recursive(mock_get_bridge, runner):
     )
 
 
-@patch("cli.commands.catalog.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_catalog_set_title(mock_get_bridge, runner):
     """lr catalog set-title 123 'Sunset' がcatalog.setTitleに正しいパラメータを送信する"""
     mock_bridge = AsyncMock()
@@ -128,7 +128,7 @@ def test_catalog_set_title(mock_get_bridge, runner):
     )
 
 
-@patch("cli.commands.catalog.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_catalog_set_caption(mock_get_bridge, runner):
     """lr catalog set-caption 123 'A beautiful sunset' がcatalog.setCaptionに正しいパラメータを送信する"""
     mock_bridge = AsyncMock()
@@ -145,7 +145,7 @@ def test_catalog_set_caption(mock_get_bridge, runner):
     )
 
 
-@patch("cli.commands.catalog.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_catalog_set_color_label(mock_get_bridge, runner):
     """lr catalog set-color-label 123 red がcatalog.setColorLabelに正しいパラメータを送信する"""
     mock_bridge = AsyncMock()
@@ -162,7 +162,7 @@ def test_catalog_set_color_label(mock_get_bridge, runner):
     )
 
 
-@patch("cli.commands.catalog.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_catalog_batch_metadata(mock_get_bridge, runner):
     """lr catalog batch-metadata がバッチメタデータを返す"""
     mock_bridge = AsyncMock()
@@ -181,7 +181,7 @@ def test_catalog_batch_metadata(mock_get_bridge, runner):
     )
 
 
-@patch("cli.commands.catalog.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_catalog_batch_metadata_custom_keys(mock_get_bridge, runner):
     """lr catalog batch-metadata --keys でカスタムキーを指定できる"""
     mock_bridge = AsyncMock()
@@ -200,7 +200,7 @@ def test_catalog_batch_metadata_custom_keys(mock_get_bridge, runner):
     )
 
 
-@patch("cli.commands.catalog.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_catalog_rotate_left(mock_get_bridge, runner):
     mock_bridge = AsyncMock()
     mock_bridge.send_command.return_value = {"id": "20", "success": True, "result": {"message": "Rotated left"}}
@@ -210,7 +210,7 @@ def test_catalog_rotate_left(mock_get_bridge, runner):
     mock_bridge.send_command.assert_called_once_with("catalog.rotateLeft", {}, timeout=30.0)
 
 
-@patch("cli.commands.catalog.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_catalog_rotate_right(mock_get_bridge, runner):
     mock_bridge = AsyncMock()
     mock_bridge.send_command.return_value = {"id": "21", "success": True, "result": {"message": "Rotated right"}}
@@ -220,7 +220,7 @@ def test_catalog_rotate_right(mock_get_bridge, runner):
     mock_bridge.send_command.assert_called_once_with("catalog.rotateRight", {}, timeout=30.0)
 
 
-@patch("cli.commands.catalog.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_catalog_create_virtual_copy(mock_get_bridge, runner):
     mock_bridge = AsyncMock()
     mock_bridge.send_command.return_value = {"id": "22", "success": True, "result": {"message": "Virtual copy created"}}
@@ -230,7 +230,7 @@ def test_catalog_create_virtual_copy(mock_get_bridge, runner):
     mock_bridge.send_command.assert_called_once_with("catalog.createVirtualCopy", {}, timeout=30.0)
 
 
-@patch("cli.commands.catalog.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_catalog_set_metadata(mock_get_bridge, runner):
     """lr catalog set-metadata が汎用メタデータを設定する"""
     mock_bridge = AsyncMock()

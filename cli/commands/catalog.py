@@ -1,21 +1,7 @@
-import asyncio
+import json
 import click
+from cli.helpers import execute_command
 from cli.output import OutputFormatter
-
-
-def get_bridge():
-    """ResilientSocketBridgeインスタンスを取得（遅延import）"""
-    from lightroom_sdk.resilient_bridge import ResilientSocketBridge
-    return ResilientSocketBridge()
-
-
-def run_async(coro):
-    """CLIからasync関数を実行するヘルパー（コマンドごとに1回だけ呼ぶ）"""
-    loop = asyncio.new_event_loop()
-    try:
-        return loop.run_until_complete(coro)
-    finally:
-        loop.close()
 
 
 @click.group()
@@ -28,20 +14,7 @@ def catalog():
 @click.pass_context
 def get_selected(ctx):
     """Get currently selected photos"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command("catalog.getSelectedPhotos", {}, timeout=timeout)
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "catalog.getSelectedPhotos", {})
 
 
 @catalog.command("list")
@@ -50,22 +23,7 @@ def get_selected(ctx):
 @click.pass_context
 def list_photos(ctx, limit, offset):
     """List photos in catalog"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command(
-                "catalog.getAllPhotos", {"limit": limit, "offset": offset}, timeout=timeout
-            )
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "catalog.getAllPhotos", {"limit": limit, "offset": offset}, timeout=60.0)
 
 
 @catalog.command("search")
@@ -74,22 +32,7 @@ def list_photos(ctx, limit, offset):
 @click.pass_context
 def search(ctx, query, limit):
     """Search photos by keyword"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command(
-                "catalog.searchPhotos", {"query": query, "limit": limit}, timeout=timeout
-            )
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "catalog.searchPhotos", {"query": query, "limit": limit}, timeout=60.0)
 
 
 @catalog.command("get-info")
@@ -97,98 +40,38 @@ def search(ctx, query, limit):
 @click.pass_context
 def get_info(ctx, photo_id):
     """Get detailed info for a photo"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command(
-                "catalog.getPhotoMetadata", {"photoId": photo_id}, timeout=timeout
-            )
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "catalog.getPhotoMetadata", {"photoId": photo_id})
 
 
 @catalog.command("set-rating")
 @click.argument("photo_id")
 @click.argument("rating", type=int)
+@click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @click.pass_context
-def set_rating(ctx, photo_id, rating):
+def set_rating(ctx, photo_id, rating, dry_run):
     """Set photo rating (0-5)"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command(
-                "catalog.setRating", {"photoId": photo_id, "rating": rating}, timeout=timeout
-            )
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "catalog.setRating", {"photoId": photo_id, "rating": rating})
 
 
 @catalog.command("add-keywords")
 @click.argument("photo_id")
 @click.argument("keywords", nargs=-1, required=True)
+@click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @click.pass_context
-def add_keywords(ctx, photo_id, keywords):
+def add_keywords(ctx, photo_id, keywords, dry_run):
     """Add keywords to a photo"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command(
-                "catalog.addKeywords", {"photoId": photo_id, "keywords": list(keywords)},
-                timeout=timeout
-            )
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "catalog.addKeywords", {"photoId": photo_id, "keywords": list(keywords)})
 
 
 @catalog.command("set-flag")
 @click.argument("photo_id")
 @click.argument("flag", type=click.Choice(["pick", "reject", "none"]))
+@click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @click.pass_context
-def set_flag(ctx, photo_id, flag):
+def set_flag(ctx, photo_id, flag, dry_run):
     """Set photo flag (pick/reject/none)"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
     flag_map = {"pick": 1, "reject": -1, "none": 0}
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command(
-                "catalog.setFlag",
-                {"photoId": photo_id, "flag": flag_map[flag]},
-                timeout=timeout,
-            )
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "catalog.setFlag", {"photoId": photo_id, "flag": flag_map[flag]})
 
 
 @catalog.command("get-flag")
@@ -196,22 +79,7 @@ def set_flag(ctx, photo_id, flag):
 @click.pass_context
 def get_flag(ctx, photo_id):
     """Get photo flag status"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command(
-                "catalog.getFlag", {"photoId": photo_id}, timeout=timeout
-            )
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "catalog.getFlag", {"photoId": photo_id})
 
 
 @catalog.command("find")
@@ -225,9 +93,6 @@ def get_flag(ctx, photo_id):
 @click.pass_context
 def find_photos(ctx, flag, rating, rating_op, color_label, camera, limit, offset):
     """Find photos by structured criteria"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
     search_desc = {}
     if flag:
         search_desc["flag"] = flag
@@ -239,44 +104,16 @@ def find_photos(ctx, flag, rating, rating_op, color_label, camera, limit, offset
     if camera:
         search_desc["camera"] = camera
 
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command(
-                "catalog.findPhotos",
-                {"searchDesc": search_desc, "limit": limit, "offset": offset},
-                timeout=timeout,
-            )
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "catalog.findPhotos", {"searchDesc": search_desc, "limit": limit, "offset": offset})
 
 
 @catalog.command("select")
 @click.argument("photo_ids", nargs=-1, required=True)
+@click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @click.pass_context
-def select_photos(ctx, photo_ids):
+def select_photos(ctx, photo_ids, dry_run):
     """Select photos by ID"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command(
-                "catalog.setSelectedPhotos", {"photoIds": list(photo_ids)}, timeout=timeout
-            )
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "catalog.setSelectedPhotos", {"photoIds": list(photo_ids)})
 
 
 @catalog.command("find-by-path")
@@ -284,66 +121,21 @@ def select_photos(ctx, photo_ids):
 @click.pass_context
 def find_by_path(ctx, path):
     """Find photo by file path"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command(
-                "catalog.findPhotoByPath", {"path": path}, timeout=timeout
-            )
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "catalog.findPhotoByPath", {"path": path})
 
 
 @catalog.command("collections")
 @click.pass_context
 def collections(ctx):
     """List collections in catalog"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command(
-                "catalog.getCollections", {}, timeout=timeout
-            )
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "catalog.getCollections", {})
 
 
 @catalog.command("keywords")
 @click.pass_context
 def keywords(ctx):
     """List keywords in catalog"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command(
-                "catalog.getKeywords", {}, timeout=timeout
-            )
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "catalog.getKeywords", {})
 
 
 @catalog.command("folders")
@@ -351,94 +143,37 @@ def keywords(ctx):
 @click.pass_context
 def folders(ctx, recursive):
     """List folders in catalog"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command(
-                "catalog.getFolders", {"includeSubfolders": recursive}, timeout=timeout
-            )
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "catalog.getFolders", {"includeSubfolders": recursive})
 
 
 @catalog.command("set-title")
 @click.argument("photo_id")
 @click.argument("title")
+@click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @click.pass_context
-def set_title(ctx, photo_id, title):
+def set_title(ctx, photo_id, title, dry_run):
     """Set photo title"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command(
-                "catalog.setTitle", {"photoId": photo_id, "title": title}, timeout=timeout
-            )
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "catalog.setTitle", {"photoId": photo_id, "title": title})
 
 
 @catalog.command("set-caption")
 @click.argument("photo_id")
 @click.argument("caption")
+@click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @click.pass_context
-def set_caption(ctx, photo_id, caption):
+def set_caption(ctx, photo_id, caption, dry_run):
     """Set photo caption"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command(
-                "catalog.setCaption", {"photoId": photo_id, "caption": caption}, timeout=timeout
-            )
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "catalog.setCaption", {"photoId": photo_id, "caption": caption})
 
 
 @catalog.command("set-color-label")
 @click.argument("photo_id")
 @click.argument("label", type=click.Choice(["red", "yellow", "green", "blue", "purple", "none"]))
+@click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @click.pass_context
-def set_color_label(ctx, photo_id, label):
+def set_color_label(ctx, photo_id, label, dry_run):
     """Set photo color label"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command(
-                "catalog.setColorLabel", {"photoId": photo_id, "label": label}, timeout=timeout
-            )
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "catalog.setColorLabel", {"photoId": photo_id, "label": label})
 
 
 @catalog.command("batch-metadata")
@@ -447,145 +182,63 @@ def set_color_label(ctx, photo_id, label):
 @click.pass_context
 def batch_metadata(ctx, photo_ids, keys):
     """Get formatted metadata for multiple photos"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command(
-                "catalog.batchGetFormattedMetadata",
-                {"photoIds": list(photo_ids), "keys": keys.split(",")},
-                timeout=timeout
-            )
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(
+        ctx, "catalog.batchGetFormattedMetadata",
+        {"photoIds": list(photo_ids), "keys": keys.split(",")},
+    )
 
 
 @catalog.command("rotate-left")
+@click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @click.pass_context
-def rotate_left(ctx):
+def rotate_left(ctx, dry_run):
     """Rotate selected photo left"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command("catalog.rotateLeft", {}, timeout=timeout)
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "catalog.rotateLeft", {})
 
 
 @catalog.command("rotate-right")
+@click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @click.pass_context
-def rotate_right(ctx):
+def rotate_right(ctx, dry_run):
     """Rotate selected photo right"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command("catalog.rotateRight", {}, timeout=timeout)
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "catalog.rotateRight", {})
 
 
 @catalog.command("create-virtual-copy")
+@click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @click.pass_context
-def create_virtual_copy(ctx):
+def create_virtual_copy(ctx, dry_run):
     """Create virtual copy of selected photo"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command("catalog.createVirtualCopy", {}, timeout=timeout)
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "catalog.createVirtualCopy", {})
 
 
 @catalog.command("set-metadata")
 @click.argument("photo_id")
 @click.argument("key")
 @click.argument("value")
+@click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @click.pass_context
-def set_metadata(ctx, photo_id, key, value):
+def set_metadata(ctx, photo_id, key, value, dry_run):
     """Set arbitrary metadata key/value for a photo"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command(
-                "catalog.setMetadata",
-                {"photoId": photo_id, "key": key, "value": value},
-                timeout=timeout
-            )
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "catalog.setMetadata", {"photoId": photo_id, "key": key, "value": value})
 
 
 @catalog.command("create-collection")
 @click.argument("name")
+@click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @click.pass_context
-def create_collection(ctx, name):
+def create_collection(ctx, name, dry_run):
     """Create a new collection"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command(
-                "catalog.createCollection", {"name": name}, timeout=timeout
-            )
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "catalog.createCollection", {"name": name})
 
 
 @catalog.command("create-smart-collection")
 @click.argument("name")
 @click.option("--search-desc", default=None, help="JSON search descriptor")
+@click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @click.pass_context
-def create_smart_collection(ctx, name, search_desc):
+def create_smart_collection(ctx, name, search_desc, dry_run):
     """Create a smart collection"""
-    import json
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
     params = {"name": name}
     if search_desc:
         try:
@@ -594,163 +247,63 @@ def create_smart_collection(ctx, name, search_desc):
             click.echo(OutputFormatter.format_error(f"Invalid JSON for --search-desc: {e}"))
             ctx.exit(1)
             return
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command(
-                "catalog.createSmartCollection", params, timeout=timeout
-            )
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "catalog.createSmartCollection", params)
 
 
 @catalog.command("create-collection-set")
 @click.argument("name")
+@click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @click.pass_context
-def create_collection_set(ctx, name):
+def create_collection_set(ctx, name, dry_run):
     """Create a collection set"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command(
-                "catalog.createCollectionSet", {"name": name}, timeout=timeout
-            )
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "catalog.createCollectionSet", {"name": name})
 
 
 @catalog.command("create-keyword")
 @click.argument("keyword")
+@click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @click.pass_context
-def create_keyword(ctx, keyword):
+def create_keyword(ctx, keyword, dry_run):
     """Create a keyword in catalog"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command(
-                "catalog.createKeyword", {"keyword": keyword}, timeout=timeout
-            )
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "catalog.createKeyword", {"keyword": keyword})
 
 
 @catalog.command("remove-keyword")
 @click.argument("photo_id")
 @click.argument("keyword")
+@click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @click.pass_context
-def remove_keyword(ctx, photo_id, keyword):
+def remove_keyword(ctx, photo_id, keyword, dry_run):
     """Remove keyword from a photo"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command(
-                "catalog.removeKeyword", {"photoId": photo_id, "keyword": keyword}, timeout=timeout
-            )
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "catalog.removeKeyword", {"photoId": photo_id, "keyword": keyword})
 
 
 @catalog.command("set-view-filter")
 @click.option("--filter", "filter_json", required=True, help="JSON filter descriptor")
+@click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @click.pass_context
-def set_view_filter(ctx, filter_json):
+def set_view_filter(ctx, filter_json, dry_run):
     """Set view filter"""
-    import json
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
     try:
         filter_data = json.loads(filter_json)
     except json.JSONDecodeError as e:
         click.echo(OutputFormatter.format_error(f"Invalid JSON for --filter: {e}"))
         ctx.exit(1)
         return
-    params = {"filter": filter_data}
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command(
-                "catalog.setViewFilter", params, timeout=timeout
-            )
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "catalog.setViewFilter", {"filter": filter_data})
 
 
 @catalog.command("get-view-filter")
 @click.pass_context
 def get_view_filter(ctx):
     """Get current view filter"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command(
-                "catalog.getCurrentViewFilter", {}, timeout=timeout
-            )
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "catalog.getCurrentViewFilter", {})
 
 
 @catalog.command("remove-from-catalog")
 @click.argument("photo_id")
+@click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @click.pass_context
-def remove_from_catalog(ctx, photo_id):
+def remove_from_catalog(ctx, photo_id, dry_run):
     """Remove photo from catalog"""
-    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
-    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
-
-    async def _run():
-        bridge = get_bridge()
-        try:
-            result = await bridge.send_command(
-                "catalog.removeFromCatalog", {"photoId": photo_id}, timeout=timeout
-            )
-            click.echo(OutputFormatter.format(result.get("result", result), fmt))
-        except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
-        finally:
-            await bridge.disconnect()
-
-    run_async(_run())
+    execute_command(ctx, "catalog.removeFromCatalog", {"photoId": photo_id})
