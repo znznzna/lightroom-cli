@@ -74,7 +74,7 @@ def check_connection(ctx, port_file):
         try:
             await bridge.connect()
             await bridge.send_command("system.ping", timeout=timeout)
-            click.echo("Lightroom connection: ok")
+            click.echo(OutputFormatter.format({"status": "ok"}, fmt))
         except Exception as e:
             handle_error(ctx, e, fmt)
         finally:

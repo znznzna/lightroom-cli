@@ -79,3 +79,31 @@ class TestExitCodes:
         mock_get_bridge.return_value = mock_bridge
         result = runner.invoke(cli, ["system", "reconnect"])
         assert result.exit_code == 1
+
+    @patch("cli.commands.system.get_bridge")
+    def test_check_connection_ok_structured_output(self, mock_get_bridge, runner):
+        """check-connection 成功時に構造化 JSON を返す"""
+        mock_bridge = AsyncMock()
+        mock_bridge.send_command.return_value = {
+            "id": "1", "success": True, "result": {"status": "ok"}
+        }
+        mock_get_bridge.return_value = mock_bridge
+        import tempfile
+        import os
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
+            f.write("49000\n49001\n")
+            port_file = f.name
+        try:
+            result = runner.invoke(cli, ["-o", "json", "system", "check-connection",
+                                          "--port-file", port_file])
+            assert result.exit_code == 0
+            data = json.loads(result.output)
+            assert data["status"] == "ok"
+        finally:
+            os.unlink(port_file)
+
+    def test_check_connection_no_port_file_structured(self, runner):
+        """ポートファイルがない場合に構造化出力 + exit 3"""
+        result = runner.invoke(cli, ["-o", "json", "system", "check-connection",
+                                      "--port-file", "/tmp/nonexistent_lr_test.txt"])
+        assert result.exit_code == 3
