@@ -13,8 +13,8 @@ Commands tested:
   Group 7E: develop reset-gradient, reset-circular, reset-brush, reset-masking,
             reset-crop, reset-transforms, reset-spot, reset-redeye, reset-healing
 """
-import pytest
 
+import pytest
 
 # --- Group 7A: Masking read ---
 

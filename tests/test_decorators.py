@@ -1,8 +1,10 @@
 """Tests for CLI decorators."""
+
 import json
+
+import click
 import pytest
 from click.testing import CliRunner
-import click
 
 
 class TestDryRunSupport:
@@ -21,6 +23,7 @@ class TestDryRunSupport:
         @click.pass_context
         def test_cmd(ctx, dry_run, param):
             from cli.decorators import dry_run_guard
+
             preview = dry_run_guard(ctx, command="test.command", params={"param": param})
             if preview:
                 return
@@ -46,6 +49,7 @@ class TestDryRunSupport:
         @click.pass_context
         def test_cmd(ctx, dry_run, param):
             from cli.decorators import dry_run_guard
+
             preview = dry_run_guard(ctx, command="test.command", params={"param": param})
             if preview:
                 return
@@ -67,28 +71,35 @@ class TestJsonInput:
 
     def test_json_option_invalid_json_raises(self):
         from cli.decorators import parse_json_input
+
         with pytest.raises(click.BadParameter, match="Invalid JSON"):
             parse_json_input("{invalid", None)
 
     def test_json_option_non_dict_raises(self):
         from cli.decorators import parse_json_input
+
         with pytest.raises(click.BadParameter, match="must be a JSON object"):
             parse_json_input("[1, 2, 3]", None)
 
     def test_json_stdin_reads_from_stdin(self):
-        from cli.decorators import parse_json_input
         import io
+
+        from cli.decorators import parse_json_input
+
         stdin = io.StringIO('{"key": "value"}')
         result = parse_json_input(None, stdin)
         assert result == {"key": "value"}
 
     def test_no_json_returns_none(self):
         from cli.decorators import parse_json_input
+
         result = parse_json_input(None, None)
         assert result is None
 
     def test_both_json_and_stdin_raises(self):
-        from cli.decorators import parse_json_input
         import io
+
+        from cli.decorators import parse_json_input
+
         with pytest.raises(click.BadParameter, match="Cannot use both"):
             parse_json_input('{"a": 1}', io.StringIO('{"b": 2}'))

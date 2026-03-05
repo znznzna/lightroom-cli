@@ -10,8 +10,8 @@ Commands tested:
   Group 5D: develop copy-settings, snapshot, tool (clipboard/snapshot/tool)
   Group 5E: develop reset, get-settings (full reset + verify)
 """
-import pytest
 
+import pytest
 
 # --- Group 5A: Read current state ---
 

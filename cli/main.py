@@ -1,19 +1,30 @@
-import os
-import click
 import logging
-from cli.middleware import resolve_output_format, resolve_timeout, resolve_fields
+import os
+
+import click
+
+from cli.middleware import resolve_fields, resolve_output_format, resolve_timeout
 from cli.structured_group import StructuredErrorGroup
 
 
 @click.group(cls=StructuredErrorGroup)
 @click.version_option(version="0.3.0", prog_name="lr")
-@click.option("--output", "-o", type=click.Choice(["json", "text", "table"]),
-              default=None, help="Output format (default: json for non-TTY, text for TTY)")
+@click.option(
+    "--output",
+    "-o",
+    type=click.Choice(["json", "text", "table"]),
+    default=None,
+    help="Output format (default: json for non-TTY, text for TTY)",
+)
 @click.option("--verbose", "-v", is_flag=True, help="Enable verbose logging")
-@click.option("--timeout", "-t", type=float, default=None,
-              help="Default command timeout in seconds")
-@click.option("--fields", "-f", default=None,
-              help="Comma-separated response fields to include")
+@click.option(
+    "--timeout",
+    "-t",
+    type=float,
+    default=None,
+    help="Default command timeout in seconds",
+)
+@click.option("--fields", "-f", default=None, help="Comma-separated response fields to include")
 @click.pass_context
 def cli(ctx, output, verbose, timeout, fields):
     """Lightroom Classic CLI - control Lightroom from the command line."""
@@ -31,13 +42,14 @@ def cli(ctx, output, verbose, timeout, fields):
         logging.basicConfig(level=logging.WARNING, force=True)
 
 
-from cli.commands.system import system
 from cli.commands.catalog import catalog
 from cli.commands.develop import develop
+from cli.commands.plugin import plugin
 from cli.commands.preview import preview
 from cli.commands.selection import selection
-from cli.commands.plugin import plugin
+from cli.commands.system import system
 from cli.schema import schema_cmd
+
 cli.add_command(system)
 cli.add_command(catalog)
 cli.add_command(develop)

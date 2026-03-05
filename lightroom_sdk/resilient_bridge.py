@@ -1,7 +1,7 @@
 import asyncio
 import enum
 import logging
-from typing import Optional, Dict, Any, Callable
+from typing import Any, Callable, Dict, Optional
 
 from .socket_bridge import SocketBridge
 
@@ -29,6 +29,7 @@ class ResilientSocketBridge:
         self._host = host
         if port_file is None:
             from .paths import get_port_file
+
             self._port_file = str(get_port_file())
         else:
             self._port_file = port_file
@@ -69,6 +70,7 @@ class ResilientSocketBridge:
     async def send_command(self, command: str, params=None, timeout=30.0):
         if self._state == ConnectionState.SHUTDOWN:
             from .exceptions import ConnectionError as LRConnectionError
+
             raise LRConnectionError("Lightroom is shutting down")
 
         if self._state == ConnectionState.DISCONNECTED:
@@ -87,6 +89,7 @@ class ResilientSocketBridge:
         except Exception as e:
             # Import here to avoid circular dependency
             from .exceptions import ConnectionError as LRConnectionError
+
             # Only retry on connection-related exceptions, not application errors
             if self._state == ConnectionState.SHUTDOWN:
                 raise
@@ -125,6 +128,7 @@ class ResilientSocketBridge:
                 delay = min(delay * 2, 30.0)
         self._state = ConnectionState.DISCONNECTED
         from .exceptions import ConnectionError as LRConnectionError
+
         raise LRConnectionError("Reconnection failed")
 
     def _handle_shutdown_event(self, data: Dict[str, Any]) -> None:

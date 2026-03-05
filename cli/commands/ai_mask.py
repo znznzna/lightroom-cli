@@ -1,11 +1,12 @@
 """AI Mask CLI commands — lr develop ai <type>"""
 
 import json
+
 import click
+
+from cli.decorators import json_input_options
 from cli.helpers import execute_command
 from cli.output import OutputFormatter
-from cli.decorators import json_input_options
-
 
 AI_SELECTION_TYPES = ["subject", "sky", "background", "objects", "people", "landscape"]
 
@@ -21,19 +22,32 @@ def _make_ai_type_command(selection_type: str, has_part: bool = False, part_choi
 
     params = [
         click.Option(["--adjust"], default=None, help="JSON adjustment settings"),
-        click.Option(["--adjust-preset"], default=None, help="Named preset (darken-sky, brighten-subject, etc)"),
+        click.Option(
+            ["--adjust-preset"],
+            default=None,
+            help="Named preset (darken-sky, brighten-subject, etc)",
+        ),
         click.Option(["--dry-run"], is_flag=True, default=False, help="Preview without executing"),
         click.Option(["--json", "json_str"], default=None, help="JSON string with all parameters"),
-        click.Option(["--json-stdin", "json_stdin"], is_flag=True, default=False, help="Read JSON parameters from stdin"),
+        click.Option(
+            ["--json-stdin", "json_stdin"],
+            is_flag=True,
+            default=False,
+            help="Read JSON parameters from stdin",
+        ),
     ]
     # --part is hidden until SDK support is verified
     if has_part and part_choices:
-        params.insert(0, click.Option(
-            ["--part"], default=None,
-            type=click.Choice(part_choices),
-            help="Specific part to mask",
-            hidden=True,
-        ))
+        params.insert(
+            0,
+            click.Option(
+                ["--part"],
+                default=None,
+                type=click.Choice(part_choices),
+                help="Specific part to mask",
+                hidden=True,
+            ),
+        )
 
     @click.pass_context
     def command_func(ctx, **kwargs):
@@ -73,9 +87,11 @@ def _resolve_adjustments(adjust_json: str | None, adjust_preset: str | None) -> 
 
     if adjust_preset:
         from lightroom_sdk.presets import get_preset
+
         preset = get_preset(adjust_preset)
         if preset is None:
             from lightroom_sdk.presets import list_presets
+
             available = ", ".join(list_presets())
             return f"Unknown preset '{adjust_preset}'. Available: {available}"
         return preset
@@ -97,14 +113,20 @@ ai.add_command(_make_ai_type_command("subject"))
 ai.add_command(_make_ai_type_command("sky"))
 ai.add_command(_make_ai_type_command("background"))
 ai.add_command(_make_ai_type_command("objects"))
-ai.add_command(_make_ai_type_command(
-    "people", has_part=True,
-    part_choices=["eyes", "hair", "skin", "lips", "teeth", "clothes"],
-))
-ai.add_command(_make_ai_type_command(
-    "landscape", has_part=True,
-    part_choices=["mountain", "tree", "water", "building", "road"],
-))
+ai.add_command(
+    _make_ai_type_command(
+        "people",
+        has_part=True,
+        part_choices=["eyes", "hair", "skin", "lips", "teeth", "clothes"],
+    )
+)
+ai.add_command(
+    _make_ai_type_command(
+        "landscape",
+        has_part=True,
+        part_choices=["mountain", "tree", "water", "building", "road"],
+    )
+)
 
 
 @ai.command("presets")
@@ -113,12 +135,17 @@ def ai_presets(ctx):
     """List available adjustment presets"""
     fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
     from lightroom_sdk.presets import AI_MASK_PRESETS
+
     click.echo(OutputFormatter.format(AI_MASK_PRESETS, fmt))
 
 
 @ai.command("reset")
-@click.option("--confirm", is_flag=True, default=False,
-              help="Required confirmation flag (removes all masks)")
+@click.option(
+    "--confirm",
+    is_flag=True,
+    default=False,
+    help="Required confirmation flag (removes all masks)",
+)
 @click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @json_input_options
 @click.pass_context
@@ -129,9 +156,12 @@ def ai_reset(ctx, confirm, dry_run, **kwargs):
         click.echo(
             OutputFormatter.format_error(
                 "This will remove all masks. Pass --confirm to proceed.",
-                fmt, code="CONFIRMATION_REQUIRED",
-                suggestions=["Add --confirm flag: lr develop ai reset --confirm",
-                              "Use --dry-run first to preview: lr develop ai reset --dry-run"],
+                fmt,
+                code="CONFIRMATION_REQUIRED",
+                suggestions=[
+                    "Add --confirm flag: lr develop ai reset --confirm",
+                    "Use --dry-run first to preview: lr develop ai reset --dry-run",
+                ],
             ),
             err=True,
         )
@@ -158,10 +188,19 @@ def ai_list(ctx, **kwargs):
 @click.option("--continue-on-error", is_flag=True, default=False, help="Continue on errors")
 @json_input_options
 @click.pass_context
-def ai_batch(ctx, type, photos, all_selected, adjust, adjust_preset, dry_run, continue_on_error, **kwargs):
+def ai_batch(
+    ctx,
+    type,
+    photos,
+    all_selected,
+    adjust,
+    adjust_preset,
+    dry_run,
+    continue_on_error,
+    **kwargs,
+):
     """Apply AI mask to multiple photos"""
     if not photos and not all_selected:
-        fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
         click.echo(OutputFormatter.format_error("Specify --photos or --all-selected"))
         return
 

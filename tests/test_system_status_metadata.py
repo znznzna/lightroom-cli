@@ -1,7 +1,10 @@
 """Tests for schema_hash and cli_version in system status output."""
+
 import json
-from unittest.mock import patch, AsyncMock
+from unittest.mock import AsyncMock, patch
+
 from click.testing import CliRunner
+
 from cli.main import cli
 
 

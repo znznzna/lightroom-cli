@@ -7,6 +7,7 @@ Commands tested:
   - preview generate --size 512 --format jpeg (@slow)
   - preview generate-batch (@slow)
 """
+
 import pytest
 
 

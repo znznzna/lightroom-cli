@@ -1,6 +1,8 @@
 """Tests for string input sanitization in _coerce_type()."""
+
 import pytest
-from cli.validation import validate_params, ValidationError
+
+from cli.validation import ValidationError, validate_params
 
 
 class TestStringSanitization:

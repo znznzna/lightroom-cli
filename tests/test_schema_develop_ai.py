@@ -1,12 +1,22 @@
 """develop.ai 個別タイプスキーマのテスト"""
+
 import pytest
-from lightroom_sdk.schema import get_schema, get_schemas_by_group, get_all_schemas
+
+from lightroom_sdk.schema import get_all_schemas, get_schema
 
 
 class TestDevelopAIIndividualSchemas:
-    @pytest.mark.parametrize("ai_type", [
-        "subject", "sky", "background", "objects", "people", "landscape",
-    ])
+    @pytest.mark.parametrize(
+        "ai_type",
+        [
+            "subject",
+            "sky",
+            "background",
+            "objects",
+            "people",
+            "landscape",
+        ],
+    )
     def test_ai_type_schema_exists(self, ai_type):
         schema = get_schema(f"develop.ai.{ai_type}")
         assert schema is not None, f"Schema not found for develop.ai.{ai_type}"

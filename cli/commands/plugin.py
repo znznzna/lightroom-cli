@@ -1,9 +1,15 @@
 """lr plugin — Lightroom プラグインの管理コマンド"""
-import click
-import shutil
+
 import os
-from pathlib import Path
-from lightroom_sdk.paths import get_lightroom_modules_dir, get_plugin_source_dir, PLUGIN_NAME
+import shutil
+
+import click
+
+from lightroom_sdk.paths import (
+    PLUGIN_NAME,
+    get_lightroom_modules_dir,
+    get_plugin_source_dir,
+)
 
 
 @click.group()
@@ -35,7 +41,10 @@ def install(dev, quiet):
 
     if dev:
         if os.name == "nt":
-            click.echo("Warning: --dev (symlink) may require admin privileges on Windows", err=True)
+            click.echo(
+                "Warning: --dev (symlink) may require admin privileges on Windows",
+                err=True,
+            )
         dest.symlink_to(source)
         if not quiet:
             click.echo(f"Plugin symlinked: {dest} -> {source}")
@@ -78,6 +87,6 @@ def status():
         target = dest.resolve()
         click.echo(f"Status:         Installed (symlink -> {target})")
     elif dest.exists():
-        click.echo(f"Status:         Installed (copy)")
+        click.echo("Status:         Installed (copy)")
     else:
-        click.echo(f"Status:         Not installed")
+        click.echo("Status:         Not installed")

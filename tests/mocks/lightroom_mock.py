@@ -1,7 +1,7 @@
 import asyncio
 import json
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 
 
 class MockLightroomServer:
@@ -60,6 +60,7 @@ class MockLightroomServer:
 
     def _track_handler(self, handler_coro):
         """ハンドラをTaskとして追跡"""
+
         async def wrapper(reader, writer):
             task = asyncio.current_task()
             self._handler_tasks.append(task)
@@ -68,6 +69,7 @@ class MockLightroomServer:
             finally:
                 if task in self._handler_tasks:
                     self._handler_tasks.remove(task)
+
         return wrapper
 
     async def wait_for_client(self, timeout: float = 2.0) -> None:
@@ -85,12 +87,8 @@ class MockLightroomServer:
             await w.drain()
 
     async def start(self) -> None:
-        self._sender_server = await asyncio.start_server(
-            self._track_handler(self._handle_sender), "localhost", 0
-        )
-        self._receiver_server = await asyncio.start_server(
-            self._track_handler(self._handle_receiver), "localhost", 0
-        )
+        self._sender_server = await asyncio.start_server(self._track_handler(self._handle_sender), "localhost", 0)
+        self._receiver_server = await asyncio.start_server(self._track_handler(self._handle_receiver), "localhost", 0)
         self._sender_port = self._sender_server.sockets[0].getsockname()[1]
         self._receiver_port = self._receiver_server.sockets[0].getsockname()[1]
         self.port_file.write_text(f"{self._sender_port},{self._receiver_port}")

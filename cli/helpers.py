@@ -1,23 +1,28 @@
 import asyncio
+
 import click
+
 from cli.output import OutputFormatter
 
 
 def _is_connection_error(e: Exception) -> bool:
     """ビルトイン ConnectionError と SDK ConnectionError の両方を判定"""
     from lightroom_sdk.exceptions import ConnectionError as SDKConnectionError
+
     return isinstance(e, (ConnectionError, SDKConnectionError))
 
 
 def _is_timeout_error(e: Exception) -> bool:
     """ビルトイン TimeoutError と SDK TimeoutError の両方を判定"""
     from lightroom_sdk.exceptions import TimeoutError as SDKTimeoutError
+
     return isinstance(e, (TimeoutError, SDKTimeoutError))
 
 
 def get_bridge(port_file: str | None = None):
     """ResilientSocketBridgeインスタンスを取得（遅延import）"""
     from lightroom_sdk.resilient_bridge import ResilientSocketBridge
+
     return ResilientSocketBridge(port_file=port_file)
 
 
@@ -49,13 +54,13 @@ def execute_command(ctx, command: str, params: dict, *, timeout: float | None = 
     json_str = getattr(ctx, "params", {}).get("json_str")
     json_stdin = getattr(ctx, "params", {}).get("json_stdin", False)
     if json_str is not None or json_stdin:
-        from cli.decorators import parse_json_input
         import sys
+
+        from cli.decorators import parse_json_input
+
         if json_str is not None and not json_str.strip():
             click.echo(
-                OutputFormatter.format_error(
-                    "Empty --json value", fmt, code="VALIDATION_ERROR"
-                ),
+                OutputFormatter.format_error("Empty --json value", fmt, code="VALIDATION_ERROR"),
                 err=True,
             )
             ctx.exit(2)
@@ -76,6 +81,7 @@ def execute_command(ctx, command: str, params: dict, *, timeout: float | None = 
     # dry-run チェック
     if getattr(ctx, "params", {}).get("dry_run", False):
         from lightroom_sdk.schema import get_schema
+
         schema = get_schema(command)
         preview = {
             "dry_run": True,
@@ -89,13 +95,15 @@ def execute_command(ctx, command: str, params: dict, *, timeout: float | None = 
 
     async def _run():
         # バリデーション（スキーマ未定義コマンドはスキップ）
-        from cli.validation import validate_params, ValidationError
+        from cli.validation import ValidationError, validate_params
+
         try:
             validated = validate_params(command, params)
         except ValidationError as e:
             click.echo(
                 OutputFormatter.format_error(
-                    str(e), fmt,
+                    str(e),
+                    fmt,
                     code="VALIDATION_ERROR",
                     suggestions=e.suggestions,
                 ),
@@ -158,5 +166,3 @@ def handle_error(ctx, error: Exception, fmt: str = "text"):
             err=True,
         )
         ctx.exit(1)
-
-

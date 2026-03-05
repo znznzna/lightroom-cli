@@ -1,5 +1,7 @@
 """lr schema -- command schema introspection."""
+
 import click
+
 from cli.output import OutputFormatter
 
 
@@ -15,6 +17,7 @@ def schema_cmd(ctx, path):
       lr schema develop.set        -- show command detail
     """
     from lightroom_sdk.schema import get_all_schemas, get_schemas_by_group
+
     fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
 
     if path is None:
@@ -56,7 +59,10 @@ def schema_cmd(ctx, path):
                 click.echo(OutputFormatter.format(summary, fmt))
                 return
             else:
-                click.echo(OutputFormatter.format_error(f"Unknown group or command: {path}", fmt), err=True)
+                click.echo(
+                    OutputFormatter.format_error(f"Unknown group or command: {path}", fmt),
+                    err=True,
+                )
                 ctx.exit(1)
                 return
         detail = {

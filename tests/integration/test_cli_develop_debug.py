@@ -1,6 +1,8 @@
-import pytest
 from unittest.mock import AsyncMock, patch
+
+import pytest
 from click.testing import CliRunner
+
 from cli.main import cli
 
 
@@ -12,7 +14,11 @@ def runner():
 @patch("cli.helpers.get_bridge")
 def test_develop_debug_dump(mock_get_bridge, runner):
     mock_bridge = AsyncMock()
-    mock_bridge.send_command.return_value = {"id": "1", "success": True, "result": {"functions": [], "properties": []}}
+    mock_bridge.send_command.return_value = {
+        "id": "1",
+        "success": True,
+        "result": {"functions": [], "properties": []},
+    }
     mock_get_bridge.return_value = mock_bridge
     result = runner.invoke(cli, ["develop", "debug", "dump"])
     assert result.exit_code == 0

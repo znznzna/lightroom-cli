@@ -1,15 +1,18 @@
 """CLI decorators and guard functions."""
+
 from __future__ import annotations
+
 import json as json_module
 from typing import IO
+
 import click
+
 from cli.output import OutputFormatter
 
 
 def dry_run_option(func):
     """Click コマンドに --dry-run オプションを追加するデコレータ"""
-    return click.option("--dry-run", is_flag=True, default=False,
-                        help="Preview without executing")(func)
+    return click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")(func)
 
 
 def dry_run_guard(
@@ -24,6 +27,7 @@ def dry_run_guard(
         return False
 
     from lightroom_sdk.schema import get_schema
+
     fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
     schema = get_schema(command)
     preview = {
@@ -38,10 +42,14 @@ def dry_run_guard(
 
 def json_input_options(func):
     """--json と --json-stdin オプションを追加するデコレータ"""
-    func = click.option("--json", "json_str", default=None,
-                        help="JSON string with all parameters")(func)
-    func = click.option("--json-stdin", "json_stdin", is_flag=True, default=False,
-                        help="Read JSON parameters from stdin")(func)
+    func = click.option("--json", "json_str", default=None, help="JSON string with all parameters")(func)
+    func = click.option(
+        "--json-stdin",
+        "json_stdin",
+        is_flag=True,
+        default=False,
+        help="Read JSON parameters from stdin",
+    )(func)
     return func
 
 
@@ -58,9 +66,7 @@ def parse_json_input(
         click.BadParameter: JSON解析失敗
     """
     has_json = json_str is not None
-    has_stdin = stdin is not None and (
-        not hasattr(stdin, "isatty") or not stdin.isatty()
-    )
+    has_stdin = stdin is not None and (not hasattr(stdin, "isatty") or not stdin.isatty())
 
     stdin_data = None
     if has_stdin and stdin is not None:

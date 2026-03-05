@@ -4,6 +4,7 @@ OS 横断のパス解決モジュール。
 
 Windows 分岐は将来対応の布石として含むが、テストは macOS/Linux のみ。
 """
+
 import os
 import sys
 from pathlib import Path
@@ -28,21 +29,13 @@ def get_lightroom_modules_dir() -> Path:
         return Path(env)
 
     if sys.platform == "darwin":
-        return (
-            Path.home()
-            / "Library"
-            / "Application Support"
-            / "Adobe"
-            / "Lightroom"
-            / "Modules"
-        )
+        return Path.home() / "Library" / "Application Support" / "Adobe" / "Lightroom" / "Modules"
     elif sys.platform == "win32":
         appdata = os.environ.get("APPDATA", "")
         return Path(appdata) / "Adobe" / "Lightroom" / "Modules"
     else:
         raise RuntimeError(
-            "Unsupported platform for Lightroom Classic. "
-            "Set LR_PLUGIN_DIR environment variable to override."
+            "Unsupported platform for Lightroom Classic. Set LR_PLUGIN_DIR environment variable to override."
         )
 
 
@@ -52,4 +45,5 @@ def get_plugin_source_dir() -> Path:
         return repo_dir
 
     import importlib.resources as pkg_resources
+
     return Path(str(pkg_resources.files("lightroom_cli_plugin")))

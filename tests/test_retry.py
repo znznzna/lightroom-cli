@@ -1,4 +1,3 @@
-import pytest
 from lightroom_sdk.retry import RetryConfig, get_timeout
 
 

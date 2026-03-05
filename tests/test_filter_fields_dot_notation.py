@@ -1,5 +1,7 @@
 """_filter_fields ドット記法サポートのテスト"""
+
 import json
+
 from cli.output import OutputFormatter
 
 

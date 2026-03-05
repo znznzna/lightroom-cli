@@ -1,8 +1,10 @@
 import json
+
 import click
+
+from cli.decorators import json_input_options
 from cli.helpers import execute_command
 from cli.output import OutputFormatter
-from cli.decorators import json_input_options
 
 
 def _parse_pairs(pairs: tuple) -> dict:
@@ -28,6 +30,7 @@ def develop():
 
 
 from cli.commands.ai_mask import ai
+
 develop.add_command(ai)
 
 
@@ -49,7 +52,14 @@ def set_values(ctx, pairs, dry_run, **kwargs):
     try:
         parsed = _parse_pairs(pairs)
     except click.BadParameter as e:
-        click.echo(OutputFormatter.format_error(str(e), ctx.obj.get("output", "text") if ctx.obj else "text", code="VALIDATION_ERROR"), err=True)
+        click.echo(
+            OutputFormatter.format_error(
+                str(e),
+                ctx.obj.get("output", "text") if ctx.obj else "text",
+                code="VALIDATION_ERROR",
+            ),
+            err=True,
+        )
         ctx.exit(2)
         return
     if len(parsed) == 1:
@@ -87,7 +97,14 @@ def apply_settings(ctx, settings, dry_run, **kwargs):
     try:
         parsed = json.loads(settings)
     except json.JSONDecodeError as e:
-        click.echo(OutputFormatter.format_error(f"Invalid JSON: {e}", ctx.obj.get("output", "text") if ctx.obj else "text", code="VALIDATION_ERROR"), err=True)
+        click.echo(
+            OutputFormatter.format_error(
+                f"Invalid JSON: {e}",
+                ctx.obj.get("output", "text") if ctx.obj else "text",
+                code="VALIDATION_ERROR",
+            ),
+            err=True,
+        )
         ctx.exit(1)
         return
     execute_command(ctx, "develop.applySettings", {"settings": parsed})
@@ -229,11 +246,22 @@ def curve_set(ctx, points, channel, dry_run, **kwargs):
     try:
         parsed = json.loads(points)
     except json.JSONDecodeError as e:
-        click.echo(OutputFormatter.format_error(f"Invalid JSON: {e}", ctx.obj.get("output", "text") if ctx.obj else "text", code="VALIDATION_ERROR"), err=True)
+        click.echo(
+            OutputFormatter.format_error(
+                f"Invalid JSON: {e}",
+                ctx.obj.get("output", "text") if ctx.obj else "text",
+                code="VALIDATION_ERROR",
+            ),
+            err=True,
+        )
         ctx.exit(1)
         return
     curve_points = [{"x": p[0], "y": p[1]} if isinstance(p, list) else p for p in parsed]
-    execute_command(ctx, "develop.setCurvePoints", {"param": CHANNEL_TO_PARAM.get(channel, channel), "points": curve_points})
+    execute_command(
+        ctx,
+        "develop.setCurvePoints",
+        {"param": CHANNEL_TO_PARAM.get(channel, channel), "points": curve_points},
+    )
 
 
 @curve.command("linear")
@@ -265,7 +293,11 @@ def curve_s_curve(ctx, channel, dry_run, **kwargs):
 @click.pass_context
 def curve_add_point(ctx, x, y, channel, dry_run, **kwargs):
     """Add a point to the tone curve"""
-    execute_command(ctx, "develop.addCurvePoint", {"param": CHANNEL_TO_PARAM.get(channel, channel), "x": x, "y": y})
+    execute_command(
+        ctx,
+        "develop.addCurvePoint",
+        {"param": CHANNEL_TO_PARAM.get(channel, channel), "x": x, "y": y},
+    )
 
 
 @curve.command("remove-point")
@@ -276,7 +308,11 @@ def curve_add_point(ctx, x, y, channel, dry_run, **kwargs):
 @click.pass_context
 def curve_remove_point(ctx, index, channel, dry_run, **kwargs):
     """Remove a point from the tone curve"""
-    execute_command(ctx, "develop.removeCurvePoint", {"param": CHANNEL_TO_PARAM.get(channel, channel), "index": index})
+    execute_command(
+        ctx,
+        "develop.removeCurvePoint",
+        {"param": CHANNEL_TO_PARAM.get(channel, channel), "index": index},
+    )
 
 
 # --- Masking commands ---
@@ -293,7 +329,10 @@ def mask():
 @click.pass_context
 def mask_list(ctx, **kwargs):
     """List all masks (DEPRECATED: use 'lr develop ai list')"""
-    click.echo("Warning: 'lr develop mask list' is deprecated. Use 'lr develop ai list' instead.", err=True)
+    click.echo(
+        "Warning: 'lr develop mask list' is deprecated. Use 'lr develop ai list' instead.",
+        err=True,
+    )
     execute_command(ctx, "develop.getAllMasks", {})
 
 
@@ -362,7 +401,14 @@ def local_apply(ctx, settings, dry_run, **kwargs):
     try:
         parsed = json.loads(settings)
     except json.JSONDecodeError as e:
-        click.echo(OutputFormatter.format_error(f"Invalid JSON: {e}", ctx.obj.get("output", "text") if ctx.obj else "text", code="VALIDATION_ERROR"), err=True)
+        click.echo(
+            OutputFormatter.format_error(
+                f"Invalid JSON: {e}",
+                ctx.obj.get("output", "text") if ctx.obj else "text",
+                code="VALIDATION_ERROR",
+            ),
+            err=True,
+        )
         ctx.exit(1)
         return
     execute_command(ctx, "develop.applyLocalSettings", {"settings": parsed})
@@ -391,7 +437,14 @@ def local_create_mask(ctx, mask_type, settings, dry_run, **kwargs):
         try:
             params["localSettings"] = json.loads(settings)
         except json.JSONDecodeError as e:
-            click.echo(OutputFormatter.format_error(f"Invalid JSON: {e}", ctx.obj.get("output", "text") if ctx.obj else "text", code="VALIDATION_ERROR"), err=True)
+            click.echo(
+                OutputFormatter.format_error(
+                    f"Invalid JSON: {e}",
+                    ctx.obj.get("output", "text") if ctx.obj else "text",
+                    code="VALIDATION_ERROR",
+                ),
+                err=True,
+            )
             ctx.exit(1)
             return
     execute_command(ctx, "develop.createMaskWithLocalAdjustments", params)
@@ -434,9 +487,13 @@ def filter_brush(ctx, dry_run, **kwargs):
 
 
 @filter_cmds.command("range")
-@click.option("--type", "range_type", default=None,
-              type=click.Choice(["luminance", "color", "depth"]),
-              help="Range mask type (luminance/color/depth)")
+@click.option(
+    "--type",
+    "range_type",
+    default=None,
+    type=click.Choice(["luminance", "color", "depth"]),
+    help="Range mask type (luminance/color/depth)",
+)
 @click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @json_input_options
 @click.pass_context
@@ -565,7 +622,10 @@ def reset_brush(ctx, dry_run, **kwargs):
 @click.pass_context
 def reset_masking(ctx, dry_run, **kwargs):
     """Reset masking (DEPRECATED: use 'lr develop ai reset')"""
-    click.echo("Warning: 'lr develop reset-masking' is deprecated. Use 'lr develop ai reset' instead.", err=True)
+    click.echo(
+        "Warning: 'lr develop reset-masking' is deprecated. Use 'lr develop ai reset' instead.",
+        err=True,
+    )
     execute_command(ctx, "develop.resetMasking", {})
 
 

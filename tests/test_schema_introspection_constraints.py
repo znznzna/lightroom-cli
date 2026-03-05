@@ -1,6 +1,9 @@
 """Tests for cli_constraints in lr schema output."""
+
 import json
+
 from click.testing import CliRunner
+
 from cli.main import cli
 
 

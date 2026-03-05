@@ -9,6 +9,7 @@ Commands tested:
   - system check-connection
   - system reconnect
 """
+
 import pytest
 
 

@@ -1,5 +1,7 @@
 """catalog set-rating の 0-5 範囲バリデーションテスト"""
+
 from click.testing import CliRunner
+
 from cli.main import cli
 
 

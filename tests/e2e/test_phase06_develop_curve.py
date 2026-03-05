@@ -9,6 +9,7 @@ Commands tested:
   - develop curve set --points '[[0,0],[128,140],[255,255]]'
   - develop curve linear (cleanup)
 """
+
 import pytest
 
 

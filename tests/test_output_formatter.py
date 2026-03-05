@@ -1,5 +1,5 @@
 import json
-import pytest
+
 from cli.output import OutputFormatter
 
 
@@ -84,16 +84,16 @@ class TestStructuredError:
         assert parsed["error"]["message"] == "Something went wrong"
 
     def test_json_error_with_code(self):
-        result = OutputFormatter.format_error(
-            "Unknown param", mode="json", code="VALIDATION_ERROR"
-        )
+        result = OutputFormatter.format_error("Unknown param", mode="json", code="VALIDATION_ERROR")
         parsed = json.loads(result)
         assert parsed["error"]["code"] == "VALIDATION_ERROR"
 
     def test_json_error_with_suggestions(self):
         result = OutputFormatter.format_error(
-            "Unknown param 'Exposre'", mode="json",
-            code="VALIDATION_ERROR", suggestions=["Exposure"]
+            "Unknown param 'Exposre'",
+            mode="json",
+            code="VALIDATION_ERROR",
+            suggestions=["Exposure"],
         )
         parsed = json.loads(result)
         assert parsed["error"]["suggestions"] == ["Exposure"]

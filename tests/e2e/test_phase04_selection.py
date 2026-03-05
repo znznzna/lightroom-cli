@@ -12,8 +12,8 @@ Commands tested:
   Additional: select-all, deselect-others, extend, deselect-active, select-none,
               select-inverse, catalog get-selected, catalog select (restore)
 """
-import pytest
 
+import pytest
 
 # --- Group 4A: Flag cycle ---
 

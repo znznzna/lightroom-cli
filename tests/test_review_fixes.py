@@ -1,10 +1,13 @@
 """Tests for 3-model review fixes: #13 risk_level, #14 _truncated flag, #15 JSON sanitize."""
+
 import json
+
 import pytest
 from click.testing import CliRunner
+
 from cli.main import cli
 from cli.output import OutputFormatter
-from cli.validation import validate_params, ValidationError
+from cli.validation import ValidationError, validate_params
 
 
 class TestResetMaskingRiskLevel:
@@ -12,6 +15,7 @@ class TestResetMaskingRiskLevel:
 
     def test_reset_masking_requires_confirm(self):
         from lightroom_sdk.schema import get_schema
+
         schema = get_schema("develop.resetMasking")
         assert schema is not None
         assert schema.requires_confirm is True
@@ -21,7 +25,6 @@ class TestResetMaskingRiskLevel:
         runner = CliRunner()
         result = runner.invoke(cli, ["-o", "json", "develop", "reset-masking", "--dry-run"])
         # Skip deprecation warning line
-        json_line = [l for l in result.output.splitlines() if l.strip().startswith("{")][0]
         # Parse full JSON block from first { onward
         json_start = result.output.index("{")
         data = json.loads(result.output[json_start:])

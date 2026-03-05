@@ -1,4 +1,5 @@
 """CLI middleware: TTY detection, environment variable resolution."""
+
 import os
 import sys
 

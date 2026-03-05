@@ -1,4 +1,5 @@
 """plugin グループが schema introspection に現れるかのテスト"""
+
 from lightroom_sdk.schema import get_schema, get_schemas_by_group
 
 

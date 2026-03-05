@@ -1,8 +1,11 @@
 """破壊的操作の --confirm フラグテスト"""
+
 from unittest.mock import AsyncMock, patch
-from click.testing import CliRunner
-from cli.main import cli
+
 import pytest
+from click.testing import CliRunner
+
+from cli.main import cli
 
 
 @pytest.fixture
@@ -26,7 +29,11 @@ class TestRemoveFromCatalogConfirm:
     def test_with_confirm_succeeds(self, mock_get_bridge, runner):
         """--confirm 付きで実行される"""
         mock_bridge = AsyncMock()
-        mock_bridge.send_command.return_value = {"id": "1", "success": True, "result": {"status": "removed"}}
+        mock_bridge.send_command.return_value = {
+            "id": "1",
+            "success": True,
+            "result": {"status": "removed"},
+        }
         mock_get_bridge.return_value = mock_bridge
         result = runner.invoke(cli, ["-o", "json", "catalog", "remove-from-catalog", "123", "--confirm"])
         assert result.exit_code == 0
@@ -50,7 +57,11 @@ class TestAiResetConfirm:
     def test_with_confirm_succeeds(self, mock_get_bridge, runner):
         """--confirm 付きで実行される"""
         mock_bridge = AsyncMock()
-        mock_bridge.send_command.return_value = {"id": "1", "success": True, "result": {"status": "reset"}}
+        mock_bridge.send_command.return_value = {
+            "id": "1",
+            "success": True,
+            "result": {"status": "reset"},
+        }
         mock_get_bridge.return_value = mock_bridge
         result = runner.invoke(cli, ["-o", "json", "develop", "ai", "reset", "--confirm"])
         assert result.exit_code == 0

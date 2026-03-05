@@ -30,7 +30,5 @@ DEVELOP_PARAMETER_RANGES = {
 def complete_develop_param(ctx, param, incomplete: str) -> list:
     """develop set コマンド用のタブ補完"""
     return [
-        CompletionItem(name)
-        for name in DEVELOP_PARAMETER_RANGES.keys()
-        if name.lower().startswith(incomplete.lower())
+        CompletionItem(name) for name in DEVELOP_PARAMETER_RANGES.keys() if name.lower().startswith(incomplete.lower())
     ]

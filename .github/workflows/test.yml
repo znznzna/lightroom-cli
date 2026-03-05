@@ -3,6 +3,17 @@ name: Test
 on: [push, pull_request]
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install ruff
+      - run: ruff check .
+      - run: ruff format --check .
+
   test:
     runs-on: ubuntu-latest
     strategy:
@@ -14,4 +25,4 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - run: pip install -e ".[dev]"
-      - run: python -m pytest tests/ -v --cov=lightroom_sdk --cov=cli
+      - run: python -m pytest tests/ -v --ignore=tests/e2e --cov=lightroom_sdk --cov=cli

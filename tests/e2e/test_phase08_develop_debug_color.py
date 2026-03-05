@@ -11,6 +11,7 @@ Commands tested:
   - develop color enhance --preset natural
   - develop reset (final cleanup)
 """
+
 import pytest
 
 

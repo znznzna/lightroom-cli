@@ -15,6 +15,7 @@ Commands tested:
   - catalog get-view-filter
   - catalog batch-metadata <photo_id>
 """
+
 import pytest
 
 
@@ -51,9 +52,7 @@ class TestCatalogGetSelected:
                 e2e_state.photo_id = str(data["id"])
                 e2e_state.photo_ids = [e2e_state.photo_id]
 
-        assert e2e_state.photo_id is not None, (
-            f"Could not extract photo_id from get-selected response: {r['data']}"
-        )
+        assert e2e_state.photo_id is not None, f"Could not extract photo_id from get-selected response: {r['data']}"
 
 
 @pytest.mark.e2e

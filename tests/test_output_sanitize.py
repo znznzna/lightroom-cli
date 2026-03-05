@@ -1,5 +1,7 @@
 """Tests for output sanitization in OutputFormatter."""
+
 import json
+
 from cli.output import OutputFormatter
 
 

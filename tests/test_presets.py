@@ -1,5 +1,4 @@
 # tests/test_presets.py
-import pytest
 from lightroom_sdk.presets import AI_MASK_PRESETS, get_preset, list_presets
 
 
@@ -45,4 +44,10 @@ def test_get_preset_unknown_returns_none():
 
 def test_list_presets_returns_all_names():
     names = list_presets()
-    assert set(names) == {"darken-sky", "brighten-subject", "blur-background", "warm-skin", "enhance-landscape"}
+    assert set(names) == {
+        "darken-sky",
+        "brighten-subject",
+        "blur-background",
+        "warm-skin",
+        "enhance-landscape",
+    }

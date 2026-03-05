@@ -1,7 +1,10 @@
 """JSON モード時のログレベルテスト"""
+
 import json
 from unittest.mock import AsyncMock, patch
+
 from click.testing import CliRunner
+
 from cli.main import cli
 
 

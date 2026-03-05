@@ -1,4 +1,5 @@
 """ParamSchema min/max フィールドのテスト"""
+
 from lightroom_sdk.schema import get_schema
 
 

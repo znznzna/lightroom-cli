@@ -1,6 +1,8 @@
-import pytest
 from unittest.mock import AsyncMock, patch
+
+import pytest
 from click.testing import CliRunner
+
 from cli.main import cli
 
 
@@ -12,17 +14,27 @@ def runner():
 @patch("cli.helpers.get_bridge")
 def test_catalog_create_collection(mock_get_bridge, runner):
     mock_bridge = AsyncMock()
-    mock_bridge.send_command.return_value = {"id": "1", "success": True, "result": {"name": "My Collection"}}
+    mock_bridge.send_command.return_value = {
+        "id": "1",
+        "success": True,
+        "result": {"name": "My Collection"},
+    }
     mock_get_bridge.return_value = mock_bridge
     result = runner.invoke(cli, ["catalog", "create-collection", "My Collection"])
     assert result.exit_code == 0
-    mock_bridge.send_command.assert_called_once_with("catalog.createCollection", {"name": "My Collection"}, timeout=30.0)
+    mock_bridge.send_command.assert_called_once_with(
+        "catalog.createCollection", {"name": "My Collection"}, timeout=30.0
+    )
 
 
 @patch("cli.helpers.get_bridge")
 def test_catalog_create_smart_collection(mock_get_bridge, runner):
     mock_bridge = AsyncMock()
-    mock_bridge.send_command.return_value = {"id": "2", "success": True, "result": {"name": "Smart"}}
+    mock_bridge.send_command.return_value = {
+        "id": "2",
+        "success": True,
+        "result": {"name": "Smart"},
+    }
     mock_get_bridge.return_value = mock_bridge
     result = runner.invoke(cli, ["catalog", "create-smart-collection", "Smart"])
     assert result.exit_code == 0
@@ -32,7 +44,11 @@ def test_catalog_create_smart_collection(mock_get_bridge, runner):
 @patch("cli.helpers.get_bridge")
 def test_catalog_create_collection_set(mock_get_bridge, runner):
     mock_bridge = AsyncMock()
-    mock_bridge.send_command.return_value = {"id": "3", "success": True, "result": {"name": "Set"}}
+    mock_bridge.send_command.return_value = {
+        "id": "3",
+        "success": True,
+        "result": {"name": "Set"},
+    }
     mock_get_bridge.return_value = mock_bridge
     result = runner.invoke(cli, ["catalog", "create-collection-set", "Set"])
     assert result.exit_code == 0
@@ -42,7 +58,11 @@ def test_catalog_create_collection_set(mock_get_bridge, runner):
 @patch("cli.helpers.get_bridge")
 def test_catalog_create_keyword(mock_get_bridge, runner):
     mock_bridge = AsyncMock()
-    mock_bridge.send_command.return_value = {"id": "4", "success": True, "result": {"keyword": "sunset"}}
+    mock_bridge.send_command.return_value = {
+        "id": "4",
+        "success": True,
+        "result": {"keyword": "sunset"},
+    }
     mock_get_bridge.return_value = mock_bridge
     result = runner.invoke(cli, ["catalog", "create-keyword", "sunset"])
     assert result.exit_code == 0
@@ -56,7 +76,9 @@ def test_catalog_remove_keyword(mock_get_bridge, runner):
     mock_get_bridge.return_value = mock_bridge
     result = runner.invoke(cli, ["catalog", "remove-keyword", "123", "sunset"])
     assert result.exit_code == 0
-    mock_bridge.send_command.assert_called_once_with("catalog.removeKeyword", {"photoId": "123", "keyword": "sunset"}, timeout=30.0)
+    mock_bridge.send_command.assert_called_once_with(
+        "catalog.removeKeyword", {"photoId": "123", "keyword": "sunset"}, timeout=30.0
+    )
 
 
 @patch("cli.helpers.get_bridge")
@@ -72,7 +94,11 @@ def test_catalog_set_view_filter(mock_get_bridge, runner):
 @patch("cli.helpers.get_bridge")
 def test_catalog_get_view_filter(mock_get_bridge, runner):
     mock_bridge = AsyncMock()
-    mock_bridge.send_command.return_value = {"id": "7", "success": True, "result": {"filter": {}}}
+    mock_bridge.send_command.return_value = {
+        "id": "7",
+        "success": True,
+        "result": {"filter": {}},
+    }
     mock_get_bridge.return_value = mock_bridge
     result = runner.invoke(cli, ["catalog", "get-view-filter"])
     assert result.exit_code == 0
@@ -82,7 +108,11 @@ def test_catalog_get_view_filter(mock_get_bridge, runner):
 @patch("cli.helpers.get_bridge")
 def test_catalog_remove_from_catalog(mock_get_bridge, runner):
     mock_bridge = AsyncMock()
-    mock_bridge.send_command.return_value = {"id": "8", "success": True, "result": {"message": "Removed"}}
+    mock_bridge.send_command.return_value = {
+        "id": "8",
+        "success": True,
+        "result": {"message": "Removed"},
+    }
     mock_get_bridge.return_value = mock_bridge
     # Without --confirm, should fail with exit code 2
     result_no_confirm = runner.invoke(cli, ["catalog", "remove-from-catalog", "123"])

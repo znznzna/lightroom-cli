@@ -1,5 +1,7 @@
 import asyncio
+
 import pytest
+
 from lightroom_sdk.socket_bridge import SocketBridge
 
 
@@ -8,9 +10,7 @@ async def test_on_event_registers_and_fires(mock_lr_server):
     """on_event()で登録したハンドラがイベント受信時に呼ばれる"""
     received = []
 
-    bridge = SocketBridge(
-        port_file=str(mock_lr_server.port_file)
-    )
+    bridge = SocketBridge(port_file=str(mock_lr_server.port_file))
     bridge.on_event("photo.selected", lambda data: received.append(data))
 
     await bridge.connect(retry_attempts=1)

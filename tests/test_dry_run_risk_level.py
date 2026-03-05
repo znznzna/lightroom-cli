@@ -1,6 +1,9 @@
 """Tests for risk_level field in dry-run output."""
+
 import json
+
 from click.testing import CliRunner
+
 from cli.main import cli
 
 

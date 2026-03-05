@@ -1,4 +1,5 @@
 """response_fields が充実しているかのテスト"""
+
 from lightroom_sdk.schema import get_all_schemas
 
 
@@ -20,6 +21,4 @@ def test_no_empty_response_fields_for_read_commands():
             read_commands_without_fields.append(schema.cli_path)
 
     # 全ての読み取りコマンドに response_fields があるべき
-    assert read_commands_without_fields == [], (
-        f"Read commands missing response_fields: {read_commands_without_fields}"
-    )
+    assert read_commands_without_fields == [], f"Read commands missing response_fields: {read_commands_without_fields}"

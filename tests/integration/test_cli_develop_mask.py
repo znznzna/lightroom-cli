@@ -1,6 +1,8 @@
-import pytest
 from unittest.mock import AsyncMock, patch
+
+import pytest
 from click.testing import CliRunner
+
 from cli.main import cli
 
 
@@ -14,15 +16,14 @@ def test_develop_mask_list(mock_get_bridge, runner):
     """lr develop mask list が全マスク一覧を返す"""
     mock_bridge = AsyncMock()
     mock_bridge.send_command.return_value = {
-        "id": "1", "success": True,
+        "id": "1",
+        "success": True,
         "result": {"masks": []},
     }
     mock_get_bridge.return_value = mock_bridge
     result = runner.invoke(cli, ["develop", "mask", "list"])
     assert result.exit_code == 0
-    mock_bridge.send_command.assert_called_once_with(
-        "develop.getAllMasks", {}, timeout=30.0
-    )
+    mock_bridge.send_command.assert_called_once_with("develop.getAllMasks", {}, timeout=30.0)
 
 
 @patch("cli.helpers.get_bridge")

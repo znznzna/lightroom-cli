@@ -20,6 +20,7 @@ Commands tested:
   - catalog find-by-path "/some/path"
   - catalog set-view-filter --filter '{}'
 """
+
 import pytest
 
 

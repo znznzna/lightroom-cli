@@ -1,4 +1,5 @@
 """Tests for get_schema_hash()."""
+
 from lightroom_sdk.schema import get_schema_hash
 
 

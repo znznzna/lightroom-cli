@@ -3,8 +3,10 @@
 
 Does NOT require Lightroom — filesystem only.
 """
+
 import pytest
 from click.testing import CliRunner
+
 from cli.main import cli
 
 

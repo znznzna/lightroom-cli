@@ -1,28 +1,35 @@
-from typing import Dict, List, Any, Optional
+from typing import Dict
+
 from pydantic import BaseModel, Field, validator
+
 
 class DevelopParameter(BaseModel):
     """Single develop parameter with validation"""
+
     name: str
     value: float
     min: float
     max: float
 
-    @validator('value')
+    @validator("value")
     def validate_range(cls, v, values):
-        if 'min' in values and v < values['min']:
+        if "min" in values and v < values["min"]:
             raise ValueError(f"Value {v} below minimum {values['min']}")
-        if 'max' in values and v > values['max']:
+        if "max" in values and v > values["max"]:
             raise ValueError(f"Value {v} above maximum {values['max']}")
         return v
 
+
 class CurvePoint(BaseModel):
     """Point on a tone curve"""
+
     x: float = Field(ge=0, le=255)
     y: float = Field(ge=0, le=255)
 
+
 class PointColorSwatch(BaseModel):
     """PointColors swatch definition"""
+
     SrcHue: float = Field(ge=0, le=6)
     SrcSat: float = Field(ge=0, le=1)
     SrcLum: float = Field(ge=0, le=1)
@@ -33,6 +40,7 @@ class PointColorSwatch(BaseModel):
     HueRange: Dict[str, float]
     SatRange: Dict[str, float]
     LumRange: Dict[str, float]
+
 
 # Parameter ranges from API_DEVELOP_REFERENCE.md
 DEVELOP_PARAMETER_RANGES = {
@@ -51,7 +59,6 @@ DEVELOP_PARAMETER_RANGES = {
     "Saturation": (-100, 100),
     "Texture": (-100, 100),
     "Dehaze": (-100, 100),
-    
     # Tone Curve
     "ParametricDarks": (-100, 100),
     "ParametricLights": (-100, 100),
@@ -61,7 +68,6 @@ DEVELOP_PARAMETER_RANGES = {
     "ParametricMidtoneSplit": (0, 100),
     "ParametricHighlightSplit": (0, 100),
     "CurveRefineSaturation": (-100, 100),
-    
     # HSL/Color Adjustments
     "HueAdjustmentRed": (-100, 100),
     "HueAdjustmentOrange": (-100, 100),
@@ -71,7 +77,6 @@ DEVELOP_PARAMETER_RANGES = {
     "HueAdjustmentBlue": (-100, 100),
     "HueAdjustmentPurple": (-100, 100),
     "HueAdjustmentMagenta": (-100, 100),
-    
     "SaturationAdjustmentRed": (-100, 100),
     "SaturationAdjustmentOrange": (-100, 100),
     "SaturationAdjustmentYellow": (-100, 100),
@@ -80,7 +85,6 @@ DEVELOP_PARAMETER_RANGES = {
     "SaturationAdjustmentBlue": (-100, 100),
     "SaturationAdjustmentPurple": (-100, 100),
     "SaturationAdjustmentMagenta": (-100, 100),
-    
     "LuminanceAdjustmentRed": (-100, 100),
     "LuminanceAdjustmentOrange": (-100, 100),
     "LuminanceAdjustmentYellow": (-100, 100),
@@ -89,7 +93,6 @@ DEVELOP_PARAMETER_RANGES = {
     "LuminanceAdjustmentBlue": (-100, 100),
     "LuminanceAdjustmentPurple": (-100, 100),
     "LuminanceAdjustmentMagenta": (-100, 100),
-    
     # Detail
     "Sharpness": (0, 150),
     "SharpenRadius": (0.5, 3.0),
@@ -98,7 +101,6 @@ DEVELOP_PARAMETER_RANGES = {
     "LuminanceSmoothing": (0, 100),
     "LuminanceNoiseReductionDetail": (0, 100),
     "ColorNoiseReduction": (0, 100),
-    
     # Lens Corrections
     "LensProfileEnable": (0, 1),
     "AutoLateralCA": (0, 1),
@@ -106,19 +108,16 @@ DEVELOP_PARAMETER_RANGES = {
     "PerspectiveHorizontal": (-100, 100),
     "PerspectiveRotate": (-10, 10),
     "PerspectiveScale": (50, 150),
-    
     # Lens Blur (LR 14.4+)
     "LensBlurActive": (0, 1),
     "LensBlurAmount": (0, 100),
     "LensBlurCatEye": (0, 100),
     "LensBlurHighlightsBoost": (0, 100),
-    
     # Effects
     "PostCropVignetteAmount": (-100, 100),
     "GrainAmount": (0, 100),
     "GrainSize": (0, 100),
     "GrainFrequency": (0, 100),
-    
     # Calibration
     "ShadowTint": (-100, 100),
     "RedHue": (-100, 100),
@@ -127,7 +126,6 @@ DEVELOP_PARAMETER_RANGES = {
     "GreenSaturation": (-100, 100),
     "BlueHue": (-100, 100),
     "BlueSaturation": (-100, 100),
-    
     # Split Toning / Color Grading
     "SplitToningShadowHue": (0, 360),
     "SplitToningShadowSaturation": (0, 100),
@@ -138,17 +136,14 @@ DEVELOP_PARAMETER_RANGES = {
     "ColorGradeHighlightLum": (-100, 100),
     "ColorGradeMidtoneHue": (0, 360),
     "ColorGradeGlobalSat": (-100, 100),
-    
     # Advanced Detail
     "ColorNoiseReductionDetail": (0, 100),
-    
     # Advanced Effects/Vignette
     "PostCropVignetteMidpoint": (0, 100),
     "PostCropVignetteFeather": (0, 100),
     "PostCropVignetteRoundness": (-100, 100),
     "PostCropVignetteStyle": (1, 3),
     "PostCropVignetteHighlightContrast": (0, 100),
-    
     # Lens Corrections (Extended)
     "LensProfileDistortionScale": (0, 200),
     "LensProfileVignettingScale": (0, 200),

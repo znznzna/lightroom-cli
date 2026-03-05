@@ -9,16 +9,20 @@ Requirements:
 These tests verify actual AI mask creation in Lightroom.
 Run with: pytest tests/e2e/test_phase11_ai_mask.py -v
 """
-import pytest
-import subprocess
+
 import json
+import subprocess
+
+import pytest
 
 
 def lr(*args):
     """lr CLI を実行して結果を返すヘルパー"""
     result = subprocess.run(
         ["lr", "-o", "json", *args],
-        capture_output=True, text=True, timeout=120,
+        capture_output=True,
+        text=True,
+        timeout=120,
     )
     return result
 

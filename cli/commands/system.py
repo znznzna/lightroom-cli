@@ -1,8 +1,10 @@
-import click
 from pathlib import Path
+
+import click
+
+from cli.decorators import json_input_options
 from cli.helpers import execute_command, get_bridge, handle_error, run_async
 from cli.output import OutputFormatter
-from cli.decorators import json_input_options
 
 
 @click.group()
@@ -24,8 +26,10 @@ def ping(ctx, **kwargs):
 @click.pass_context
 def status(ctx, **kwargs):
     """Get Lightroom bridge status"""
+
     def _add_cli_metadata(data):
         from lightroom_sdk.schema import get_schema_hash
+
         if isinstance(data, dict):
             data["schema_hash"] = get_schema_hash()
             data["cli_version"] = _get_cli_version()
@@ -37,6 +41,7 @@ def status(ctx, **kwargs):
 def _get_cli_version() -> str:
     try:
         from importlib.metadata import version
+
         return version("lightroom-cli")
     except Exception:
         return "dev"
@@ -72,6 +77,7 @@ def check_connection(ctx, port_file):
 
     if port_file is None:
         from lightroom_sdk.paths import get_port_file
+
         port_path = get_port_file()
     else:
         port_path = Path(port_file)

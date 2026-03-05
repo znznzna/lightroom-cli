@@ -1,6 +1,8 @@
-import pytest
 from unittest.mock import AsyncMock, patch
+
+import pytest
 from click.testing import CliRunner
+
 from cli.main import cli
 
 

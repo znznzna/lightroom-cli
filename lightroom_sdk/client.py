@@ -1,18 +1,18 @@
 import asyncio
-from typing import Optional, Dict, Any
-from contextlib import asynccontextmanager
 import logging
+from typing import Any, Dict, Optional
 
-from .socket_bridge import SocketBridge
+from .exceptions import ERROR_CODE_MAP, LightroomSDKError
 from .protocol import LightroomResponse
-from .exceptions import LightroomSDKError, ERROR_CODE_MAP
+from .socket_bridge import SocketBridge
 
 logger = logging.getLogger(__name__)
+
 
 class LightroomClient:
     """Main client for interacting with Lightroom"""
 
-    def __init__(self, host: str = 'localhost'):
+    def __init__(self, host: str = "localhost"):
         self.host = host
         self._bridge = SocketBridge(host)
 
@@ -37,7 +37,7 @@ class LightroomClient:
         self,
         command: str,
         params: Optional[Dict[str, Any]] = None,
-        timeout: float = 30.0
+        timeout: float = 30.0,
     ) -> Dict[str, Any]:
         """Execute a command and handle response"""
         response = await self._bridge.send_command(command, params, timeout)
@@ -47,8 +47,8 @@ class LightroomClient:
 
         if not lr_response.success:
             error = lr_response.error or {}
-            error_code = error.get('code', 'UNKNOWN')
-            error_message = error.get('message', 'Unknown error')
+            error_code = error.get("code", "UNKNOWN")
+            error_message = error.get("message", "Unknown error")
 
             # Map to specific exception type
             exception_class = ERROR_CODE_MAP.get(error_code, LightroomSDKError)
@@ -108,9 +108,7 @@ class LightroomClient:
             params["part"] = part
         if adjustments:
             params["adjustments"] = adjustments
-        return await self.execute_command(
-            "develop.createAIMaskWithAdjustments", params, timeout=timeout
-        )
+        return await self.execute_command("develop.createAIMaskWithAdjustments", params, timeout=timeout)
 
     async def batch_ai_mask(
         self,
@@ -144,6 +142,4 @@ class LightroomClient:
             params["part"] = part
         if adjustments:
             params["adjustments"] = adjustments
-        return await self.execute_command(
-            "develop.batchAIMask", params, timeout=timeout
-        )
+        return await self.execute_command("develop.batchAIMask", params, timeout=timeout)

@@ -1,13 +1,15 @@
 import json
+
 import click
+
+from cli.decorators import json_input_options
 from cli.helpers import execute_command
 from cli.output import OutputFormatter
-from cli.decorators import json_input_options
 
 
 @click.group()
 def catalog():
-    """Catalog commands (list, search, find, get-selected, get-info, set-rating, add-keywords, set-flag, get-flag, select, find-by-path, collections, keywords, folders)"""
+    """Catalog commands (list, search, find, get-selected, get-info, set-rating, add-keywords, etc.)"""
     pass
 
 
@@ -94,7 +96,12 @@ def get_flag(ctx, photo_id, **kwargs):
 @catalog.command("find")
 @click.option("--flag", type=click.Choice(["pick", "reject", "none"]), help="Flag condition")
 @click.option("--rating", type=int, help="Rating (0-5)")
-@click.option("--rating-op", default="==", type=click.Choice(["==", ">=", "<=", ">", "<"]), help="Rating comparison operator")
+@click.option(
+    "--rating-op",
+    default="==",
+    type=click.Choice(["==", ">=", "<=", ">", "<"]),
+    help="Rating comparison operator",
+)
 @click.option("--color-label", help="Color label (red/yellow/green/blue/purple/none)")
 @click.option("--camera", help="Camera model name")
 @click.option("--limit", default=50, type=int, help="Max results")
@@ -114,7 +121,11 @@ def find_photos(ctx, flag, rating, rating_op, color_label, camera, limit, offset
     if camera:
         search_desc["camera"] = camera
 
-    execute_command(ctx, "catalog.findPhotos", {"searchDesc": search_desc, "limit": limit, "offset": offset})
+    execute_command(
+        ctx,
+        "catalog.findPhotos",
+        {"searchDesc": search_desc, "limit": limit, "offset": offset},
+    )
 
 
 @catalog.command("select")
@@ -196,13 +207,18 @@ def set_color_label(ctx, photo_id, label, dry_run, **kwargs):
 
 @catalog.command("batch-metadata")
 @click.argument("photo_ids", nargs=-1, required=True)
-@click.option("--keys", default="fileName,dateTimeOriginal,rating", help="Comma-separated metadata keys")
+@click.option(
+    "--keys",
+    default="fileName,dateTimeOriginal,rating",
+    help="Comma-separated metadata keys",
+)
 @json_input_options
 @click.pass_context
 def batch_metadata(ctx, photo_ids, keys, **kwargs):
     """Get formatted metadata for multiple photos"""
     execute_command(
-        ctx, "catalog.batchGetFormattedMetadata",
+        ctx,
+        "catalog.batchGetFormattedMetadata",
         {"photoIds": list(photo_ids), "keys": keys.split(",")},
     )
 
@@ -332,8 +348,12 @@ def get_view_filter(ctx, **kwargs):
 
 @catalog.command("remove-from-catalog")
 @click.argument("photo_id")
-@click.option("--confirm", is_flag=True, default=False,
-              help="Required confirmation flag (this operation is irreversible)")
+@click.option(
+    "--confirm",
+    is_flag=True,
+    default=False,
+    help="Required confirmation flag (this operation is irreversible)",
+)
 @click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @json_input_options
 @click.pass_context
@@ -344,9 +364,12 @@ def remove_from_catalog(ctx, photo_id, confirm, dry_run, **kwargs):
         click.echo(
             OutputFormatter.format_error(
                 "This operation is irreversible. Pass --confirm to proceed.",
-                fmt, code="CONFIRMATION_REQUIRED",
-                suggestions=["Add --confirm flag: lr catalog remove-from-catalog PHOTO_ID --confirm",
-                              "Use --dry-run first to preview: lr catalog remove-from-catalog PHOTO_ID --dry-run"],
+                fmt,
+                code="CONFIRMATION_REQUIRED",
+                suggestions=[
+                    "Add --confirm flag: lr catalog remove-from-catalog PHOTO_ID --confirm",
+                    "Use --dry-run first to preview: lr catalog remove-from-catalog PHOTO_ID --dry-run",
+                ],
             ),
             err=True,
         )

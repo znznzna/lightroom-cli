@@ -13,8 +13,8 @@ Commands tested:
   Group 3F: catalog set-metadata (write + restore)
   Group 3G: catalog rotate-left, rotate-right (self-canceling pair)
 """
-import pytest
 
+import pytest
 
 # --- Group 3A: Rating ---
 

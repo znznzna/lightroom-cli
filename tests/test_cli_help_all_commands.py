@@ -1,6 +1,8 @@
 """全コマンドの --help が正常動作することを検証するパラメトリックテスト"""
+
 import pytest
 from click.testing import CliRunner
+
 from cli.main import cli
 
 

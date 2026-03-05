@@ -1,4 +1,5 @@
 """system グループのスキーマ完全性テスト"""
+
 from lightroom_sdk.schema import get_schemas_by_group
 
 

@@ -1,6 +1,6 @@
 import pytest
-from pathlib import Path
 from click.testing import CliRunner
+
 from cli.main import cli
 from lightroom_sdk.paths import PLUGIN_NAME
 

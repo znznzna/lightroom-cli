@@ -1,14 +1,18 @@
 """Input validation based on command schemas."""
+
 from __future__ import annotations
+
 import re
-from lightroom_sdk.schema import get_schema, ParamType, ParamSchema
+
+from lightroom_sdk.schema import ParamSchema, ParamType, get_schema
 
 _MAX_STRING_LENGTH = 10_000
-_CONTROL_CHAR_RE = re.compile(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]')
+_CONTROL_CHAR_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 
 
 class ValidationError(Exception):
     """バリデーションエラー"""
+
     def __init__(
         self,
         message: str,
@@ -79,7 +83,7 @@ def _check_range(name: str, value: int | float, schema: ParamSchema) -> None:
 
 def _sanitize_string(name: str, value: str) -> str:
     """文字列のサニタイズ: NUL・制御文字・過長入力をreject。\t, \n, \r は許可。"""
-    if '\x00' in value:
+    if "\x00" in value:
         raise ValidationError(
             f"Parameter '{name}' contains null character",
             param=name,
@@ -135,32 +139,28 @@ def _coerce_type(name: str, value: object, schema: ParamSchema) -> object:
                     if lower in ("false", "0", "no"):
                         return False
                     raise ValidationError(
-                        f"Invalid value '{value}' for '{name}': "
-                        f"expected boolean (true/false/yes/no/1/0)",
+                        f"Invalid value '{value}' for '{name}': expected boolean (true/false/yes/no/1/0)",
                         param=name,
                     )
                 return bool(value)
             case ParamType.JSON_OBJECT:
                 if not isinstance(value, dict):
                     raise ValidationError(
-                        f"Invalid type for '{name}': expected JSON object (dict), "
-                        f"got {type(value).__name__}",
+                        f"Invalid type for '{name}': expected JSON object (dict), got {type(value).__name__}",
                         param=name,
                     )
                 return _sanitize_json_strings(name, value)
             case ParamType.JSON_ARRAY:
                 if not isinstance(value, list):
                     raise ValidationError(
-                        f"Invalid type for '{name}': expected JSON array (list), "
-                        f"got {type(value).__name__}",
+                        f"Invalid type for '{name}': expected JSON array (list), got {type(value).__name__}",
                         param=name,
                     )
                 return _sanitize_json_strings(name, value)
             case ParamType.ENUM:
                 if str(value) not in (schema.enum_values or []):
                     raise ValidationError(
-                        f"Invalid value '{value}' for '{name}'. "
-                        f"Must be one of: {', '.join(schema.enum_values or [])}",
+                        f"Invalid value '{value}' for '{name}'. Must be one of: {', '.join(schema.enum_values or [])}",
                         param=name,
                         suggestions=[f"Valid values: {', '.join(schema.enum_values or [])}"],
                     )
@@ -177,10 +177,11 @@ def _coerce_type(name: str, value: object, schema: ParamSchema) -> object:
             ParamType.BOOLEAN: "e.g., true, false",
         }
         example = type_examples.get(schema.type, "")
-        suggestions = [f"Expected type: {schema.type.value} ({example})"] if example else [f"Expected type: {schema.type.value}"]
+        suggestions = (
+            [f"Expected type: {schema.type.value} ({example})"] if example else [f"Expected type: {schema.type.value}"]
+        )
         raise ValidationError(
-            f"Invalid type for '{name}': expected {schema.type.value}, "
-            f"got {type(value).__name__}",
+            f"Invalid type for '{name}': expected {schema.type.value}, got {type(value).__name__}",
             param=name,
             suggestions=suggestions,
         )
@@ -189,6 +190,7 @@ def _coerce_type(name: str, value: object, schema: ParamSchema) -> object:
 def _find_similar(name: str, valid_names: set[str], max_results: int = 3) -> list[str]:
     """部分文字列マッチ + 編集距離で類似パラメータを検索"""
     from difflib import get_close_matches
+
     # difflib for fuzzy matching
     matches = get_close_matches(name, sorted(valid_names), n=max_results, cutoff=0.6)
     if matches:

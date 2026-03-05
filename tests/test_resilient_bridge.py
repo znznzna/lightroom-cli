@@ -1,6 +1,8 @@
 import asyncio
+
 import pytest
-from lightroom_sdk.resilient_bridge import ResilientSocketBridge, ConnectionState
+
+from lightroom_sdk.resilient_bridge import ConnectionState, ResilientSocketBridge
 
 
 @pytest.mark.asyncio
@@ -12,9 +14,7 @@ async def test_initial_state_is_disconnected():
 @pytest.mark.asyncio
 async def test_connect_transitions_to_connected(mock_lr_server):
     mock_lr_server.register_response("system.ping", {"status": "ok"})
-    bridge = ResilientSocketBridge(
-        port_file=str(mock_lr_server.port_file)
-    )
+    bridge = ResilientSocketBridge(port_file=str(mock_lr_server.port_file))
     await bridge.connect()
     assert bridge.state == ConnectionState.CONNECTED
     await bridge.disconnect()

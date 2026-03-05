@@ -1,4 +1,5 @@
 """StructuredErrorGroup -- JSON モード時に Click 標準エラーを構造化する"""
+
 from __future__ import annotations
 
 import json

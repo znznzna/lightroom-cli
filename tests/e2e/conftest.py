@@ -4,13 +4,15 @@
 Run: pytest tests/e2e/ -v -m e2e
 Run destructive: pytest tests/e2e/ -v -m e2e --run-destructive
 """
+
 import json
-import pytest
 from dataclasses import dataclass, field
 from typing import Any
-from click.testing import CliRunner
-from lightroom_sdk.paths import get_port_file
 
+import pytest
+from click.testing import CliRunner
+
+from lightroom_sdk.paths import get_port_file
 
 # --- State container shared across entire session ---
 
@@ -21,6 +23,7 @@ class E2EState:
 
     Populated by early phases, consumed by later ones.
     """
+
     photo_id: str | None = None
     photo_ids: list[str] = field(default_factory=list)
     original_rating: int | None = None
@@ -56,6 +59,7 @@ def pytest_addoption(parser):
 def _lightroom_reachable() -> bool:
     """Check if Lightroom is actually reachable by attempting TCP connections to both ports."""
     import socket
+
     port_file = get_port_file()
     if not port_file.exists():
         return False
@@ -77,9 +81,7 @@ def pytest_collection_modifyitems(config, items):
     """
     skip_e2e = None
     if not _lightroom_reachable():
-        skip_e2e = pytest.mark.skip(
-            reason="Lightroom not reachable (port file missing or connection refused)"
-        )
+        skip_e2e = pytest.mark.skip(reason="Lightroom not reachable (port file missing or connection refused)")
 
     skip_destructive = None
     if not config.getoption("--run-destructive"):
@@ -112,6 +114,7 @@ def runner():
 def cli_app():
     """The CLI application."""
     from cli.main import cli
+
     return cli
 
 
@@ -148,8 +151,10 @@ def invoke(runner, cli_app, args: list[str], fmt: str = "json") -> dict:
 @pytest.fixture(scope="session")
 def run(runner, cli_app):
     """Convenience fixture: run("system", "ping") -> dict."""
+
     def _run(*args, fmt="json"):
         return invoke(runner, cli_app, list(args), fmt=fmt)
+
     return _run
 
 

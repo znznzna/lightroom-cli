@@ -1,6 +1,9 @@
 """StructuredErrorGroup -- Click 標準エラーの構造化テスト"""
+
 import json
+
 from click.testing import CliRunner
+
 from cli.main import cli
 
 
@@ -11,7 +14,7 @@ class TestStructuredErrors:
         assert result.exit_code == 2
         # err=True で stderr に出力されるが、CliRunner のデフォルトでは
         # output に混在する。JSON パース可能であることを確認。
-        lines = [l for l in result.output.strip().splitlines() if l.strip()]
+        lines = [line for line in result.output.strip().splitlines() if line.strip()]
         data = json.loads(lines[-1])
         assert "error" in data
         assert data["error"]["code"] == "USAGE_ERROR"
@@ -20,7 +23,7 @@ class TestStructuredErrors:
         runner = CliRunner()
         result = runner.invoke(cli, ["-o", "json", "catalog", "get-info"])
         assert result.exit_code == 2
-        lines = [l for l in result.output.strip().splitlines() if l.strip()]
+        lines = [line for line in result.output.strip().splitlines() if line.strip()]
         data = json.loads(lines[-1])
         assert "error" in data
         assert data["error"]["code"] == "USAGE_ERROR"
@@ -46,7 +49,7 @@ class TestStructuredErrors:
         runner = CliRunner()
         result = runner.invoke(cli, ["-o", "json", "develop", "nonexistent"])
         assert result.exit_code == 2
-        lines = [l for l in result.output.strip().splitlines() if l.strip()]
+        lines = [line for line in result.output.strip().splitlines() if line.strip()]
         data = json.loads(lines[-1])
         assert "error" in data
         assert data["error"]["code"] == "USAGE_ERROR"

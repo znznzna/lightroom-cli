@@ -1,6 +1,8 @@
-import pytest
 from unittest.mock import AsyncMock, patch
+
+import pytest
 from click.testing import CliRunner
+
 from cli.main import cli
 
 
@@ -44,9 +46,7 @@ def test_catalog_set_flag_pick(mock_get_bridge, runner):
 
     result = runner.invoke(cli, ["catalog", "set-flag", "12345", "pick"])
     assert result.exit_code == 0
-    mock_bridge.send_command.assert_called_once_with(
-        "catalog.setFlag", {"photoId": "12345", "flag": 1}, timeout=30.0
-    )
+    mock_bridge.send_command.assert_called_once_with("catalog.setFlag", {"photoId": "12345", "flag": 1}, timeout=30.0)
 
 
 @patch("cli.helpers.get_bridge")
@@ -62,9 +62,7 @@ def test_catalog_set_flag_reject(mock_get_bridge, runner):
 
     result = runner.invoke(cli, ["catalog", "set-flag", "12345", "reject"])
     assert result.exit_code == 0
-    mock_bridge.send_command.assert_called_once_with(
-        "catalog.setFlag", {"photoId": "12345", "flag": -1}, timeout=30.0
-    )
+    mock_bridge.send_command.assert_called_once_with("catalog.setFlag", {"photoId": "12345", "flag": -1}, timeout=30.0)
 
 
 @patch("cli.helpers.get_bridge")
@@ -80,9 +78,7 @@ def test_catalog_set_flag_none(mock_get_bridge, runner):
 
     result = runner.invoke(cli, ["catalog", "set-flag", "12345", "none"])
     assert result.exit_code == 0
-    mock_bridge.send_command.assert_called_once_with(
-        "catalog.setFlag", {"photoId": "12345", "flag": 0}, timeout=30.0
-    )
+    mock_bridge.send_command.assert_called_once_with("catalog.setFlag", {"photoId": "12345", "flag": 0}, timeout=30.0)
 
 
 @patch("cli.helpers.get_bridge")
@@ -98,9 +94,7 @@ def test_catalog_get_flag(mock_get_bridge, runner):
 
     result = runner.invoke(cli, ["catalog", "get-flag", "12345"])
     assert result.exit_code == 0
-    mock_bridge.send_command.assert_called_once_with(
-        "catalog.getFlag", {"photoId": "12345"}, timeout=30.0
-    )
+    mock_bridge.send_command.assert_called_once_with("catalog.getFlag", {"photoId": "12345"}, timeout=30.0)
 
 
 @patch("cli.helpers.get_bridge")
@@ -155,7 +149,8 @@ def test_catalog_find_with_multiple_options(mock_get_bridge, runner):
     mock_get_bridge.return_value = mock_bridge
 
     result = runner.invoke(
-        cli, ["catalog", "find", "--flag", "pick", "--rating", "5", "--color-label", "red"]
+        cli,
+        ["catalog", "find", "--flag", "pick", "--rating", "5", "--color-label", "red"],
     )
     assert result.exit_code == 0
     call_args = mock_bridge.send_command.call_args

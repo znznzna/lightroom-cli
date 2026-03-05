@@ -38,9 +38,10 @@ mcp.json.*
 .idea/
 *.swp
 
-# Session files
+# Session / dev-only files
 HANDOVER*.md
 CLAUDE.md
+TASK.md
 
 # Claude
 .claude/

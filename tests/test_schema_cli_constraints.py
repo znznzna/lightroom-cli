@@ -1,5 +1,6 @@
 """Tests for cli_constraints fields on CommandSchema."""
-from lightroom_sdk.schema import get_schema, get_all_schemas
+
+from lightroom_sdk.schema import get_all_schemas, get_schema
 
 
 class TestCliConstraints:

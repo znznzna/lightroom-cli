@@ -1,16 +1,22 @@
 """
 Type definitions for Lightroom SDK
 """
-from .catalog import Photo, PhotoList, Folder, Collection
-from .develop import DevelopParameter, CurvePoint, PointColorSwatch, DEVELOP_PARAMETER_RANGES
+
+from .catalog import Collection, Folder, Photo, PhotoList
+from .develop import (
+    DEVELOP_PARAMETER_RANGES,
+    CurvePoint,
+    DevelopParameter,
+    PointColorSwatch,
+)
 
 __all__ = [
-    "Photo", 
-    "PhotoList", 
-    "Folder", 
+    "Photo",
+    "PhotoList",
+    "Folder",
     "Collection",
     "DevelopParameter",
-    "CurvePoint", 
+    "CurvePoint",
     "PointColorSwatch",
-    "DEVELOP_PARAMETER_RANGES"
+    "DEVELOP_PARAMETER_RANGES",
 ]
