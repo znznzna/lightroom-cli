@@ -33,6 +33,22 @@
 - [x] シャットダウン高速化 (PluginShutdown/AppShutdown フラグセットのみ)
 - [x] 5連続ping + 全systemコマンド動作確認済み
 
+### AI Mask API 実装 (2026-03-05)
+
+- [x] `lightroom_sdk/presets.py` — 5プリセット定義 (darken-sky, brighten-subject, blur-background, warm-skin, enhance-landscape)
+- [x] SDK タイムアウト追加 (createAIMaskWithAdjustments: 60s, batchAIMask: 300s)
+- [x] `LightroomClient.create_ai_mask()` / `batch_ai_mask()` メソッド
+- [x] `cli/commands/ai_mask.py` — `lr develop ai` グループ (subject/sky/background/objects/people/landscape)
+- [x] `--part` オプション (people: eyes/hair/skin等, landscape: mountain/water等)
+- [x] `--adjust` JSON / `--adjust-preset` プリセット適用
+- [x] `lr develop ai presets` / `list` / `reset` / `batch` コマンド
+- [x] batch: `--photos`, `--all-selected`, `--dry-run`, `--continue-on-error`
+- [x] Lua `createAIMaskWithAdjustments` (hang guard + adjustment support)
+- [x] Lua `batchAIMask` (multi-photo, continueOnError)
+- [x] 既存 mask/filter コマンド13個削除、deprecated警告追加
+- [x] E2E テスト11件 ALL PASS (実機検証済み)
+- [x] ユニット/統合テスト 215件 ALL PASS
+
 ### 発見・修正した問題
 
 - `.lrdevplugin` は Modules ディレクトリの自動検出で認識されない → `.lrplugin` に変更
@@ -48,13 +64,17 @@
 
 ## In Progress
 
-### E2Eテスト実機実行
-- [ ] Lightroom起動状態で全145テスト実行 (`python -m pytest tests/e2e/ -v`)
-- [ ] ソケット安定化修正のコミット
+(なし)
 
 ---
 
 ## Backlog
+
+### CLI 最適化
+
+- [ ] CLI パフォーマンス改善 (起動時間、接続ハンドリング等)
+- [ ] コマンド構造の見直し・整理
+- [ ] エラーメッセージの統一・改善
 
 ### 配布
 
