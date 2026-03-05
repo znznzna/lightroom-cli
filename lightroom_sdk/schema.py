@@ -887,7 +887,14 @@ def get_schema_hash() -> str:
         [{
             "command": COMMAND_SCHEMAS[k].command,
             "cli_path": COMMAND_SCHEMAS[k].cli_path,
-            "params": [(p.name, p.type.value) for p in COMMAND_SCHEMAS[k].params],
+            "mutating": COMMAND_SCHEMAS[k].mutating,
+            "supports_dry_run": COMMAND_SCHEMAS[k].supports_dry_run,
+            "requires_confirm": COMMAND_SCHEMAS[k].requires_confirm,
+            "timeout": COMMAND_SCHEMAS[k].timeout,
+            "params": [
+                (p.name, p.type.value, p.required, p.min, p.max, p.enum_values)
+                for p in COMMAND_SCHEMAS[k].params
+            ],
         } for k in keys],
         sort_keys=True,
     )
