@@ -254,3 +254,71 @@ def test_ai_reset_calls_reset_masking(mock_get_bridge, runner):
     mock_bridge.send_command.assert_called_once_with(
         "develop.resetMasking", {}, timeout=30.0,
     )
+
+
+@patch("cli.commands.ai_mask.get_bridge")
+def test_ai_batch_all_selected(mock_get_bridge, runner):
+    """lr develop ai batch sky --all-selected"""
+    mock_bridge = AsyncMock()
+    mock_bridge.send_command.return_value = {
+        "id": "1", "success": True,
+        "result": {"total": 3, "succeeded": 3, "failed": 0, "results": []},
+    }
+    mock_get_bridge.return_value = mock_bridge
+    result = runner.invoke(cli, ["develop", "ai", "batch", "sky", "--all-selected"])
+    assert result.exit_code == 0
+    call_args = mock_bridge.send_command.call_args
+    assert call_args[0][0] == "develop.batchAIMask"
+    assert call_args[0][1]["selectionType"] == "sky"
+    assert call_args[0][1]["allSelected"] is True
+
+
+@patch("cli.commands.ai_mask.get_bridge")
+def test_ai_batch_with_photos(mock_get_bridge, runner):
+    """lr develop ai batch subject --photos 1,2,3"""
+    mock_bridge = AsyncMock()
+    mock_bridge.send_command.return_value = {
+        "id": "1", "success": True,
+        "result": {"total": 3, "succeeded": 3, "failed": 0, "results": []},
+    }
+    mock_get_bridge.return_value = mock_bridge
+    result = runner.invoke(cli, ["develop", "ai", "batch", "subject", "--photos", "1,2,3"])
+    assert result.exit_code == 0
+    call_args = mock_bridge.send_command.call_args
+    assert call_args[0][1]["photoIds"] == ["1", "2", "3"]
+
+
+@patch("cli.commands.ai_mask.get_bridge")
+def test_ai_batch_with_adjust_preset(mock_get_bridge, runner):
+    """lr develop ai batch sky --all-selected --adjust-preset darken-sky"""
+    mock_bridge = AsyncMock()
+    mock_bridge.send_command.return_value = {
+        "id": "1", "success": True,
+        "result": {"total": 2, "succeeded": 2, "failed": 0, "results": []},
+    }
+    mock_get_bridge.return_value = mock_bridge
+    result = runner.invoke(cli, [
+        "develop", "ai", "batch", "sky",
+        "--all-selected", "--adjust-preset", "darken-sky",
+    ])
+    assert result.exit_code == 0
+    call_args = mock_bridge.send_command.call_args
+    assert call_args[0][1]["adjustments"] == {"Exposure": -0.7, "Highlights": -30, "Saturation": 15}
+
+
+@patch("cli.commands.ai_mask.get_bridge")
+def test_ai_batch_dry_run(mock_get_bridge, runner):
+    """lr develop ai batch sky --all-selected --dry-run は実行せず対象を表示"""
+    mock_bridge = AsyncMock()
+    mock_get_bridge.return_value = mock_bridge
+    result = runner.invoke(cli, ["develop", "ai", "batch", "sky", "--all-selected", "--dry-run"])
+    assert result.exit_code == 0
+    assert "dry-run" in result.output.lower() or "Dry run" in result.output
+    mock_bridge.send_command.assert_not_called()
+
+
+def test_ai_batch_no_target(runner):
+    """--photos も --all-selected もない場合エラー"""
+    result = runner.invoke(cli, ["develop", "ai", "batch", "sky"])
+    assert result.exit_code == 0
+    assert "Specify --photos or --all-selected" in result.output

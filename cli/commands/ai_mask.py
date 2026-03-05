@@ -179,3 +179,59 @@ def ai_list(ctx):
             await bridge.disconnect()
 
     run_async(_run())
+
+
+@ai.command("batch")
+@click.argument("type", type=click.Choice(AI_SELECTION_TYPES))
+@click.option("--photos", default=None, help="Comma-separated photo IDs")
+@click.option("--all-selected", is_flag=True, help="Apply to all selected photos")
+@click.option("--adjust", default=None, help="JSON adjustment settings")
+@click.option("--adjust-preset", default=None, help="Named preset")
+@click.option("--dry-run", is_flag=True, help="Show targets without applying")
+@click.option("--continue-on-error", is_flag=True, default=True, help="Continue on errors")
+@click.pass_context
+def ai_batch(ctx, type, photos, all_selected, adjust, adjust_preset, dry_run, continue_on_error):
+    """Apply AI mask to multiple photos"""
+    fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+    timeout = ctx.obj.get("timeout", 30.0) if ctx.obj else 30.0
+
+    if not photos and not all_selected:
+        click.echo(OutputFormatter.format_error("Specify --photos or --all-selected"))
+        return
+
+    if dry_run:
+        target = "all selected photos" if all_selected else f"photos: {photos}"
+        click.echo(f"Dry run: would apply AI {type} mask to {target}")
+        return
+
+    # Resolve adjustments
+    adjustments = _resolve_adjustments(adjust, adjust_preset)
+    if isinstance(adjustments, str):
+        click.echo(OutputFormatter.format_error(adjustments))
+        return
+
+    cmd_params: dict = {
+        "selectionType": type,
+        "allSelected": all_selected,
+        "continueOnError": continue_on_error,
+    }
+    if photos:
+        cmd_params["photoIds"] = [p.strip() for p in photos.split(",")]
+    if adjustments:
+        cmd_params["adjustments"] = adjustments
+
+    async def _run():
+        bridge = get_bridge()
+        try:
+            result = await bridge.send_command(
+                "develop.batchAIMask",
+                cmd_params,
+                timeout=max(timeout, 300.0),
+            )
+            click.echo(OutputFormatter.format(result.get("result", result), fmt))
+        except Exception as e:
+            click.echo(OutputFormatter.format_error(str(e)))
+        finally:
+            await bridge.disconnect()
+
+    run_async(_run())
