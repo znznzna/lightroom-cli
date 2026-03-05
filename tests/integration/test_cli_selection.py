@@ -9,7 +9,7 @@ def runner():
     return CliRunner()
 
 
-@patch("cli.commands.selection.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_selection_flag(mock_get_bridge, runner):
     """lr selection flag が選択写真にPickフラグを設定する"""
     mock_bridge = AsyncMock()
@@ -26,7 +26,7 @@ def test_selection_flag(mock_get_bridge, runner):
     )
 
 
-@patch("cli.commands.selection.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_selection_reject(mock_get_bridge, runner):
     """lr selection reject が選択写真にRejectフラグを設定する"""
     mock_bridge = AsyncMock()
@@ -43,7 +43,7 @@ def test_selection_reject(mock_get_bridge, runner):
     )
 
 
-@patch("cli.commands.selection.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_selection_unflag(mock_get_bridge, runner):
     """lr selection unflag がフラグを解除する"""
     mock_bridge = AsyncMock()
@@ -60,7 +60,7 @@ def test_selection_unflag(mock_get_bridge, runner):
     )
 
 
-@patch("cli.commands.selection.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_selection_next(mock_get_bridge, runner):
     """lr selection next が次の写真へ移動する"""
     mock_bridge = AsyncMock()
@@ -77,7 +77,7 @@ def test_selection_next(mock_get_bridge, runner):
     )
 
 
-@patch("cli.commands.selection.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_selection_previous(mock_get_bridge, runner):
     """lr selection previous が前の写真へ移動する"""
     mock_bridge = AsyncMock()
@@ -94,7 +94,7 @@ def test_selection_previous(mock_get_bridge, runner):
     )
 
 
-@patch("cli.commands.selection.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_selection_color_label(mock_get_bridge, runner):
     """lr selection color-label red がカラーラベルを設定する"""
     mock_bridge = AsyncMock()
@@ -111,7 +111,7 @@ def test_selection_color_label(mock_get_bridge, runner):
     )
 
 
-@patch("cli.commands.selection.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_selection_select_all(mock_get_bridge, runner):
     mock_bridge = AsyncMock()
     mock_bridge.send_command.return_value = {"id": "7", "success": True, "result": {"message": "All selected"}}
@@ -121,7 +121,7 @@ def test_selection_select_all(mock_get_bridge, runner):
     mock_bridge.send_command.assert_called_once_with("selection.selectAll", {}, timeout=30.0)
 
 
-@patch("cli.commands.selection.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_selection_select_none(mock_get_bridge, runner):
     mock_bridge = AsyncMock()
     mock_bridge.send_command.return_value = {"id": "8", "success": True, "result": {"message": "None selected"}}
@@ -131,7 +131,7 @@ def test_selection_select_none(mock_get_bridge, runner):
     mock_bridge.send_command.assert_called_once_with("selection.selectNone", {}, timeout=30.0)
 
 
-@patch("cli.commands.selection.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_selection_select_inverse(mock_get_bridge, runner):
     mock_bridge = AsyncMock()
     mock_bridge.send_command.return_value = {"id": "9", "success": True, "result": {"message": "Selection inverted"}}
@@ -141,7 +141,7 @@ def test_selection_select_inverse(mock_get_bridge, runner):
     mock_bridge.send_command.assert_called_once_with("selection.selectInverse", {}, timeout=30.0)
 
 
-@patch("cli.commands.selection.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_selection_increase_rating(mock_get_bridge, runner):
     mock_bridge = AsyncMock()
     mock_bridge.send_command.return_value = {"id": "10", "success": True, "result": {"message": "Rating increased"}}
@@ -151,7 +151,7 @@ def test_selection_increase_rating(mock_get_bridge, runner):
     mock_bridge.send_command.assert_called_once_with("selection.increaseRating", {}, timeout=30.0)
 
 
-@patch("cli.commands.selection.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_selection_decrease_rating(mock_get_bridge, runner):
     mock_bridge = AsyncMock()
     mock_bridge.send_command.return_value = {"id": "11", "success": True, "result": {"message": "Rating decreased"}}
@@ -161,7 +161,7 @@ def test_selection_decrease_rating(mock_get_bridge, runner):
     mock_bridge.send_command.assert_called_once_with("selection.decreaseRating", {}, timeout=30.0)
 
 
-@patch("cli.commands.selection.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_selection_toggle_label_red(mock_get_bridge, runner):
     mock_bridge = AsyncMock()
     mock_bridge.send_command.return_value = {"id": "12", "success": True, "result": {"message": "Red label toggled"}}
@@ -171,7 +171,7 @@ def test_selection_toggle_label_red(mock_get_bridge, runner):
     mock_bridge.send_command.assert_called_once_with("selection.toggleRedLabel", {}, timeout=30.0)
 
 
-@patch("cli.commands.selection.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_selection_toggle_label_blue(mock_get_bridge, runner):
     mock_bridge = AsyncMock()
     mock_bridge.send_command.return_value = {"id": "13", "success": True, "result": {"message": "Blue label toggled"}}
@@ -181,7 +181,7 @@ def test_selection_toggle_label_blue(mock_get_bridge, runner):
     mock_bridge.send_command.assert_called_once_with("selection.toggleBlueLabel", {}, timeout=30.0)
 
 
-@patch("cli.commands.selection.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_selection_extend(mock_get_bridge, runner):
     mock_bridge = AsyncMock()
     mock_bridge.send_command.return_value = {"id": "14", "success": True, "result": {"message": "Selection extended"}}
@@ -191,7 +191,7 @@ def test_selection_extend(mock_get_bridge, runner):
     mock_bridge.send_command.assert_called_once_with("selection.extendSelection", {"direction": "right", "amount": 2}, timeout=30.0)
 
 
-@patch("cli.commands.selection.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_selection_deselect_active(mock_get_bridge, runner):
     mock_bridge = AsyncMock()
     mock_bridge.send_command.return_value = {"id": "15", "success": True, "result": {"message": "Deselected"}}
@@ -201,7 +201,7 @@ def test_selection_deselect_active(mock_get_bridge, runner):
     mock_bridge.send_command.assert_called_once_with("selection.deselectActive", {}, timeout=30.0)
 
 
-@patch("cli.commands.selection.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_selection_deselect_others(mock_get_bridge, runner):
     mock_bridge = AsyncMock()
     mock_bridge.send_command.return_value = {"id": "16", "success": True, "result": {"message": "Others deselected"}}
@@ -211,7 +211,7 @@ def test_selection_deselect_others(mock_get_bridge, runner):
     mock_bridge.send_command.assert_called_once_with("selection.deselectOthers", {}, timeout=30.0)
 
 
-@patch("cli.commands.selection.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_selection_get_flag(mock_get_bridge, runner):
     mock_bridge = AsyncMock()
     mock_bridge.send_command.return_value = {"id": "17", "success": True, "result": {"pickStatus": 1, "label": "Pick"}}
@@ -221,7 +221,7 @@ def test_selection_get_flag(mock_get_bridge, runner):
     mock_bridge.send_command.assert_called_once_with("selection.getFlag", {}, timeout=30.0)
 
 
-@patch("cli.commands.selection.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_selection_get_rating(mock_get_bridge, runner):
     mock_bridge = AsyncMock()
     mock_bridge.send_command.return_value = {"id": "18", "success": True, "result": {"rating": 3}}
@@ -231,7 +231,7 @@ def test_selection_get_rating(mock_get_bridge, runner):
     mock_bridge.send_command.assert_called_once_with("selection.getRating", {}, timeout=30.0)
 
 
-@patch("cli.commands.selection.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_selection_set_rating(mock_get_bridge, runner):
     mock_bridge = AsyncMock()
     mock_bridge.send_command.return_value = {"id": "19", "success": True, "result": {"rating": 4}}
@@ -241,14 +241,14 @@ def test_selection_set_rating(mock_get_bridge, runner):
     mock_bridge.send_command.assert_called_once_with("selection.setRating", {"rating": 4}, timeout=30.0)
 
 
-@patch("cli.commands.selection.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_selection_set_rating_invalid(mock_get_bridge, runner):
     """範囲外のrating(6)はClickがエラーにする"""
     result = runner.invoke(cli, ["selection", "set-rating", "6"])
     assert result.exit_code != 0
 
 
-@patch("cli.commands.selection.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_selection_get_color_label(mock_get_bridge, runner):
     mock_bridge = AsyncMock()
     mock_bridge.send_command.return_value = {"id": "20", "success": True, "result": {"label": "red"}}

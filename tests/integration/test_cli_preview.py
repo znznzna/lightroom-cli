@@ -9,7 +9,7 @@ def runner():
     return CliRunner()
 
 
-@patch("cli.commands.preview.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_preview_generate_current(mock_get_bridge, runner):
     """lr preview generate-current が現在の写真のプレビューを生成する"""
     mock_bridge = AsyncMock()
@@ -26,7 +26,7 @@ def test_preview_generate_current(mock_get_bridge, runner):
     )
 
 
-@patch("cli.commands.preview.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_preview_generate_with_options(mock_get_bridge, runner):
     """lr preview generate --size 2048 --format png がオプションを渡す"""
     mock_bridge = AsyncMock()
@@ -43,7 +43,7 @@ def test_preview_generate_with_options(mock_get_bridge, runner):
     )
 
 
-@patch("cli.commands.preview.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_preview_generate_batch(mock_get_bridge, runner):
     """lr preview generate-batch がバッチプレビュー生成する（タイムアウト300秒）"""
     mock_bridge = AsyncMock()
@@ -60,7 +60,7 @@ def test_preview_generate_batch(mock_get_bridge, runner):
     )
 
 
-@patch("cli.commands.preview.get_bridge")
+@patch("cli.helpers.get_bridge")
 def test_preview_info(mock_get_bridge, runner):
     """lr preview info <photo_id> がプレビュー情報を返す"""
     mock_bridge = AsyncMock()
