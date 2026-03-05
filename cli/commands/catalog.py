@@ -50,7 +50,7 @@ def get_info(ctx, photo_id, **kwargs):
 
 @catalog.command("set-rating")
 @click.argument("photo_id")
-@click.argument("rating", type=int)
+@click.argument("rating", type=click.IntRange(0, 5))
 @click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @json_input_options
 @click.pass_context

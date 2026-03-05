@@ -40,11 +40,13 @@ class CommandSchema:
 # ---------------------------------------------------------------------------
 
 COMMAND_SCHEMAS: dict[str, CommandSchema] = {}
+_CLI_PATH_INDEX: dict[str, CommandSchema] = {}
 
 
 def _register(*schemas: CommandSchema) -> None:
     for s in schemas:
         COMMAND_SCHEMAS[s.command] = s
+        _CLI_PATH_INDEX[s.cli_path] = s
 
 
 # --- system ---
@@ -53,6 +55,16 @@ _register(
                   response_fields=["status", "timestamp"]),
     CommandSchema("system.status", "system.status", "Get bridge status", timeout=5.0,
                   response_fields=["status", "uptime", "version", "connections"]),
+    CommandSchema("system.reconnect", "system.reconnect",
+                  "Force reconnection to Lightroom", timeout=10.0),
+    CommandSchema("system.checkConnection", "system.check-connection",
+                  "Check if Lightroom is available",
+                  params=[
+                      ParamSchema("portFile", ParamType.STRING,
+                                  description="Path to port file (default: auto-detect)"),
+                  ],
+                  timeout=5.0,
+                  response_fields=["status", "reason"]),
 )
 
 # --- develop (主要) ---
@@ -365,11 +377,37 @@ _register(
                   mutating=True),
 )
 
-# --- develop.ai ---
+# --- develop.ai (individual types) ---
+_AI_TYPES = ["subject", "sky", "background", "objects", "people", "landscape"]
+
+for _ai_type in _AI_TYPES:
+    _extra_params: list[ParamSchema] = []
+    if _ai_type == "people":
+        _extra_params = [ParamSchema("part", ParamType.STRING,
+                                     description="Specific part to mask (e.g. eyes, hair)")]
+    elif _ai_type == "landscape":
+        _extra_params = [ParamSchema("part", ParamType.STRING,
+                                     description="Specific part to mask (e.g. mountain, tree)")]
+
+    _register(
+        CommandSchema(
+            f"develop.ai.{_ai_type}", f"develop.ai.{_ai_type}",
+            f"Create AI {_ai_type} mask with optional adjustments",
+            params=[
+                *_extra_params,
+                ParamSchema("adjustments", ParamType.JSON_OBJECT,
+                            description="Optional develop adjustments to apply"),
+            ],
+            mutating=True, timeout=60.0,
+        ),
+    )
+
+# Bridge command alias: ai_mask.py calls execute_command("develop.createAIMaskWithAdjustments", ...)
+# Register a shared schema so validation/dry-run still works for the bridge command name.
 _register(
     CommandSchema(
-        "develop.createAIMaskWithAdjustments", "develop.ai.mask",
-        "Create AI mask with optional adjustments",
+        "develop.createAIMaskWithAdjustments", "develop.ai._bridge",
+        "Create AI mask with adjustments (internal bridge command)",
         params=[
             ParamSchema("selectionType", ParamType.ENUM, required=True,
                         description="AI mask selection type",
@@ -378,10 +416,19 @@ _register(
             ParamSchema("adjustments", ParamType.JSON_OBJECT,
                         description="Optional develop adjustments to apply"),
             ParamSchema("part", ParamType.STRING,
-                        description="Specific part to mask (e.g. eyes, hair)"),
+                        description="Specific part to mask"),
         ],
         mutating=True, timeout=60.0,
     ),
+)
+
+_register(
+    CommandSchema("develop.ai.presets", "develop.ai.presets",
+                  "List available adjustment presets"),
+    CommandSchema("develop.ai.reset", "develop.ai.reset",
+                  "Remove all masks from the current photo", mutating=True),
+    CommandSchema("develop.ai.list", "develop.ai.list",
+                  "List all masks on the current photo"),
     CommandSchema(
         "develop.batchAIMask", "develop.ai.batch",
         "Apply AI mask to multiple photos",
@@ -741,8 +788,9 @@ _register(
 # Lookup functions
 # ---------------------------------------------------------------------------
 
-def get_schema(command: str) -> CommandSchema | None:
-    return COMMAND_SCHEMAS.get(command)
+def get_schema(key: str) -> CommandSchema | None:
+    """コマンド名または cli_path でスキーマを取得（dual lookup）"""
+    return COMMAND_SCHEMAS.get(key) or _CLI_PATH_INDEX.get(key)
 
 
 def get_schemas_by_group(group: str) -> dict[str, CommandSchema]:
