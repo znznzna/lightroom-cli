@@ -29,34 +29,36 @@ def schema_cmd(ctx, path):
                 groups[group]["mutating"] += 1
         click.echo(OutputFormatter.format(list(groups.values()), fmt))
 
-    elif "." not in path:
-        schemas = get_schemas_by_group(path)
-        if not schemas:
-            click.echo(OutputFormatter.format_error(f"Unknown group: {path}", fmt), err=True)
-            ctx.exit(1)
-            return
-        summary = [
-            {
-                "command": s.cli_path,
-                "description": s.description,
-                "mutating": s.mutating,
-                "params": len(s.params),
-            }
-            for s in schemas.values()
-        ]
-        click.echo(OutputFormatter.format(summary, fmt))
-
     else:
-        schemas = get_all_schemas()
+        # まず完全一致でコマンドを探す
+        all_schemas = get_all_schemas()
         target = None
-        for s in schemas.values():
+        for s in all_schemas.values():
             if s.cli_path == path or s.command == path:
                 target = s
                 break
-        if target is None:
-            click.echo(OutputFormatter.format_error(f"Unknown command: {path}", fmt), err=True)
-            ctx.exit(1)
-            return
+
+        if target is not None:
+            pass  # コマンド詳細表示（下で処理）
+        else:
+            # グループとして探す（develop, develop.ai 等）
+            group_schemas = get_schemas_by_group(path)
+            if group_schemas:
+                summary = [
+                    {
+                        "command": s.cli_path,
+                        "description": s.description,
+                        "mutating": s.mutating,
+                        "params": len(s.params),
+                    }
+                    for s in group_schemas.values()
+                ]
+                click.echo(OutputFormatter.format(summary, fmt))
+                return
+            else:
+                click.echo(OutputFormatter.format_error(f"Unknown group or command: {path}", fmt), err=True)
+                ctx.exit(1)
+                return
         detail = {
             "command": target.cli_path,
             "bridge_command": target.command,

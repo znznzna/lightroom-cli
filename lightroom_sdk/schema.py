@@ -368,7 +368,7 @@ _register(
 # --- develop.ai ---
 _register(
     CommandSchema(
-        "develop.createAIMaskWithAdjustments", "develop.ai.<type>",
+        "develop.createAIMaskWithAdjustments", "develop.ai.mask",
         "Create AI mask with optional adjustments",
         params=[
             ParamSchema("selectionType", ParamType.ENUM, required=True,

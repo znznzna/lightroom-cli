@@ -49,6 +49,21 @@ class TestSchemaCommand:
         assert "error" in result.output.lower() or "unknown" in result.output.lower()
 
 
+class TestSchemaAIGroup:
+    """lr schema develop.ai グループのテスト"""
+
+    @pytest.fixture
+    def runner(self):
+        return CliRunner()
+
+    def test_schema_develop_ai_group(self, runner):
+        result = runner.invoke(cli, ["-o", "json", "schema", "develop.ai"])
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert isinstance(data, list)
+        assert len(data) >= 2
+
+
 class TestSchemaExitCodes:
     """lr schema のエラー時 exit code テスト"""
 

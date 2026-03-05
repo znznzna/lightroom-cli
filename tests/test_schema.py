@@ -109,6 +109,23 @@ class TestParamDescriptions:
         assert missing == [], f"Empty descriptions: {missing}"
 
 
+class TestDevelopAISchema:
+    """develop.ai スキーマのテスト"""
+
+    def test_ai_mask_schema_exists(self):
+        from lightroom_sdk.schema import get_schema
+        schema = get_schema("develop.createAIMaskWithAdjustments")
+        assert schema is not None
+        assert schema.cli_path == "develop.ai.mask"
+
+    def test_ai_group_lists_mask_and_batch(self):
+        from lightroom_sdk.schema import get_schemas_by_group
+        schemas = get_schemas_by_group("develop.ai")
+        cli_paths = [s.cli_path for s in schemas.values()]
+        assert "develop.ai.mask" in cli_paths
+        assert "develop.ai.batch" in cli_paths
+
+
 class TestResponseFields:
     """response_fields の充実テスト"""
 
