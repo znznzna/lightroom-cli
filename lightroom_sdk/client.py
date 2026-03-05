@@ -111,3 +111,39 @@ class LightroomClient:
         return await self.execute_command(
             "develop.createAIMaskWithAdjustments", params, timeout=timeout
         )
+
+    async def batch_ai_mask(
+        self,
+        selection_type: str,
+        photo_ids: Optional[list[str]] = None,
+        all_selected: bool = False,
+        part: Optional[str] = None,
+        adjustments: Optional[Dict[str, float]] = None,
+        continue_on_error: bool = True,
+        timeout: float = 300.0,
+    ) -> Dict[str, Any]:
+        """Apply AI mask to multiple photos.
+
+        Args:
+            selection_type: One of subject, sky, background, objects, people, landscape
+            photo_ids: List of photo IDs to process
+            all_selected: If True, apply to all currently selected photos
+            part: Optional body/landscape part
+            adjustments: Optional dict of develop parameter adjustments
+            continue_on_error: If True, continue processing on individual failures
+            timeout: Command timeout in seconds
+        """
+        params: Dict[str, Any] = {
+            "selectionType": selection_type,
+            "allSelected": all_selected,
+            "continueOnError": continue_on_error,
+        }
+        if photo_ids:
+            params["photoIds"] = photo_ids
+        if part:
+            params["part"] = part
+        if adjustments:
+            params["adjustments"] = adjustments
+        return await self.execute_command(
+            "develop.batchAIMask", params, timeout=timeout
+        )

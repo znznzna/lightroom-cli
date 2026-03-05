@@ -93,3 +93,42 @@ async def test_create_ai_mask_with_part(mock_lr_server):
         assert result["part"] == "eyes"
     finally:
         await client.disconnect()
+
+
+@pytest.mark.asyncio
+async def test_batch_ai_mask_with_photo_ids(mock_lr_server):
+    """batch_ai_mask が photoIds 付きで送信される"""
+    mock_lr_server.register_response("develop.batchAIMask", {
+        "total": 2, "succeeded": 2, "failed": 0,
+        "results": [
+            {"photoId": "1", "status": "success"},
+            {"photoId": "2", "status": "success"},
+        ],
+    })
+
+    client = LightroomClient.__new__(LightroomClient)
+    client._bridge = SocketBridge(port_file=str(mock_lr_server.port_file))
+    await client._bridge.connect(retry_attempts=1)
+    try:
+        result = await client.batch_ai_mask("sky", photo_ids=["1", "2"])
+        assert result["total"] == 2
+        assert result["succeeded"] == 2
+    finally:
+        await client.disconnect()
+
+
+@pytest.mark.asyncio
+async def test_batch_ai_mask_all_selected(mock_lr_server):
+    """batch_ai_mask --all-selected で allSelected=True が送信される"""
+    mock_lr_server.register_response("develop.batchAIMask", {
+        "total": 3, "succeeded": 3, "failed": 0, "results": [],
+    })
+
+    client = LightroomClient.__new__(LightroomClient)
+    client._bridge = SocketBridge(port_file=str(mock_lr_server.port_file))
+    await client._bridge.connect(retry_attempts=1)
+    try:
+        result = await client.batch_ai_mask("subject", all_selected=True)
+        assert result["total"] == 3
+    finally:
+        await client.disconnect()
