@@ -13,23 +13,17 @@ class TestGetPortFile:
 
         assert get_port_file() == Path("/custom/path.txt")
 
-    def test_macos_default(self, monkeypatch):
+    def test_default_uses_tmp_on_macos(self, monkeypatch):
         monkeypatch.delenv("LR_PORT_FILE", raising=False)
-        with patch.object(lightroom_sdk.paths.sys, "platform", "darwin"):
+        with patch("sys.platform", "darwin"):
             result = lightroom_sdk.paths.get_port_file()
-            assert result == Path("/tmp/lightroom_ports.txt")
-
-    def test_linux_default(self, monkeypatch):
-        monkeypatch.delenv("LR_PORT_FILE", raising=False)
-        with patch.object(lightroom_sdk.paths.sys, "platform", "linux"):
-            result = lightroom_sdk.paths.get_port_file()
-            assert result == Path("/tmp/lightroom_ports.txt")
+        # macOS/Linux では /tmp を使用（Lightroom SDK と一致）
+        assert result == Path("/tmp") / "lightroom_ports.txt"
 
     def test_env_override_takes_priority(self, monkeypatch):
         monkeypatch.setenv("LR_PORT_FILE", "/override/ports.txt")
-        with patch.object(lightroom_sdk.paths.sys, "platform", "darwin"):
-            result = lightroom_sdk.paths.get_port_file()
-            assert result == Path("/override/ports.txt")
+        result = lightroom_sdk.paths.get_port_file()
+        assert result == Path("/override/ports.txt")
 
 
 class TestGetLightroomModulesDir:
@@ -41,19 +35,19 @@ class TestGetLightroomModulesDir:
 
     def test_macos_default(self, monkeypatch):
         monkeypatch.delenv("LR_PLUGIN_DIR", raising=False)
-        with patch.object(lightroom_sdk.paths.sys, "platform", "darwin"):
+        with patch("sys.platform", "darwin"):
             result = lightroom_sdk.paths.get_lightroom_modules_dir()
             assert "Library/Application Support/Adobe/Lightroom/Modules" in str(result)
 
     def test_linux_raises(self, monkeypatch):
         monkeypatch.delenv("LR_PLUGIN_DIR", raising=False)
-        with patch.object(lightroom_sdk.paths.sys, "platform", "linux"):
+        with patch("sys.platform", "linux"):
             with pytest.raises(RuntimeError, match="Unsupported platform"):
                 lightroom_sdk.paths.get_lightroom_modules_dir()
 
     def test_env_override_bypasses_platform_check(self, monkeypatch):
         monkeypatch.setenv("LR_PLUGIN_DIR", "/custom/lr/modules")
-        with patch.object(lightroom_sdk.paths.sys, "platform", "linux"):
+        with patch("sys.platform", "linux"):
             result = lightroom_sdk.paths.get_lightroom_modules_dir()
             assert result == Path("/custom/lr/modules")
 
@@ -107,3 +101,33 @@ class TestSystemCommandUsesPathsModule:
         sig = inspect.signature(get_bridge)
         default = sig.parameters["port_file"].default
         assert default is None
+
+
+import tempfile
+from unittest.mock import patch as stdlib_patch
+
+
+def test_get_port_file_macos_uses_tmp():
+    """macOS では /tmp を使用すること（Lightroom SDK と一致）"""
+    from lightroom_sdk.paths import get_port_file
+    import os
+
+    with patch.dict("os.environ", {}, clear=True):
+        os.environ.pop("LR_PORT_FILE", None)
+        with stdlib_patch("lightroom_sdk.paths.sys") as mock_sys:
+            mock_sys.platform = "darwin"
+            result = get_port_file()
+        assert result == Path("/tmp") / "lightroom_ports.txt"
+
+
+def test_get_port_file_windows_uses_tempfile():
+    """Windows では tempfile.gettempdir() を使用すること"""
+    from lightroom_sdk.paths import get_port_file
+    import os
+
+    with patch.dict("os.environ", {}, clear=True):
+        os.environ.pop("LR_PORT_FILE", None)
+        with stdlib_patch("lightroom_sdk.paths.sys") as mock_sys:
+            mock_sys.platform = "win32"
+            result = get_port_file()
+        assert result == Path(tempfile.gettempdir()) / "lightroom_ports.txt"
