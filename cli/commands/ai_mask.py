@@ -117,11 +117,26 @@ def ai_presets(ctx):
 
 
 @ai.command("reset")
+@click.option("--confirm", is_flag=True, default=False,
+              help="Required confirmation flag (removes all masks)")
 @click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @json_input_options
 @click.pass_context
-def ai_reset(ctx, dry_run, **kwargs):
-    """Remove all masks from the current photo"""
+def ai_reset(ctx, confirm, dry_run, **kwargs):
+    """Remove all masks from the current photo (requires --confirm)"""
+    if not confirm and not dry_run:
+        fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+        click.echo(
+            OutputFormatter.format_error(
+                "This will remove all masks. Pass --confirm to proceed.",
+                fmt, code="CONFIRMATION_REQUIRED",
+                suggestions=["Add --confirm flag: lr develop ai reset --confirm",
+                              "Use --dry-run first to preview: lr develop ai reset --dry-run"],
+            ),
+            err=True,
+        )
+        ctx.exit(2)
+        return
     execute_command(ctx, "develop.resetMasking", {})
 
 

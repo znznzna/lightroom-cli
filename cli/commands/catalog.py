@@ -332,9 +332,24 @@ def get_view_filter(ctx, **kwargs):
 
 @catalog.command("remove-from-catalog")
 @click.argument("photo_id")
+@click.option("--confirm", is_flag=True, default=False,
+              help="Required confirmation flag (this operation is irreversible)")
 @click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @json_input_options
 @click.pass_context
-def remove_from_catalog(ctx, photo_id, dry_run, **kwargs):
-    """Remove photo from catalog"""
+def remove_from_catalog(ctx, photo_id, confirm, dry_run, **kwargs):
+    """Remove photo from catalog (irreversible, requires --confirm)"""
+    if not confirm and not dry_run:
+        fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+        click.echo(
+            OutputFormatter.format_error(
+                "This operation is irreversible. Pass --confirm to proceed.",
+                fmt, code="CONFIRMATION_REQUIRED",
+                suggestions=["Add --confirm flag: lr catalog remove-from-catalog PHOTO_ID --confirm",
+                              "Use --dry-run first to preview: lr catalog remove-from-catalog PHOTO_ID --dry-run"],
+            ),
+            err=True,
+        )
+        ctx.exit(2)
+        return
     execute_command(ctx, "catalog.removeFromCatalog", {"photoId": photo_id})

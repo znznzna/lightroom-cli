@@ -80,7 +80,7 @@ lr catalog set-rating 12345 5
 | `lr catalog keywords` | List all keywords |
 | `lr catalog rotate-left` | Rotate photo left |
 | `lr catalog create-virtual-copy` | Create virtual copy |
-| `lr catalog find --flag pick --rating 3` | Find photos by criteria (flag/rating/color/camera) |
+| `lr catalog find --flag pick --rating 3 --rating-op ">="` | Find photos by criteria (see options below) |
 | `lr catalog select PHOTO_ID [PHOTO_ID ...]` | Select photos by ID |
 | `lr catalog find-by-path PATH` | Find photo by file path |
 | `lr catalog folders [--recursive]` | List folders in catalog |
@@ -88,7 +88,7 @@ lr catalog set-rating 12345 5
 | `lr catalog get-flag PHOTO_ID` | Get photo flag status |
 | `lr catalog set-caption PHOTO_ID "caption"` | Set photo caption |
 | `lr catalog set-color-label PHOTO_ID COLOR` | Set color label (red/yellow/green/blue/purple/none) |
-| `lr catalog batch-metadata PHOTO_ID [PHOTO_ID ...]` | Get formatted metadata for multiple photos |
+| `lr catalog batch-metadata PHOTO_ID [...] --keys k1,k2` | Get formatted metadata (keys: fileName,dateTimeOriginal,rating,...) |
 | `lr catalog rotate-right` | Rotate photo right |
 | `lr catalog set-metadata PHOTO_ID KEY VALUE` | Set arbitrary metadata |
 | `lr catalog create-smart-collection "name" --search-desc JSON` | Create smart collection |
@@ -97,7 +97,24 @@ lr catalog set-rating 12345 5
 | `lr catalog remove-keyword PHOTO_ID keyword` | Remove keyword from photo |
 | `lr catalog set-view-filter --filter JSON` | Set library view filter |
 | `lr catalog get-view-filter` | Get current view filter |
-| `lr catalog remove-from-catalog PHOTO_ID` | Remove photo from catalog (irreversible!) |
+| `lr catalog remove-from-catalog PHOTO_ID --confirm` | Remove photo from catalog (irreversible, requires --confirm) |
+
+#### catalog find Options
+
+| Option | Values | Description |
+|--------|--------|-------------|
+| `--flag` | `pick`, `reject`, `none` | Filter by flag status |
+| `--rating` | `0`-`5` | Filter by star rating |
+| `--rating-op` | `==`, `>=`, `<=`, `>`, `<` | Rating comparison (default: `==`) |
+| `--color-label` | `red`, `yellow`, `green`, `blue`, `purple`, `none` | Filter by color label |
+| `--camera` | string | Filter by camera model |
+| `--limit` | integer | Max results (default: 50) |
+| `--offset` | integer | Pagination offset (default: 0) |
+
+Example: Find all 4+ star photos:
+```bash
+lr -o json catalog find --rating 4 --rating-op ">="
+```
 
 ### develop — Image editing
 
@@ -118,7 +135,7 @@ lr catalog set-rating 12345 5
 | `lr develop reset-param PARAM` | Reset single parameter to default |
 | `lr develop process-version` | Get current process version |
 | `lr develop set-process-version VERSION` | Set process version |
-| `lr develop tool TOOL` | Select tool (loupe/crop/dust/redeye/gradient/circularGradient) |
+| `lr develop tool TOOL` | Select tool (loupe/crop/dust/redeye/gradient/circularGradient/localized/upright) |
 | `lr develop edit-in-photoshop` | Edit selected photo in Photoshop |
 
 #### Develop Parameters Reference
@@ -152,9 +169,11 @@ Use `lr develop range PARAM` to get the exact min/max for any parameter.
 
 #### Tone Curve
 
+All curve commands accept `--channel` (default: `RGB`, options: `RGB`, `Red`, `Green`, `Blue`).
+
 | Command | Description |
 |---------|-------------|
-| `lr develop curve get` | Get curve points |
+| `lr develop curve get --channel RGB` | Get curve points |
 | `lr develop curve set --points '[[0,0],[128,140],[255,255]]'` | Set curve |
 | `lr develop curve s-curve` | Apply S-curve preset |
 | `lr develop curve linear` | Reset to linear |
@@ -183,9 +202,21 @@ Use `lr develop range PARAM` to get the exact min/max for any parameter.
 | `lr develop ai people` | Create AI people mask |
 | `lr develop ai landscape` | Create AI landscape mask |
 | `lr develop ai list` | List all masks on current photo |
-| `lr develop ai reset` | Remove all masks from current photo |
+| `lr develop ai reset --confirm` | Remove all masks from current photo (requires --confirm) |
 | `lr develop ai presets` | List available adjustment presets |
 | `lr develop ai batch TYPE --photos ID1,ID2` | Apply AI mask to multiple photos |
+
+**Inline adjustments:** All AI mask type commands (`subject`, `sky`, etc.) accept:
+- `--adjust '{"Exposure": -1.0, "Contrast": 20}'` — Apply adjustments as JSON
+- `--adjust-preset NAME` — Apply named preset (use `lr develop ai presets` to list available names)
+
+```bash
+# Create sky mask and darken it
+lr develop ai sky --adjust '{"Exposure": -1.0, "Highlights": -30}'
+
+# Create subject mask with a named preset
+lr develop ai subject --adjust-preset brighten-subject
+```
 
 #### Filters
 
@@ -317,6 +348,49 @@ lr catalog add-keywords PHOTO_ID sunset landscape golden-hour
 lr catalog create-collection "Best Sunsets"
 ```
 
+### AI mask with adjustments
+
+```bash
+# Create sky mask and darken the sky
+lr develop ai sky --adjust '{"Exposure": -1.0, "Highlights": -30}'
+
+# Or use a named preset
+lr develop ai subject --adjust-preset brighten-subject
+
+# List available presets
+lr -o json develop ai presets
+```
+
+### Batch find + mutate (agent pattern)
+
+```bash
+# 1. Find photos matching criteria
+photos=$(lr -o json catalog find --rating 4 --rating-op ">=")
+
+# 2. Extract IDs and iterate
+# (agent parses JSON, loops over photos[].id)
+lr catalog add-keywords PHOTO_ID1 portfolio
+lr catalog add-keywords PHOTO_ID2 portfolio
+# ... repeat for each ID
+```
+
+> **Note:** There is no single "find and mutate" command. Agents should parse the JSON result from `find`/`search`/`list` and call mutating commands per photo ID. This is the standard pattern for batch operations.
+
+### Safe editing with snapshots
+
+```bash
+# 1. Create a snapshot BEFORE making changes (acts as undo checkpoint)
+lr develop snapshot "before-edit"
+
+# 2. Make edits
+lr develop set Exposure 1.0 Contrast 25
+
+# 3. If unhappy, reset and try again
+lr develop reset
+```
+
+> **Note:** There is no undo/redo command. Always create a snapshot before significant edits so you can reset and re-apply from a known state.
+
 ### Quick culling workflow
 
 ```bash
@@ -403,3 +477,46 @@ echo '{"parameter": "Contrast", "value": 25}' | lr develop set --json-stdin
 - Connection errors: The CLI auto-retries with exponential backoff
 - Timeout: Use `-t SECONDS` to increase timeout for slow operations
 - Plugin not running: `lr system check-connection` for diagnostics
+
+Error response example:
+```json
+{"error": {"code": "CONFIRMATION_REQUIRED", "message": "This operation is irreversible. Pass --confirm to proceed.", "suggestions": ["Add --confirm flag: lr catalog remove-from-catalog PHOTO_ID --confirm"]}}
+```
+
+## Response Examples
+
+### catalog get-selected
+```json
+{"photos": [{"id": "12345", "filename": "IMG_001.jpg", "path": "/path/to/IMG_001.jpg"}], "count": 1}
+```
+
+### catalog find
+```json
+{"photos": [{"id": "12345", "filename": "IMG_001.jpg", "rating": 5}], "total": 42, "criteria": {"rating": 4, "ratingOp": ">="}}
+```
+
+### develop get-settings
+```json
+{"Exposure": 0.5, "Contrast": 25, "Highlights": -10, "Shadows": 30, "Whites": 0, "Blacks": 0, "Temperature": 5500, "Tint": 0, ...}
+```
+
+### preview generate
+```json
+{"path": "/tmp/lr_preview_12345.jpg", "size": 2048, "format": "jpeg"}
+```
+
+### schema detail (`lr -o json schema develop.set`)
+```json
+{"command": "develop.set", "bridge_command": "develop.setValue", "description": "Set develop parameter(s)", "mutating": true, "timeout": 10.0, "params": [{"name": "parameter", "type": "string", "required": true, "description": "Develop parameter name"}, {"name": "value", "type": "float", "required": true, "description": "Parameter value"}], "response_fields": ["parameter", "value", "previousValue"]}
+```
+
+## Limitations
+
+- **No Undo/Redo**: There is no undo command. **Workaround:** Always run `lr develop snapshot "before-edit"` before significant changes. To revert, use `lr develop reset` and re-apply from the snapshot. See "Safe editing with snapshots" workflow above.
+- **No batch mutate command**: There is no "find and apply" single command. **Workaround:** Use `lr -o json catalog find ...` to get photo IDs, then call mutating commands per ID in a loop. See "Batch find + mutate" workflow above.
+- **Values are absolute, not relative**: `lr develop set Exposure 0.5` sets Exposure to 0.5, not +0.5 from current. **Workaround:** Read current value with `lr -o json develop get PARAM` first, then compute and set the new absolute value.
+- **No preset listing**: `lr develop preset` applies a preset by name, but there is no command to list all available Lightroom presets. **Workaround:** Ask the user for the preset name.
+- **Preview output is a file path**: `lr preview generate` returns a file path to a JPEG/PNG on disk, not image data. **Workaround:** Use the Read tool or filesystem access to view the file at the returned path.
+- **Single connection**: Only one CLI session should control Lightroom at a time. Concurrent operations are not supported.
+- **Out-of-range values**: Values outside parameter ranges (e.g., `Exposure 10.0`) are rejected with a validation error. Use `lr develop range PARAM` to check valid ranges.
+- **Catalog removal is catalog-only**: `lr catalog remove-from-catalog` removes the photo reference from the Lightroom catalog. The physical file on disk is NOT deleted.

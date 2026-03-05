@@ -84,6 +84,12 @@ def test_catalog_remove_from_catalog(mock_get_bridge, runner):
     mock_bridge = AsyncMock()
     mock_bridge.send_command.return_value = {"id": "8", "success": True, "result": {"message": "Removed"}}
     mock_get_bridge.return_value = mock_bridge
-    result = runner.invoke(cli, ["catalog", "remove-from-catalog", "123"])
+    # Without --confirm, should fail with exit code 2
+    result_no_confirm = runner.invoke(cli, ["catalog", "remove-from-catalog", "123"])
+    assert result_no_confirm.exit_code == 2
+    assert "--confirm" in result_no_confirm.output
+
+    # With --confirm, should succeed
+    result = runner.invoke(cli, ["catalog", "remove-from-catalog", "123", "--confirm"])
     assert result.exit_code == 0
     mock_bridge.send_command.assert_called_once_with("catalog.removeFromCatalog", {"photoId": "123"}, timeout=30.0)

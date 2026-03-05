@@ -73,6 +73,8 @@ def schema_cmd(ctx, path):
                     "description": p.description,
                     **({"default": p.default} if p.default is not None else {}),
                     **({"enum_values": p.enum_values} if p.enum_values else {}),
+                    **({"min": p.min} if p.min is not None else {}),
+                    **({"max": p.max} if p.max is not None else {}),
                 }
                 for p in target.params
             ],

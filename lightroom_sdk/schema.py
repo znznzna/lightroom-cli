@@ -22,6 +22,8 @@ class ParamSchema:
     description: str = ""
     default: object = None
     enum_values: list[str] | None = None
+    min: float | int | None = None
+    max: float | int | None = None
 
 
 @dataclass
@@ -56,7 +58,8 @@ _register(
     CommandSchema("system.status", "system.status", "Get bridge status", timeout=5.0,
                   response_fields=["status", "uptime", "version", "connections"]),
     CommandSchema("system.reconnect", "system.reconnect",
-                  "Force reconnection to Lightroom", timeout=10.0),
+                  "Force reconnection to Lightroom", timeout=10.0,
+                  response_fields=["status"]),
     CommandSchema("system.checkConnection", "system.check-connection",
                   "Check if Lightroom is available",
                   params=[
@@ -85,6 +88,7 @@ _register(
                         description="Parameter value"),
         ],
         mutating=True, timeout=10.0,
+        response_fields=["parameter", "value", "previousValue"],
     ),
     CommandSchema(
         "develop.getValue", "develop.get",
@@ -103,6 +107,7 @@ _register(
                         description="JSON object of settings to apply"),
         ],
         mutating=True,
+        response_fields=["applied", "settings"],
     ),
     CommandSchema(
         "develop.batchApplySettings", "develop.batch-apply",
@@ -112,16 +117,19 @@ _register(
                         description="JSON object of settings to apply"),
         ],
         mutating=True,
+        response_fields=["applied", "settings"],
     ),
     CommandSchema(
         "develop.setAutoTone", "develop.auto-tone",
         "Apply auto tone adjustments",
         mutating=True,
+        response_fields=["status"],
     ),
     CommandSchema(
         "develop.setAutoWhiteBalance", "develop.auto-wb",
         "Apply auto white balance",
         mutating=True,
+        response_fields=["status"],
     ),
     CommandSchema(
         "develop.selectTool", "develop.tool",
@@ -133,6 +141,7 @@ _register(
                                      "gradient", "circularGradient",
                                      "localized", "upright"]),
         ],
+        response_fields=["tool", "status"],
     ),
     CommandSchema(
         "develop.resetAllDevelopAdjustments", "develop.reset",
@@ -160,6 +169,7 @@ _register(
     CommandSchema(
         "develop.getProcessVersion", "develop.process-version",
         "Get the current process version",
+        response_fields=["version"],
     ),
     CommandSchema(
         "develop.setProcessVersion", "develop.set-process-version",
@@ -181,6 +191,7 @@ _register(
             ParamSchema("param", ParamType.STRING, required=True,
                         description="Curve parameter name"),
         ],
+        response_fields=["points", "param"],
     ),
     CommandSchema(
         "develop.setCurvePoints", "develop.curve.set",
@@ -235,9 +246,12 @@ _register(
 
 # --- develop.mask ---
 _register(
-    CommandSchema("develop.getAllMasks", "develop.mask.list", "List all masks"),
-    CommandSchema("develop.getSelectedMask", "develop.mask.selected", "Get selected mask"),
-    CommandSchema("develop.goToMasking", "develop.mask.go-to", "Go to masking view"),
+    CommandSchema("develop.getAllMasks", "develop.mask.list", "List all masks",
+                  response_fields=["masks", "count"]),
+    CommandSchema("develop.getSelectedMask", "develop.mask.selected", "Get selected mask",
+                  response_fields=["mask"]),
+    CommandSchema("develop.goToMasking", "develop.mask.go-to", "Go to masking view",
+                  response_fields=["status"]),
     CommandSchema("develop.toggleOverlay", "develop.mask.toggle-overlay", "Toggle mask overlay"),
 )
 
@@ -248,6 +262,7 @@ _register(
         "Get a local adjustment parameter value",
         params=[ParamSchema("parameter", ParamType.STRING, required=True,
                             description="Local adjustment parameter name")],
+        response_fields=["parameter", "value"],
     ),
     CommandSchema(
         "develop.setLocalValue", "develop.local.set",
@@ -272,6 +287,7 @@ _register(
     CommandSchema(
         "develop.getAvailableLocalParameters", "develop.local.params",
         "List available local adjustment parameters",
+        response_fields=["parameters"],
     ),
     CommandSchema(
         "develop.createMaskWithLocalAdjustments", "develop.local.create-mask",
@@ -344,7 +360,8 @@ _register(
                                       description="Snapshot name")],
                   mutating=True),
     CommandSchema("catalog.copySettings", "develop.copy-settings",
-                  "Copy develop settings from selected photo"),
+                  "Copy develop settings from selected photo",
+                  response_fields=["status"]),
     CommandSchema("catalog.pasteSettings", "develop.paste-settings",
                   "Paste develop settings to selected photo", mutating=True),
 )
@@ -424,11 +441,13 @@ _register(
 
 _register(
     CommandSchema("develop.ai.presets", "develop.ai.presets",
-                  "List available adjustment presets"),
+                  "List available adjustment presets",
+                  response_fields=["presets"]),
     CommandSchema("develop.ai.reset", "develop.ai.reset",
                   "Remove all masks from the current photo", mutating=True),
     CommandSchema("develop.ai.list", "develop.ai.list",
-                  "List all masks on the current photo"),
+                  "List all masks on the current photo",
+                  response_fields=["masks", "count"]),
     CommandSchema(
         "develop.batchAIMask", "develop.ai.batch",
         "Apply AI mask to multiple photos",
@@ -494,9 +513,10 @@ _register(
             ParamSchema("photoId", ParamType.STRING, required=True,
                         description="Photo ID (obtain via catalog list or get-selected)"),
             ParamSchema("rating", ParamType.INTEGER, required=True,
-                        description="Star rating (0-5)"),
+                        description="Star rating (0-5)", min=0, max=5),
         ],
         mutating=True,
+        response_fields=["photoId", "rating"],
     ),
     CommandSchema(
         "catalog.addKeywords", "catalog.add-keywords",
@@ -508,6 +528,7 @@ _register(
                         description="Array of keyword strings to add"),
         ],
         mutating=True,
+        response_fields=["photoId", "keywords"],
     ),
     CommandSchema(
         "catalog.setFlag", "catalog.set-flag",
@@ -519,12 +540,14 @@ _register(
                         description="Flag value (1=pick, -1=reject, 0=none)"),
         ],
         mutating=True,
+        response_fields=["photoId", "flag"],
     ),
     CommandSchema(
         "catalog.getFlag", "catalog.get-flag",
         "Get photo flag status",
         params=[ParamSchema("photoId", ParamType.STRING, required=True,
                             description="Photo ID (obtain via catalog list or get-selected)")],
+        response_fields=["photoId", "flag"],
     ),
     CommandSchema(
         "catalog.findPhotos", "catalog.find",
@@ -537,6 +560,7 @@ _register(
             ParamSchema("offset", ParamType.INTEGER, default=0,
                         description="Number of results to skip for pagination"),
         ],
+        response_fields=["photos", "total", "criteria"],
     ),
     CommandSchema(
         "catalog.setSelectedPhotos", "catalog.select",
@@ -552,16 +576,20 @@ _register(
         "Find photo by file path",
         params=[ParamSchema("path", ParamType.STRING, required=True,
                             description="Absolute file path of the photo")],
+        response_fields=["photo", "found"],
     ),
     CommandSchema("catalog.getCollections", "catalog.collections",
-                  "List collections in catalog"),
+                  "List collections in catalog",
+                  response_fields=["collections"]),
     CommandSchema("catalog.getKeywords", "catalog.keywords",
-                  "List keywords in catalog"),
+                  "List keywords in catalog",
+                  response_fields=["keywords"]),
     CommandSchema(
         "catalog.getFolders", "catalog.folders",
         "List folders in catalog",
         params=[ParamSchema("includeSubfolders", ParamType.BOOLEAN, default=False,
                             description="Include subfolders in the listing")],
+        response_fields=["folders"],
     ),
     CommandSchema(
         "catalog.setTitle", "catalog.set-title",
@@ -606,6 +634,7 @@ _register(
             ParamSchema("keys", ParamType.JSON_ARRAY, required=True,
                         description="Array of metadata key names to retrieve"),
         ],
+        response_fields=["photos", "keys"],
     ),
     CommandSchema("catalog.rotateLeft", "catalog.rotate-left",
                   "Rotate selected photo left", mutating=True),
@@ -677,7 +706,8 @@ _register(
         mutating=True,
     ),
     CommandSchema("catalog.getCurrentViewFilter", "catalog.get-view-filter",
-                  "Get current view filter"),
+                  "Get current view filter",
+                  response_fields=["filter"]),
     CommandSchema(
         "catalog.removeFromCatalog", "catalog.remove-from-catalog",
         "Remove photo from catalog",
@@ -696,9 +726,11 @@ _register(
     CommandSchema("selection.removeFlag", "selection.unflag",
                   "Remove flag from selected photo(s)", mutating=True),
     CommandSchema("selection.nextPhoto", "selection.next",
-                  "Move to next photo"),
+                  "Move to next photo",
+                  response_fields=["status"]),
     CommandSchema("selection.previousPhoto", "selection.previous",
-                  "Move to previous photo"),
+                  "Move to previous photo",
+                  response_fields=["status"]),
     CommandSchema(
         "selection.setColorLabel", "selection.color-label",
         "Set color label for selected photo(s)",
@@ -746,20 +778,23 @@ _register(
     CommandSchema("selection.deselectOthers", "selection.deselect-others",
                   "Deselect all except active photo", mutating=True),
     CommandSchema("selection.getFlag", "selection.get-flag",
-                  "Get flag status of selected photo"),
+                  "Get flag status of selected photo",
+                  response_fields=["flag"]),
     CommandSchema("selection.getRating", "selection.get-rating",
-                  "Get rating of selected photo"),
+                  "Get rating of selected photo",
+                  response_fields=["rating"]),
     CommandSchema(
         "selection.setRating", "selection.set-rating",
         "Set rating for selected photo (0-5)",
         params=[
             ParamSchema("rating", ParamType.INTEGER, required=True,
-                        description="Rating 0-5"),
+                        description="Rating 0-5", min=0, max=5),
         ],
         mutating=True,
     ),
     CommandSchema("selection.getColorLabel", "selection.get-color-label",
-                  "Get color label of selected photo"),
+                  "Get color label of selected photo",
+                  response_fields=["label"]),
 )
 
 # --- preview ---
@@ -776,11 +811,41 @@ _register(
                   timeout=120.0,
                   response_fields=["path", "size", "format"]),
     CommandSchema("preview.generateBatchPreviews", "preview.generate-batch",
-                  "Generate batch previews", timeout=300.0),
+                  "Generate batch previews", timeout=300.0,
+                  response_fields=["previews", "total"]),
     CommandSchema("preview.getPreviewInfo", "preview.info",
                   "Get preview info for a photo",
                   params=[ParamSchema("photoId", ParamType.STRING, required=True,
-                                      description="Photo ID to get preview info for")]),
+                                      description="Photo ID to get preview info for")],
+                  response_fields=["photoId", "path", "size", "exists"]),
+)
+
+
+# ---------------------------------------------------------------------------
+# Lookup functions
+# ---------------------------------------------------------------------------
+
+# --- plugin (local-only, no bridge communication) ---
+_register(
+    CommandSchema(
+        "plugin.install", "plugin.install",
+        "Install the Lightroom plugin to Modules directory",
+        params=[
+            ParamSchema("dev", ParamType.BOOLEAN, default=False,
+                        description="Use symlink instead of copy (development mode)"),
+        ],
+        mutating=True,
+    ),
+    CommandSchema(
+        "plugin.uninstall", "plugin.uninstall",
+        "Uninstall the Lightroom plugin",
+        mutating=True,
+    ),
+    CommandSchema(
+        "plugin.status", "plugin.status",
+        "Show plugin installation status",
+        response_fields=["source", "target", "status"],
+    ),
 )
 
 

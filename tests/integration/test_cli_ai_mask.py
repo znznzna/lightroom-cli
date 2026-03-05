@@ -249,7 +249,13 @@ def test_ai_reset_calls_reset_masking(mock_get_bridge, runner):
         "result": {"message": "All masks reset"},
     }
     mock_get_bridge.return_value = mock_bridge
-    result = runner.invoke(cli, ["develop", "ai", "reset"])
+    # Without --confirm, should fail with exit code 2
+    result_no_confirm = runner.invoke(cli, ["develop", "ai", "reset"])
+    assert result_no_confirm.exit_code == 2
+    assert "CONFIRMATION_REQUIRED" in result_no_confirm.output or "--confirm" in result_no_confirm.output
+
+    # With --confirm, should succeed
+    result = runner.invoke(cli, ["develop", "ai", "reset", "--confirm"])
     assert result.exit_code == 0
     mock_bridge.send_command.assert_called_once_with(
         "develop.resetMasking", {}, timeout=30.0,
