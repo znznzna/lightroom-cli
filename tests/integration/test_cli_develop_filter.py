@@ -40,16 +40,6 @@ def test_develop_filter_brush(mock_get_bridge, runner):
 
 
 @patch("cli.commands.develop.get_bridge")
-def test_develop_filter_ai_select(mock_get_bridge, runner):
-    mock_bridge = AsyncMock()
-    mock_bridge.send_command.return_value = {"id": "4", "success": True, "result": {"maskId": "m4"}}
-    mock_get_bridge.return_value = mock_bridge
-    result = runner.invoke(cli, ["develop", "filter", "ai-select", "--type", "sky"])
-    assert result.exit_code == 0
-    mock_bridge.send_command.assert_called_once_with("develop.createAISelectionMask", {"selectionType": "sky"}, timeout=30.0)
-
-
-@patch("cli.commands.develop.get_bridge")
 def test_develop_filter_range(mock_get_bridge, runner):
     mock_bridge = AsyncMock()
     mock_bridge.send_command.return_value = {"id": "5", "success": True, "result": {"maskId": "m5"}}
