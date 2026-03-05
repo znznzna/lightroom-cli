@@ -87,3 +87,27 @@ class LightroomClient:
         except Exception as e:
             logger.warning(f"Lightroom not ready: {e}")
             return False
+
+    async def create_ai_mask(
+        self,
+        selection_type: str,
+        part: Optional[str] = None,
+        adjustments: Optional[Dict[str, float]] = None,
+        timeout: float = 60.0,
+    ) -> Dict[str, Any]:
+        """Create an AI mask and optionally apply adjustments.
+
+        Args:
+            selection_type: One of subject, sky, background, objects, people, landscape
+            part: Optional body/landscape part for people/landscape types
+            adjustments: Optional dict of develop parameter adjustments
+            timeout: Command timeout in seconds
+        """
+        params: Dict[str, Any] = {"selectionType": selection_type}
+        if part:
+            params["part"] = part
+        if adjustments:
+            params["adjustments"] = adjustments
+        return await self.execute_command(
+            "develop.createAIMaskWithAdjustments", params, timeout=timeout
+        )

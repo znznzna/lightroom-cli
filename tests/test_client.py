@@ -36,3 +36,60 @@ async def test_ping_returns_result(mock_lr_server):
     result = await client.ping()
     assert result["status"] == "ok"
     await client.disconnect()
+
+
+@pytest.mark.asyncio
+async def test_create_ai_mask_basic(mock_lr_server):
+    """create_ai_mask が develop.createAIMaskWithAdjustments を正しいパラメータで送信する"""
+    mock_lr_server.register_response("develop.createAIMaskWithAdjustments", {
+        "maskType": "aiSelection",
+        "selectionType": "sky",
+        "message": "Created AI sky mask",
+    })
+
+    client = LightroomClient.__new__(LightroomClient)
+    client._bridge = SocketBridge(port_file=str(mock_lr_server.port_file))
+    await client._bridge.connect(retry_attempts=1)
+    try:
+        result = await client.create_ai_mask("sky")
+        assert result["selectionType"] == "sky"
+    finally:
+        await client.disconnect()
+
+
+@pytest.mark.asyncio
+async def test_create_ai_mask_with_adjustments(mock_lr_server):
+    """create_ai_mask に adjustments を渡すと params に含まれる"""
+    mock_lr_server.register_response("develop.createAIMaskWithAdjustments", {
+        "maskType": "aiSelection",
+        "selectionType": "subject",
+        "adjustments": {"Exposure": 0.5},
+    })
+
+    client = LightroomClient.__new__(LightroomClient)
+    client._bridge = SocketBridge(port_file=str(mock_lr_server.port_file))
+    await client._bridge.connect(retry_attempts=1)
+    try:
+        result = await client.create_ai_mask("subject", adjustments={"Exposure": 0.5})
+        assert result["adjustments"] == {"Exposure": 0.5}
+    finally:
+        await client.disconnect()
+
+
+@pytest.mark.asyncio
+async def test_create_ai_mask_with_part(mock_lr_server):
+    """create_ai_mask に part を渡すと params に含まれる"""
+    mock_lr_server.register_response("develop.createAIMaskWithAdjustments", {
+        "maskType": "aiSelection",
+        "selectionType": "people",
+        "part": "eyes",
+    })
+
+    client = LightroomClient.__new__(LightroomClient)
+    client._bridge = SocketBridge(port_file=str(mock_lr_server.port_file))
+    await client._bridge.connect(retry_attempts=1)
+    try:
+        result = await client.create_ai_mask("people", part="eyes")
+        assert result["part"] == "eyes"
+    finally:
+        await client.disconnect()
