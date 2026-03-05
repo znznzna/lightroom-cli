@@ -54,3 +54,41 @@ class TestDryRunSupport:
         runner = CliRunner()
         result = runner.invoke(test_group, ["test-cmd", "value"])
         assert "executed" in result.output
+
+
+class TestJsonInput:
+    """--json / --json-stdin 入力テスト"""
+
+    def test_json_option_parses_dict(self):
+        from cli.decorators import parse_json_input
+
+        result = parse_json_input('{"parameter": "Exposure", "value": 0.5}', None)
+        assert result == {"parameter": "Exposure", "value": 0.5}
+
+    def test_json_option_invalid_json_raises(self):
+        from cli.decorators import parse_json_input
+        with pytest.raises(click.BadParameter, match="Invalid JSON"):
+            parse_json_input("{invalid", None)
+
+    def test_json_option_non_dict_raises(self):
+        from cli.decorators import parse_json_input
+        with pytest.raises(click.BadParameter, match="must be a JSON object"):
+            parse_json_input("[1, 2, 3]", None)
+
+    def test_json_stdin_reads_from_stdin(self):
+        from cli.decorators import parse_json_input
+        import io
+        stdin = io.StringIO('{"key": "value"}')
+        result = parse_json_input(None, stdin)
+        assert result == {"key": "value"}
+
+    def test_no_json_returns_none(self):
+        from cli.decorators import parse_json_input
+        result = parse_json_input(None, None)
+        assert result is None
+
+    def test_both_json_and_stdin_raises(self):
+        from cli.decorators import parse_json_input
+        import io
+        with pytest.raises(click.BadParameter, match="Cannot use both"):
+            parse_json_input('{"a": 1}', io.StringIO('{"b": 2}'))
