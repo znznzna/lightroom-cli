@@ -84,3 +84,57 @@ def test_ai_objects_creates_mask(mock_get_bridge, runner):
         {"selectionType": "objects"},
         timeout=60.0,
     )
+
+
+@patch("cli.commands.ai_mask.get_bridge")
+def test_ai_people_with_part(mock_get_bridge, runner):
+    """lr develop ai people --part eyes がパラメータに part を含む"""
+    mock_bridge = AsyncMock()
+    mock_bridge.send_command.return_value = {
+        "id": "1", "success": True,
+        "result": {"selectionType": "people", "part": "eyes"},
+    }
+    mock_get_bridge.return_value = mock_bridge
+    result = runner.invoke(cli, ["develop", "ai", "people", "--part", "eyes"])
+    assert result.exit_code == 0
+    mock_bridge.send_command.assert_called_once_with(
+        "develop.createAIMaskWithAdjustments",
+        {"selectionType": "people", "part": "eyes"},
+        timeout=60.0,
+    )
+
+
+@patch("cli.commands.ai_mask.get_bridge")
+def test_ai_people_without_part(mock_get_bridge, runner):
+    """lr develop ai people (part なし) は part をパラメータに含まない"""
+    mock_bridge = AsyncMock()
+    mock_bridge.send_command.return_value = {
+        "id": "1", "success": True,
+        "result": {"selectionType": "people"},
+    }
+    mock_get_bridge.return_value = mock_bridge
+    result = runner.invoke(cli, ["develop", "ai", "people"])
+    assert result.exit_code == 0
+    mock_bridge.send_command.assert_called_once_with(
+        "develop.createAIMaskWithAdjustments",
+        {"selectionType": "people"},
+        timeout=60.0,
+    )
+
+
+@patch("cli.commands.ai_mask.get_bridge")
+def test_ai_landscape_with_part(mock_get_bridge, runner):
+    """lr develop ai landscape --part water"""
+    mock_bridge = AsyncMock()
+    mock_bridge.send_command.return_value = {
+        "id": "1", "success": True,
+        "result": {"selectionType": "landscape", "part": "water"},
+    }
+    mock_get_bridge.return_value = mock_bridge
+    result = runner.invoke(cli, ["develop", "ai", "landscape", "--part", "water"])
+    assert result.exit_code == 0
+    mock_bridge.send_command.assert_called_once_with(
+        "develop.createAIMaskWithAdjustments",
+        {"selectionType": "landscape", "part": "water"},
+        timeout=60.0,
+    )
