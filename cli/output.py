@@ -27,9 +27,36 @@ class OutputFormatter:
 
     @staticmethod
     def _filter_fields(data: Any, fields: list[str]) -> Any:
-        """指定フィールドのみを残す（トップレベルのみ）"""
+        """指定フィールドのみを残す（ドット記法サポート）"""
         if isinstance(data, dict):
-            return {k: v for k, v in data.items() if k in fields}
+            plain_fields: list[str] = []
+            nested_fields: dict[str, list[str]] = {}
+            for f in fields:
+                if "." in f:
+                    parent, child = f.split(".", 1)
+                    nested_fields.setdefault(parent, []).append(child)
+                else:
+                    plain_fields.append(f)
+
+            result: dict[str, Any] = {}
+            for k, v in data.items():
+                if k in plain_fields:
+                    result[k] = v
+            for parent, children in nested_fields.items():
+                if parent not in data:
+                    continue
+                value = data[parent]
+                if isinstance(value, list):
+                    result[parent] = [
+                        {c: item[c] for c in children if c in item}
+                        if isinstance(item, dict) else item
+                        for item in value
+                    ]
+                elif isinstance(value, dict):
+                    result[parent] = {c: value[c] for c in children if c in value}
+                else:
+                    result[parent] = value
+            return result
         elif isinstance(data, list):
             return [OutputFormatter._filter_fields(item, fields) for item in data]
         return data
