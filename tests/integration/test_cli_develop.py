@@ -315,3 +315,28 @@ class TestParsePairsErrorHandling:
         result = runner.invoke(cli, ["-o", "json", "develop", "set", "Exposure", "!@#"])
         assert result.exit_code == 2
         assert "Traceback" not in result.output
+
+
+class TestJsonInput:
+    """--json 入力テスト"""
+
+    @pytest.fixture
+    def runner(self):
+        return CliRunner()
+
+    @patch("cli.helpers.get_bridge")
+    def test_develop_get_settings_via_json(self, mock_get_bridge, runner):
+        """get-settings でも --json オプションが存在する"""
+        mock_bridge = AsyncMock()
+        mock_bridge.send_command.return_value = {"id": "1", "success": True, "result": {}}
+        mock_get_bridge.return_value = mock_bridge
+        result = runner.invoke(cli, ["develop", "get-settings", "--json", '{}'])
+        assert result.exit_code == 0
+
+    @patch("cli.helpers.get_bridge")
+    def test_empty_json_shows_error(self, mock_get_bridge, runner):
+        """空の --json がエラーになる"""
+        mock_bridge = AsyncMock()
+        mock_get_bridge.return_value = mock_bridge
+        result = runner.invoke(cli, ["develop", "get-settings", "--json", "  "])
+        assert result.exit_code == 2

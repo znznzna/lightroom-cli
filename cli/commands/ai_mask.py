@@ -4,6 +4,7 @@ import json
 import click
 from cli.helpers import execute_command
 from cli.output import OutputFormatter
+from cli.decorators import json_input_options
 
 
 AI_SELECTION_TYPES = ["subject", "sky", "background", "objects", "people", "landscape"]
@@ -22,6 +23,8 @@ def _make_ai_type_command(selection_type: str, has_part: bool = False, part_choi
         click.Option(["--adjust"], default=None, help="JSON adjustment settings"),
         click.Option(["--adjust-preset"], default=None, help="Named preset (darken-sky, brighten-subject, etc)"),
         click.Option(["--dry-run"], is_flag=True, default=False, help="Preview without executing"),
+        click.Option(["--json"], "json_str", default=None, help="JSON string with all parameters"),
+        click.Option(["--json-stdin"], "json_stdin", is_flag=True, default=False, help="Read JSON parameters from stdin"),
     ]
     # --part is hidden until SDK support is verified
     if has_part and part_choices:
@@ -115,15 +118,17 @@ def ai_presets(ctx):
 
 @ai.command("reset")
 @click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
+@json_input_options
 @click.pass_context
-def ai_reset(ctx, dry_run):
+def ai_reset(ctx, dry_run, **kwargs):
     """Remove all masks from the current photo"""
     execute_command(ctx, "develop.resetMasking", {})
 
 
 @ai.command("list")
+@json_input_options
 @click.pass_context
-def ai_list(ctx):
+def ai_list(ctx, **kwargs):
     """List all masks on the current photo"""
     execute_command(ctx, "develop.getAllMasks", {})
 
@@ -136,8 +141,9 @@ def ai_list(ctx):
 @click.option("--adjust-preset", default=None, help="Named preset")
 @click.option("--dry-run", is_flag=True, help="Show targets without applying")
 @click.option("--continue-on-error", is_flag=True, default=False, help="Continue on errors")
+@json_input_options
 @click.pass_context
-def ai_batch(ctx, type, photos, all_selected, adjust, adjust_preset, dry_run, continue_on_error):
+def ai_batch(ctx, type, photos, all_selected, adjust, adjust_preset, dry_run, continue_on_error, **kwargs):
     """Apply AI mask to multiple photos"""
     if not photos and not all_selected:
         fmt = ctx.obj.get("output", "text") if ctx.obj else "text"

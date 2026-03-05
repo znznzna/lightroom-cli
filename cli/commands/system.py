@@ -2,6 +2,7 @@ import click
 from pathlib import Path
 from cli.helpers import execute_command, get_bridge, handle_error, run_async
 from cli.output import OutputFormatter
+from cli.decorators import json_input_options
 
 
 @click.group()
@@ -11,15 +12,17 @@ def system():
 
 
 @system.command()
+@json_input_options
 @click.pass_context
-def ping(ctx):
+def ping(ctx, **kwargs):
     """Test connection to Lightroom"""
     execute_command(ctx, "system.ping", {})
 
 
 @system.command()
+@json_input_options
 @click.pass_context
-def status(ctx):
+def status(ctx, **kwargs):
     """Get Lightroom bridge status"""
     execute_command(ctx, "system.status", {})
 
