@@ -1,5 +1,5 @@
 -- StopMenuAction.lua  
--- Handles "Stop Python Bridge" menu action
+-- Handles "Stop CLI Bridge" menu action
 
 local LrLogger = import 'LrLogger'
 local LrDialogs = import 'LrDialogs'
@@ -13,11 +13,11 @@ local myLogger = LrLogger('StopMenuAction')
 myLogger:enable("logfile")
 
 -- This code executes when the menu item is selected
-myLogger:info("Stop Python Bridge menu item selected")
+myLogger:info("Stop CLI Bridge menu item selected")
 
 -- Check if plugin is initialized
 if not bridge or not bridge.initialized then
-    LrDialogs.message("Python Bridge", "Plugin not properly initialized. Please restart Lightroom.", "critical")
+    LrDialogs.message("CLI Bridge", "Plugin not properly initialized. Please restart Lightroom.", "critical")
     return
 end
 
@@ -27,11 +27,11 @@ local logger = bridge.logger or myLogger
 -- Check if socket server is running
 if not SimpleSocketBridge.isRunning() then
     logger:info("Socket server not running")
-    LrDialogs.message("Python Bridge", "Bridge is not currently running.", "info")
+    LrDialogs.message("CLI Bridge", "Bridge is not currently running.", "info")
     return
 end
 
-logger:info("Stopping Python Bridge")
+logger:info("Stopping CLI Bridge")
 
 -- Stop the socket server
 SimpleSocketBridge.stop()
@@ -42,10 +42,10 @@ LrTasks.startAsyncTask(function()
     LrTasks.sleep(0.5)  -- Wait 500ms for cleanup (was 2 seconds)
 
     if not SimpleSocketBridge.isRunning() then
-        logger:info("Python Bridge stopped successfully")
-        LrDialogs.showBezel("Python Bridge Stopped", 1.5)
+        logger:info("CLI Bridge stopped successfully")
+        LrDialogs.showBezel("CLI Bridge Stopped", 1.5)
     else
-        logger:warn("Python Bridge taking longer to stop")
+        logger:warn("CLI Bridge taking longer to stop")
         LrDialogs.showBezel("Bridge Stopping...", 2)
     end
 end)

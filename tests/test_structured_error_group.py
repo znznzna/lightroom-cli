@@ -43,7 +43,7 @@ class TestStructuredErrors:
         runner = CliRunner()
         result = runner.invoke(cli, ["--version"])
         assert result.exit_code == 0
-        assert "0.3.0" in result.output
+        assert "lr, version" in result.output
 
     def test_no_such_subcommand_json(self):
         runner = CliRunner()

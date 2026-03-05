@@ -14,18 +14,18 @@ return {
 
 	LrExportMenuItems = {
 		{
-			title = "Start Python Bridge",
+			title = "Start CLI Bridge",
 			file = "MenuActions.lua",
 		},
 		{
-			title = "Stop Python Bridge",
+			title = "Stop CLI Bridge",
 			file = "StopMenuAction.lua",
 		},
 	},
 
 	-- LrLibraryMenuItems = {
 	-- 	{
-	-- 		title = "Python Bridge Settings",
+	-- 		title = "CLI Bridge Settings",
 	-- 		file = "SettingsDialog.lua",
 	-- 	}
 	-- },

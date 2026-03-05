@@ -1,5 +1,6 @@
 import logging
 import os
+from importlib.metadata import version as pkg_version
 
 import click
 
@@ -8,7 +9,7 @@ from cli.structured_group import StructuredErrorGroup
 
 
 @click.group(cls=StructuredErrorGroup)
-@click.version_option(version="0.3.0", prog_name="lr")
+@click.version_option(version=pkg_version("lightroom-cli"), prog_name="lr")
 @click.option(
     "--output",
     "-o",

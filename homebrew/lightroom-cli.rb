@@ -3,7 +3,7 @@ class LightroomCli < Formula
 
   desc "CLI tool for Adobe Lightroom Classic — 107 commands for full Lightroom control"
   homepage "https://github.com/znznzna/lightroom-cli"
-  url "https://github.com/znznzna/lightroom-cli/archive/refs/tags/v2.0.0.tar.gz"
+  url "https://github.com/znznzna/lightroom-cli/archive/refs/tags/v1.0.0.tar.gz"
   # sha256 will be filled after release
   license "MIT"
   head "https://github.com/znznzna/lightroom-cli.git", branch: "main"

@@ -1,5 +1,5 @@
 -- MenuActions.lua
--- Handles "Start Python Bridge" menu action
+-- Handles "Start CLI Bridge" menu action
 
 local LrLogger = import 'LrLogger'
 local LrDialogs = import 'LrDialogs'
@@ -13,11 +13,11 @@ local myLogger = LrLogger('MenuActions')
 myLogger:enable("logfile")
 
 -- This code executes when the menu item is selected
-myLogger:info("Start Python Bridge menu item selected")
+myLogger:info("Start CLI Bridge menu item selected")
 
 -- Check if plugin is initialized
 if not bridge or not bridge.initialized then
-    LrDialogs.message("Python Bridge", "Plugin not properly initialized. Please restart Lightroom.", "critical")
+    LrDialogs.message("CLI Bridge", "Plugin not properly initialized. Please restart Lightroom.", "critical")
     return
 end
 
@@ -27,14 +27,14 @@ local logger = bridge.logger or myLogger
 -- Check if socket server is already running
 if SimpleSocketBridge.isRunning() then
     logger:info("Socket server already running")
-    LrDialogs.message("Python Bridge", "Bridge is already running. Use Stop to disconnect first.", "info")
+    LrDialogs.message("CLI Bridge", "Bridge is already running. Use Stop to disconnect first.", "info")
     return
 end
 
 if bridge.phase4Loaded then
-    logger:info("Starting Python Bridge with full Phase 4 API support")
+    logger:info("Starting CLI Bridge with full Phase 4 API support")
 else
-    logger:info("Starting Python Bridge with Phase 3 command routing (Phase 4 unavailable)")
+    logger:info("Starting CLI Bridge with Phase 3 command routing (Phase 4 unavailable)")
 end
 
 -- Start the enhanced socket server (follows Adobe pattern with command routing)
@@ -74,4 +74,4 @@ LrTasks.startAsyncTask(function()
 end)
 
 logger:info("Socket server started with command routing - check logs for connection details")
-LrDialogs.showBezel("Python Bridge Started", 2)
+LrDialogs.showBezel("CLI Bridge Started", 2)

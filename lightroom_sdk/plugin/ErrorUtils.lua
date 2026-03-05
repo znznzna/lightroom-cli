@@ -1,5 +1,5 @@
 -- ErrorUtils.lua
--- Lightweight error handling utilities for Lightroom Python Bridge
+-- Lightweight error handling utilities for Lightroom CLI Bridge
 -- Designed to work within Lightroom's module system without external dependencies
 
 -- Lazy load LrTasks to avoid import issues during module loading

@@ -282,7 +282,7 @@ local function startSocketServer()
                     end
                 end)
                 logger:info("Socket server stopped (shutdown)")
-                LrDialogs.showBezel("Python Bridge Disconnected", 2)
+                LrDialogs.showBezel("CLI Bridge Disconnected", 2)
             else
                 logger:info("Socket server stopped (restart pending)")
             end
