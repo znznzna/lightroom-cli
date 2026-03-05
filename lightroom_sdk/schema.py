@@ -49,8 +49,10 @@ def _register(*schemas: CommandSchema) -> None:
 
 # --- system ---
 _register(
-    CommandSchema("system.ping", "system.ping", "Test connection", timeout=5.0),
-    CommandSchema("system.status", "system.status", "Get bridge status", timeout=5.0),
+    CommandSchema("system.ping", "system.ping", "Test connection", timeout=5.0,
+                  response_fields=["status", "timestamp"]),
+    CommandSchema("system.status", "system.status", "Get bridge status", timeout=5.0,
+                  response_fields=["status", "uptime", "version", "connections"]),
 )
 
 # --- develop (主要) ---
@@ -79,6 +81,7 @@ _register(
             ParamSchema("param", ParamType.STRING, required=True,
                         description="Parameter name"),
         ],
+        response_fields=["parameter", "value"],
     ),
     CommandSchema(
         "develop.applySettings", "develop.apply",
@@ -131,6 +134,7 @@ _register(
             ParamSchema("param", ParamType.STRING, required=True,
                         description="Parameter name"),
         ],
+        response_fields=["parameter", "min", "max"],
     ),
     CommandSchema(
         "develop.resetToDefault", "develop.reset-param",
@@ -375,7 +379,8 @@ _register(
 # --- catalog ---
 _register(
     CommandSchema("catalog.getSelectedPhotos", "catalog.get-selected",
-                  "Get currently selected photos"),
+                  "Get currently selected photos",
+                  response_fields=["photos", "count"]),
     CommandSchema(
         "catalog.getAllPhotos", "catalog.list",
         "List photos in catalog",
@@ -384,6 +389,7 @@ _register(
             ParamSchema("offset", ParamType.INTEGER, default=0),
         ],
         timeout=60.0,
+        response_fields=["photos", "total", "limit", "offset"],
     ),
     CommandSchema(
         "catalog.searchPhotos", "catalog.search",
@@ -393,11 +399,14 @@ _register(
             ParamSchema("limit", ParamType.INTEGER, default=50),
         ],
         timeout=60.0,
+        response_fields=["photos", "total", "query"],
     ),
     CommandSchema(
         "catalog.getPhotoMetadata", "catalog.get-info",
         "Get detailed info for a photo",
         params=[ParamSchema("photoId", ParamType.STRING, required=True)],
+        response_fields=["filename", "path", "rating", "flag", "keywords",
+                         "dimensions", "dateCreated"],
     ),
     CommandSchema(
         "catalog.setRating", "catalog.set-rating",
@@ -648,7 +657,8 @@ _register(
                       ParamSchema("format", ParamType.ENUM, default="jpeg",
                                   enum_values=["jpeg", "png"]),
                   ],
-                  timeout=120.0),
+                  timeout=120.0,
+                  response_fields=["path", "size", "format"]),
     CommandSchema("preview.generateBatchPreviews", "preview.generate-batch",
                   "Generate batch previews", timeout=300.0),
     CommandSchema("preview.getPreviewInfo", "preview.info",

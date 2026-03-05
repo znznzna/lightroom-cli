@@ -94,3 +94,26 @@ class TestSchemaIntegrity:
         from lightroom_sdk.schema import get_all_schemas
         mutating = [s for s in get_all_schemas().values() if s.mutating]
         assert len(mutating) >= 30, f"Expected >=30 mutating commands, got {len(mutating)}"
+
+
+class TestResponseFields:
+    """response_fields の充実テスト"""
+
+    @pytest.mark.parametrize("command,expected_fields", [
+        ("system.ping", ["status", "timestamp"]),
+        ("system.status", ["status", "uptime", "version", "connections"]),
+        ("catalog.getSelectedPhotos", ["photos", "count"]),
+        ("catalog.getAllPhotos", ["photos", "total", "limit", "offset"]),
+        ("catalog.searchPhotos", ["photos", "total", "query"]),
+        ("catalog.getPhotoMetadata", ["filename", "path", "rating", "flag", "keywords"]),
+        ("preview.generatePreview", ["path", "size", "format"]),
+        ("develop.getValue", ["parameter", "value"]),
+        ("develop.getRange", ["parameter", "min", "max"]),
+    ])
+    def test_response_fields_not_empty(self, command, expected_fields):
+        from lightroom_sdk.schema import get_schema
+        schema = get_schema(command)
+        assert schema is not None, f"Schema not found for {command}"
+        assert len(schema.response_fields) > 0, f"response_fields empty for {command}"
+        for field in expected_fields:
+            assert field in schema.response_fields, f"Missing response field '{field}' in {command}"
