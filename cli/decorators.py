@@ -23,10 +23,13 @@ def dry_run_guard(
     if not dry_run:
         return False
 
+    from lightroom_sdk.schema import get_schema
     fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+    schema = get_schema(command)
     preview = {
         "dry_run": True,
         "command": command,
+        "risk_level": schema.risk_level if schema else None,
         "params": {k: v for k, v in params.items() if v is not None},
     }
     click.echo(OutputFormatter.format(preview, fmt))

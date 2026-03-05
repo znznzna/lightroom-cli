@@ -81,6 +81,7 @@ def execute_command(ctx, command: str, params: dict, *, timeout: float | None = 
             "dry_run": True,
             "command": command,
             "mutating": schema.mutating if schema else None,
+            "risk_level": schema.risk_level if schema else None,
             "params": {k: v for k, v in params.items() if v is not None},
         }
         click.echo(OutputFormatter.format(preview, fmt))
