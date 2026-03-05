@@ -26,21 +26,9 @@ lr schema develop.set          # Show command detail with parameters
 lr develop range Exposure      # Get min/max for a develop parameter
 ```
 
-### `lr schema` output examples
-
-**Group list** (`lr -o json schema`):
+**Example** (`lr -o json schema develop.set`):
 ```json
-{"groups": ["system", "catalog", "develop", "selection", "preview", "plugin"]}
-```
-
-**Command list** (`lr -o json schema catalog`):
-```json
-{"group": "catalog", "commands": ["catalog.getSelected", "catalog.list", "catalog.search", ...]}
-```
-
-**Command detail** (`lr -o json schema develop.set`):
-```json
-{"command": "develop.set", "bridge_command": "develop.setValue", "description": "Set develop parameter(s)", "mutating": true, "timeout": 10.0, "supports_dry_run": true, "requires_confirm": false, "risk_level": "write", "params": [{"name": "parameter", "type": "string", "required": true}, {"name": "value", "type": "float", "required": true}], "response_fields": ["parameter", "value", "previousValue"]}
+{"command": "develop.set", "mutating": true, "supports_dry_run": true, "requires_confirm": false, "risk_level": "write", "params": [{"name": "parameter", "type": "string", "required": true}, {"name": "value", "type": "float", "required": true}], "response_fields": ["parameter", "value", "previousValue"]}
 ```
 
 ## Getting Started for Agents
@@ -102,43 +90,12 @@ Discover full command lists with `lr schema MODULE`. Below is what each module d
 
 ## Common Workflows
 
-### Batch rate photos by content analysis
-
-```bash
-lr -o json catalog get-selected        # 1. Get photos
-lr preview generate-current            # 2. Generate preview for analysis
-lr catalog set-rating PHOTO_ID 5       # 3. Rate based on analysis
-```
-
-### Apply consistent edits across photos
-
-```bash
-lr -o json develop get-settings                              # 1. Get reference
-lr develop apply --settings '{"Exposure": 1.0, "Contrast": 25}'  # 2. Apply to others
-```
-
 ### Relative value adjustment (values are absolute!)
 
 ```bash
 lr -o json develop get Exposure        # 1. Read current value (e.g., 0.3)
 # 2. Compute new value: 0.3 + 0.5 = 0.8
 lr develop set Exposure 0.8            # 3. Set absolute value
-```
-
-### Organize photos with keywords and collections
-
-```bash
-lr -o json catalog search "sunset"                      # 1. Search
-lr catalog add-keywords PHOTO_ID sunset landscape       # 2. Tag
-lr catalog create-collection "Best Sunsets"              # 3. Organize
-```
-
-### AI mask with adjustments
-
-```bash
-lr develop ai sky --adjust '{"Exposure": -1.0, "Highlights": -30}'   # Darken sky
-lr develop ai subject --adjust-preset brighten-subject               # Named preset
-lr -o json develop ai presets                                        # List presets
 ```
 
 ### Batch find + mutate (agent pattern)
@@ -161,12 +118,19 @@ lr develop set Exposure 1.0 Contrast 25     # 2. Edit
 lr develop reset                            # 3. Revert if unhappy
 ```
 
-### Quick culling workflow
+### AI mask with adjustments
 
 ```bash
-lr selection next && lr selection set-rating 3
-lr selection next && lr selection reject
-lr selection next && lr selection flag
+lr develop ai sky --adjust '{"Exposure": -1.0, "Highlights": -30}'   # Darken sky
+lr develop ai subject --adjust-preset brighten-subject               # Named preset
+lr -o json develop ai presets                                        # List presets
+```
+
+### Apply consistent edits across photos
+
+```bash
+lr -o json develop get-settings                              # 1. Get reference
+lr develop apply --settings '{"Exposure": 1.0, "Contrast": 25}'  # 2. Apply to others
 ```
 
 ## Input Options
@@ -193,9 +157,11 @@ echo '{"parameter": "Contrast", "value": 25}' | lr develop set --json-stdin
 
 The CLI auto-detects TTY vs pipe: text in TTY, JSON in pipe. Override with `-o json|text|table`.
 
-Use `--fields` (global option, before subcommand) to select specific fields:
+Use `--fields` (global option, before subcommand) to select specific fields. Dot notation filters nested arrays:
 ```bash
 lr --fields Exposure,Contrast -o json develop get-settings
+lr --fields photos.id -o json catalog find --rating 5
+# → {"photos": [{"id": "123"}, {"id": "456"}]}
 ```
 
 ## Gotchas & Limitations
