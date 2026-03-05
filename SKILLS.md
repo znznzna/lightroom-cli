@@ -6,6 +6,15 @@
 - Lightroom Classic running with plugin active
 - Connection verified (`lr system check-connection`)
 
+## Agent Quick Contract
+
+1. **Always use `--fields`** to limit response size: `lr --fields id,filename catalog list`
+2. **Always use `-o json`** (or pipe) for machine-readable output
+3. **Use `--dry-run`** before mutating commands to preview changes
+4. **Check `lr schema CMD`** for parameter types and ranges before calling
+5. **Exit codes matter**: 0=ok, 2=validation, 3=connection, 4=timeout
+6. **`requires_confirm` commands** need `--confirm` flag (see `lr schema CMD`)
+
 ## Getting Started for Agents
 
 ### Step 1: Verify connection
@@ -507,7 +516,7 @@ Error response example:
 
 ### schema detail (`lr -o json schema develop.set`)
 ```json
-{"command": "develop.set", "bridge_command": "develop.setValue", "description": "Set develop parameter(s)", "mutating": true, "timeout": 10.0, "params": [{"name": "parameter", "type": "string", "required": true, "description": "Develop parameter name"}, {"name": "value", "type": "float", "required": true, "description": "Parameter value"}], "response_fields": ["parameter", "value", "previousValue"]}
+{"command": "develop.set", "bridge_command": "develop.setValue", "description": "Set develop parameter(s)", "mutating": true, "timeout": 10.0, "supports_dry_run": true, "requires_confirm": false, "risk_level": "write", "params": [{"name": "parameter", "type": "string", "required": true, "description": "Develop parameter name"}, {"name": "value", "type": "float", "required": true, "description": "Parameter value"}], "response_fields": ["parameter", "value", "previousValue"]}
 ```
 
 ## Limitations
