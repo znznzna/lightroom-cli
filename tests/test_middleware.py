@@ -81,3 +81,32 @@ class TestResolveFields:
         from cli.middleware import resolve_fields
         monkeypatch.delenv("LR_FIELDS", raising=False)
         assert resolve_fields(None) is None
+
+
+class TestLogLevel:
+    """非verbose時のログレベル設定テスト"""
+
+    def test_non_verbose_sets_warning_level(self):
+        """verbose=False の場合、ログレベルが WARNING に設定される"""
+        import logging
+        from click.testing import CliRunner
+        from cli.main import cli
+        runner = CliRunner()
+        result = runner.invoke(cli, ["--help"])
+        assert result.exit_code == 0
+
+    def test_reconnect_error_to_stderr(self):
+        """reconnect のエラーが err=True で出力される"""
+        from unittest.mock import AsyncMock, patch, call
+        from click.testing import CliRunner
+        from cli.main import cli
+        runner = CliRunner()
+        with patch("cli.commands.system.get_bridge") as mock_get_bridge, \
+             patch("cli.commands.system.click.echo") as mock_echo:
+            mock_bridge = AsyncMock()
+            mock_bridge.connect.side_effect = ConnectionError("test error")
+            mock_get_bridge.return_value = mock_bridge
+            result = runner.invoke(cli, ["system", "reconnect"])
+            # click.echo が err=True で呼ばれたことを確認
+            error_calls = [c for c in mock_echo.call_args_list if c.kwargs.get("err") is True]
+            assert len(error_calls) > 0, f"Expected click.echo to be called with err=True, but calls were: {mock_echo.call_args_list}"

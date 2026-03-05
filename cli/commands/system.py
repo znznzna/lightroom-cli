@@ -35,7 +35,7 @@ def reconnect():
             await bridge.connect()
             click.echo("Reconnected")
         except Exception as e:
-            click.echo(OutputFormatter.format_error(str(e)))
+            click.echo(OutputFormatter.format_error(str(e)), err=True)
         finally:
             await bridge.disconnect()
 

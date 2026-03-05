@@ -24,6 +24,8 @@ def cli(ctx, output, verbose, timeout, fields):
 
     if ctx.obj["verbose"]:
         logging.basicConfig(level=logging.DEBUG)
+    else:
+        logging.basicConfig(level=logging.WARNING)
 
 
 from cli.commands.system import system
