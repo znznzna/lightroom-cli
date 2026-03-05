@@ -23,6 +23,7 @@ def lr(*args):
     return result
 
 
+@pytest.mark.e2e
 class TestAIMaskCreation:
     """AI マスク作成の E2E テスト"""
 
@@ -72,6 +73,7 @@ class TestAIMaskCreation:
         assert "darken-sky" in data
 
 
+@pytest.mark.e2e
 class TestAIMaskBatch:
     """バッチ AI マスクの E2E テスト"""
 
@@ -86,6 +88,7 @@ class TestAIMaskBatch:
         assert result.returncode == 0
 
 
+@pytest.mark.e2e
 class TestAIMaskPartSelection:
     """パーツ選択の E2E テスト"""
 

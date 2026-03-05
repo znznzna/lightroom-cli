@@ -37,11 +37,13 @@ def _make_ai_type_command(selection_type: str, has_part: bool = False, part_choi
         click.Option(["--adjust"], default=None, help="JSON adjustment settings"),
         click.Option(["--adjust-preset"], default=None, help="Named preset (darken-sky, brighten-subject, etc)"),
     ]
+    # --part is hidden until SDK support is verified
     if has_part and part_choices:
         params.insert(0, click.Option(
             ["--part"], default=None,
             type=click.Choice(part_choices),
             help="Specific part to mask",
+            hidden=True,
         ))
 
     @click.pass_context
@@ -188,7 +190,7 @@ def ai_list(ctx):
 @click.option("--adjust", default=None, help="JSON adjustment settings")
 @click.option("--adjust-preset", default=None, help="Named preset")
 @click.option("--dry-run", is_flag=True, help="Show targets without applying")
-@click.option("--continue-on-error", is_flag=True, default=True, help="Continue on errors")
+@click.option("--continue-on-error", is_flag=True, default=False, help="Continue on errors")
 @click.pass_context
 def ai_batch(ctx, type, photos, all_selected, adjust, adjust_preset, dry_run, continue_on_error):
     """Apply AI mask to multiple photos"""
