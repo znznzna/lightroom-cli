@@ -178,15 +178,16 @@ async def test_find_photos_with_unknown_filter_key(mock_lr_server):
 @pytest.mark.asyncio
 async def test_find_photos_with_invalid_rating_value(mock_lr_server):
     """不正な rating 値でエラーレスポンス"""
+    from lightroom_sdk.exceptions import LightroomSDKError
+
     mock_lr_server.register_response(
         "catalog.findPhotos",
         {"error": {"code": "INVALID_PARAM", "message": "rating must be a number"}},
     )
-    # MockServer は success: true で返すが、Lua 実装では error を返す想定
-    # ここでは result に error フィールドが含まれることをテスト
     async with LightroomClient(port_file=str(mock_lr_server.port_file)) as client:
-        result = await client.execute_command(
-            "catalog.findPhotos",
-            {"searchDesc": {"rating": "invalid"}, "limit": 50, "offset": 0},
-        )
-    assert "error" in result
+        with pytest.raises(LightroomSDKError) as exc_info:
+            await client.execute_command(
+                "catalog.findPhotos",
+                {"searchDesc": {"rating": "invalid"}, "limit": 50, "offset": 0},
+            )
+    assert exc_info.value.code == "INVALID_PARAM"

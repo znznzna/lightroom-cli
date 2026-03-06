@@ -464,11 +464,9 @@ function CatalogModule.findPhotos(params, callback)
     -- Validate: rating must be a number
     if searchDesc.rating ~= nil and type(searchDesc.rating) ~= "number" then
         callback({
-            result = {
-                error = {
-                    code = "INVALID_PARAM",
-                    message = "rating must be a number"
-                }
+            error = {
+                code = "INVALID_PARAM",
+                message = "rating must be a number"
             }
         })
         return
