@@ -215,6 +215,8 @@ class SocketBridge:
             if not stream.future.cancelled():
                 result = self._aggregate_stream(stream)
                 stream.future.set_result(result)
+            # Cleanup completed stream
+            self._pending_streams.pop(request_id, None)
         else:
             logger.warning(f"Unknown stream event type: {event_type}")
 

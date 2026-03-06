@@ -536,8 +536,15 @@ local function matchPhoto(photo, searchDesc)
             if searchDesc.captureDateFrom and isoDate < searchDesc.captureDateFrom then
                 return false
             end
-            if searchDesc.captureDateTo and isoDate > searchDesc.captureDateTo then
-                return false
+            if searchDesc.captureDateTo then
+                local upperBound = searchDesc.captureDateTo
+                -- If date-only (YYYY-MM-DD), make it inclusive by appending end-of-day
+                if #upperBound == 10 then
+                    upperBound = upperBound .. "T23:59:59"
+                end
+                if isoDate > upperBound then
+                    return false
+                end
             end
         else
             return false
