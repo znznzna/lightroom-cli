@@ -48,145 +48,25 @@ end
 
 local CatalogModule = {}
 
--- Search photos with flexible criteria
+-- Search photos (deprecated: delegates to findPhotos)
 function CatalogModule.searchPhotos(params, callback)
-    local wrappedCallback = ErrorUtils.wrapCallback(callback, "searchPhotos")
-    
-    -- Ensure modules are loaded
-    local moduleSuccess, moduleError = ErrorUtils.safeCall(ensureLrModules)
-    if not moduleSuccess then
-        wrappedCallback(ErrorUtils.createError(ErrorUtils.CODES.RESOURCE_UNAVAILABLE, 
-            "Failed to load Lightroom modules: " .. tostring(moduleError)))
-        return
-    end
-    
     local logger = getLogger()
-    local criteria = (params and params.criteria) or {}
-    local limit = (params and params.limit) or 100
-    local offset = (params and params.offset) or 0
-    
-    -- Validate limit parameter
-    if limit < 1 or limit > 10000 then
-        wrappedCallback(ErrorUtils.createError(ErrorUtils.CODES.INVALID_PARAM_VALUE, 
-            "Limit must be between 1 and 10000"))
-        return
-    end
-    
-    -- Validate offset parameter
-    if offset < 0 then
-        wrappedCallback(ErrorUtils.createError(ErrorUtils.CODES.INVALID_PARAM_VALUE, 
-            "Offset must be 0 or greater"))
-        return
-    end
-    
-    logger:debug("Searching photos with criteria")
-    
-    local catalog = LrApplication.activeCatalog()
-    
-    catalog:withReadAccessDo(function()
-        -- Get photos using the most appropriate method
-        local allPhotos
-        local photosSuccess, photosResult = ErrorUtils.safeCall(function()
-            return catalog:getTargetPhotos()
-        end)
-        
-        if photosSuccess and photosResult and #photosResult > 0 then
-            allPhotos = photosResult
-        else
-            -- Fallback to all photos
-            local allSuccess, allResult = ErrorUtils.safeCall(function()
-                return catalog:getAllPhotos()
-            end)
-            
-            if allSuccess then
-                allPhotos = allResult
-            else
-                wrappedCallback(ErrorUtils.createError(ErrorUtils.CODES.CATALOG_ACCESS_FAILED, 
-                    "Failed to access catalog photos"))
-                return
-            end
-        end
-        
-        if not allPhotos or #allPhotos == 0 then
-            wrappedCallback(ErrorUtils.createSuccess({
-                photos = {},
-                total = 0,
-                offset = offset,
-                limit = limit,
-                hasMore = false
-            }, "No photos found in catalog"))
-            return
-        end
-        
-        local results = {}
-        local total = #allPhotos
-        local startIndex = offset + 1
-        local endIndex = math.min(offset + limit, total)
-        
-        for i = startIndex, endIndex do
-            local photo = allPhotos[i]
-            
-            local photoData = {
-                id = photo.localIdentifier,
-                keywords = {},
-                collections = {}
-            }
-            
-            -- Safely get photo metadata
-            ErrorUtils.safeCall(function()
-                photoData.filename = photo:getFormattedMetadata("fileName")
-                photoData.folderPath = photo:getFormattedMetadata("folderName")
-                photoData.path = photo:getRawMetadata("path")
-                photoData.captureTime = photo:getFormattedMetadata("dateTimeOriginal")
-                photoData.rating = photo:getRawMetadata("rating")
-                photoData.pickStatus = photo:getRawMetadata("pickStatus")
-                photoData.fileFormat = photo:getRawMetadata("fileFormat")
-                photoData.isVirtualCopy = photo:getRawMetadata("isVirtualCopy")
-            end)
+    logger:warn("deprecated: searchPhotos は findPhotos に統合されました。次バージョンで削除予定。")
 
-            -- Get keywords
-            ErrorUtils.safeCall(function()
-                local keywords = photo:getRawMetadata("keywords")
-                if keywords then
-                    for _, keyword in ipairs(keywords) do
-                        local success, name = ErrorUtils.safeCall(function()
-                            return keyword:getName()
-                        end)
-                        if success and name then
-                            table.insert(photoData.keywords, name)
-                        end
-                    end
-                end
-            end)
-            
-            -- Get collections
-            ErrorUtils.safeCall(function()
-                local collections = photo:getContainedCollections()
-                if collections then
-                    for _, collection in ipairs(collections) do
-                        local success, name = ErrorUtils.safeCall(function()
-                            return collection:getName()
-                        end)
-                        if success and name then
-                            table.insert(photoData.collections, name)
-                        end
-                    end
-                end
-            end)
-            
-            table.insert(results, photoData)
-        end
-        
-        logger:info("Found " .. total .. " photos, returning " .. #results)
-        
-        wrappedCallback(ErrorUtils.createSuccess({
-            photos = results,
-            total = total,
-            offset = offset,
-            limit = limit,
-            hasMore = endIndex < total
-        }, "Photos retrieved successfully"))
-    end)
+    -- Convert criteria to searchDesc format
+    local criteria = (params and params.criteria) or {}
+    local searchDesc = {}
+    for k, v in pairs(criteria) do
+        searchDesc[k] = v
+    end
+
+    local findParams = {
+        searchDesc = searchDesc,
+        limit = (params and params.limit) or 100,
+        offset = (params and params.offset) or 0,
+    }
+
+    CatalogModule.findPhotos(findParams, callback)
 end
 
 -- Get photo metadata
