@@ -82,7 +82,7 @@ lr catalog set-rating 12345 5
 Discover full command lists with `lr schema MODULE`. Below is what each module does.
 
 - **system** — Connection management: ping, status, check-connection, reconnect
-- **catalog** — Photo management: list, find, get-info, set-rating, add-keywords, set-flag, collections, folders, metadata operations. Use explicit PHOTO_ID for predictable results.
+- **catalog** — Photo management: list, find, get-info, set-rating, add-keywords, set-flag, collections, collection-photos, folders, develop-presets, metadata operations. Use explicit PHOTO_ID for predictable results.
 - **develop** — Image editing: get/set parameters, auto-tone, auto-wb, reset, apply JSON settings, presets, snapshots, tone curve, AI masks (subject/sky/background/etc with `--adjust`), graduated/radial/brush filters, local adjustments, crop/transform resets
 - **selection** — Navigation & flagging: next/previous, flag/reject/unflag, set-rating, color-label, select-all/none/inverse
 - **preview** — Preview generation: generate for current/batch, get preview info
@@ -207,13 +207,32 @@ Omitting `--confirm` returns a structured error with the suggestion to add it.
 
 There is no undo command. **Always** run `lr develop snapshot "name"` before significant edits. To revert: `lr develop reset` and re-apply from the snapshot.
 
-### No batch mutate command
+### Batch editing
 
-Use the "Batch find + mutate" pattern: `find` → parse JSON → loop mutating commands per ID.
+For single-parameter batch edits across multiple photos, use `batch-set`:
 
-### No preset listing
+```bash
+lr develop batch-set --photo-ids 123,456,789 Exposure 0.5
+```
 
-`lr develop preset NAME` applies a preset, but there is no command to list all Lightroom presets. Ask the user for the preset name.
+For more complex batch edits (different parameters per photo), use the "Batch find + mutate" pattern: `find` → parse JSON → loop mutating commands per ID.
+
+### Preset listing & search
+
+```bash
+lr -o json catalog develop-presets                    # List all presets (name + folder)
+lr -o json catalog develop-presets --query "Portra"   # Search by preset name or folder name
+```
+
+Then apply: `lr develop preset "PRESET_NAME"`
+
+### Collection photos
+
+```bash
+lr -o json catalog collections                           # List collections with IDs
+lr -o json catalog collection-photos COLLECTION_ID       # Get photos from a collection
+lr -o json catalog collection-photos 12345 --limit 100   # With pagination
+```
 
 ### Other limitations
 
