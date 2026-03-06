@@ -556,6 +556,13 @@ function CatalogModule.findPhotoByPath(params, callback)
     end)
 end
 
+-- Known filter keys for findPhotos
+local KNOWN_FILTER_KEYS = {
+    flag = true, rating = true, ratingOp = true, colorLabel = true, camera = true,
+    folderPath = true, captureDateFrom = true, captureDateTo = true,
+    fileFormat = true, keyword = true, filename = true,
+}
+
 -- Advanced photo search with criteria
 function CatalogModule.findPhotos(params, callback)
     ensureLrModules()
@@ -565,6 +572,27 @@ function CatalogModule.findPhotos(params, callback)
     local offset = math.max(params.offset or 0, 0)
 
     logger:debug("Finding photos with search criteria")
+
+    -- Validate: check for unknown filter keys
+    local warnings = {}
+    for key, _ in pairs(searchDesc) do
+        if not KNOWN_FILTER_KEYS[key] then
+            table.insert(warnings, "Unknown filter key: " .. tostring(key))
+        end
+    end
+
+    -- Validate: rating must be a number
+    if searchDesc.rating ~= nil and type(searchDesc.rating) ~= "number" then
+        callback({
+            result = {
+                error = {
+                    code = "INVALID_PARAM",
+                    message = "rating must be a number"
+                }
+            }
+        })
+        return
+    end
 
     local catalog = LrApplication.activeCatalog()
 
@@ -576,24 +604,19 @@ function CatalogModule.findPhotos(params, callback)
                 result = {
                     photos = {},
                     total = 0,
-                    returned = 0
+                    returned = 0,
+                    warnings = #warnings > 0 and warnings or nil
                 }
             })
             return
         end
 
-        -- Apply filters
+        -- Apply filters (light filters first, heavy filters last)
         local filtered = {}
         for _, photo in ipairs(allPhotos) do
             local match = true
 
-            -- Flag filter
-            if searchDesc.flag then
-                local pickStatus = photo:getRawMetadata("pickStatus") or 0
-                if searchDesc.flag == "pick" and pickStatus ~= 1 then match = false end
-                if searchDesc.flag == "reject" and pickStatus ~= -1 then match = false end
-                if searchDesc.flag == "none" and pickStatus ~= 0 then match = false end
-            end
+            -- Light filters first --
 
             -- Rating filter
             if match and searchDesc.rating then
@@ -606,6 +629,14 @@ function CatalogModule.findPhotos(params, callback)
                 if op == "<" and rating >= searchDesc.rating then match = false end
             end
 
+            -- Flag filter
+            if match and searchDesc.flag then
+                local pickStatus = photo:getRawMetadata("pickStatus") or 0
+                if searchDesc.flag == "pick" and pickStatus ~= 1 then match = false end
+                if searchDesc.flag == "reject" and pickStatus ~= -1 then match = false end
+                if searchDesc.flag == "none" and pickStatus ~= 0 then match = false end
+            end
+
             -- Color label filter
             if match and searchDesc.colorLabel then
                 local label = photo:getRawMetadata("colorNameForLabel") or ""
@@ -616,12 +647,60 @@ function CatalogModule.findPhotos(params, callback)
                 end
             end
 
+            -- File format filter (exact match)
+            if match and searchDesc.fileFormat then
+                local fmt = photo:getRawMetadata("fileFormat") or ""
+                if fmt ~= searchDesc.fileFormat then match = false end
+            end
+
+            -- Heavy filters --
+
             -- Camera filter
             if match and searchDesc.camera then
                 local camera = photo:getFormattedMetadata("cameraModel") or ""
                 if not string.find(string.lower(camera), string.lower(searchDesc.camera)) then
                     match = false
                 end
+            end
+
+            -- Capture date range filter
+            if match and searchDesc.captureDateFrom then
+                local dt = photo:getFormattedMetadata("dateTimeOriginal") or ""
+                if dt < searchDesc.captureDateFrom then match = false end
+            end
+            if match and searchDesc.captureDateTo then
+                local dt = photo:getFormattedMetadata("dateTimeOriginal") or ""
+                if dt > searchDesc.captureDateTo then match = false end
+            end
+
+            -- Folder path filter (substring match)
+            if match and searchDesc.folderPath then
+                local path = photo:getRawMetadata("path") or ""
+                if not string.find(path, searchDesc.folderPath, 1, true) then
+                    match = false
+                end
+            end
+
+            -- Filename filter (substring match)
+            if match and searchDesc.filename then
+                local fname = photo:getFormattedMetadata("fileName") or ""
+                if not string.find(fname, searchDesc.filename, 1, true) then
+                    match = false
+                end
+            end
+
+            -- Keyword filter (substring match on keyword names)
+            if match and searchDesc.keyword then
+                local keywords = photo:getRawMetadata("keywords") or {}
+                local keywordMatch = false
+                for _, kw in ipairs(keywords) do
+                    local kwName = kw:getName()
+                    if string.find(string.lower(kwName), string.lower(searchDesc.keyword)) then
+                        keywordMatch = true
+                        break
+                    end
+                end
+                if not keywordMatch then match = false end
             end
 
             if match then
@@ -655,7 +734,8 @@ function CatalogModule.findPhotos(params, callback)
                 total = total,
                 returned = #resultPhotos,
                 offset = offset,
-                limit = limit
+                limit = limit,
+                warnings = #warnings > 0 and warnings or nil
             }
         })
     end)
