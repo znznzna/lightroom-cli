@@ -826,12 +826,12 @@ function DevelopModule.setValue(params, callback)
     
     local paramSpec = parameterSpecs[param]
 
-    -- Validate parameter exists (use getRange as existence check for unknown params)
+    -- Validate parameter exists (use getValue as existence check for unknown params)
     if not paramSpec then
-        local rangeSuccess, rangeResult = ErrorUtils.safeCall(function()
-            return LrDevelopController.getRange(param)
+        local valSuccess, valResult = ErrorUtils.safeCall(function()
+            return LrDevelopController.getValue(param)
         end)
-        if not rangeSuccess or rangeResult == nil then
+        if not valSuccess or valResult == nil then
             callback({
                 error = {
                     code = "UNKNOWN_PARAM",
@@ -941,10 +941,8 @@ function DevelopModule.getRange(params, callback)
             })
         elseif type(range) == "number" then
             -- Some parameters may return a single number (like maximum value)
-            -- Provide a sensible default range
-            local min_val = -range
-            local max_val = range
-            
+            local min_val, max_val
+
             -- Special cases for known parameters
             if param == "Temperature" then
                 min_val = 2000
@@ -953,9 +951,10 @@ function DevelopModule.getRange(params, callback)
                 min_val = -150
                 max_val = 150
             else
-                -- For most develop parameters, range is typically -100 to +100 or similar
-                min_val = -range
-                max_val = range
+                -- Use absolute value to determine symmetric range
+                local abs_range = math.abs(range)
+                min_val = -abs_range
+                max_val = abs_range
             end
             
             callback({

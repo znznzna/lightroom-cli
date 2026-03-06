@@ -914,7 +914,8 @@ function CatalogModule.setRating(params, callback)
         catalog:withWriteAccessDo("Set Rating", function()
             local photo = catalog:getPhotoByLocalId(tonumber(photoId))
             if not photo then error("Photo not found: " .. tostring(photoId)) end
-            photo:setRawMetadata("rating", rating)
+            -- LR API: setRawMetadata("rating", 0) throws; use nil for unrated
+            photo:setRawMetadata("rating", rating == 0 and nil or rating)
         end, { timeout = 10 })
     end)
 
