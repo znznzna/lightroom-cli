@@ -143,6 +143,19 @@ lr selection flag
 # Search the catalog
 lr catalog search "landscape" --limit 20
 
+# Find photos with filters (v1.2.0)
+lr catalog find --rating 4 --rating-op ">=" --file-format RAW
+lr catalog find --capture-date-from "2024-06-01" --keyword "portrait"
+
+# Batch develop editing
+lr develop batch-set --photo-ids 123,456,789 Exposure 0.5
+
+# List/search develop presets
+lr catalog develop-presets --query "Portra"
+
+# Get photos from a collection
+lr catalog collection-photos 12345
+
 # JSON output
 lr -o json develop get-settings
 
@@ -155,8 +168,8 @@ lr -o table catalog list --limit 10
 | Group | Commands | Description |
 |-------|----------|-------------|
 | [`lr system`](#lr-system) | 4 | Connection management and status |
-| [`lr catalog`](#lr-catalog) | 27 | Catalog operations, photo search, metadata |
-| [`lr develop`](#lr-develop) | 55 | Develop settings, masks, curves, filters |
+| [`lr catalog`](#lr-catalog) | 30 | Catalog operations, photo search, metadata, presets |
+| [`lr develop`](#lr-develop) | 56 | Develop settings, batch editing, masks, curves, filters |
 | [`lr preview`](#lr-preview) | 4 | Preview generation and info |
 | [`lr selection`](#lr-selection) | 17 | Selection, flags, ratings, labels |
 | [`lr plugin`](#lr-plugin) | 3 | Plugin installation and management |

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lightroom-cli"
-version = "1.1.0"
+version = "1.2.0"
 description = "CLI tool for Adobe Lightroom Classic -- 107 commands for full Lightroom control"
 authors = [{name = "M.Endo", email = "motoki@clockwork-sound.com"}]
 readme = "README.md"

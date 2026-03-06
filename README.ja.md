@@ -143,6 +143,19 @@ lr selection flag
 # カタログ検索
 lr catalog search "landscape" --limit 20
 
+# フィルタ付き検索 (v1.2.0)
+lr catalog find --rating 4 --rating-op ">=" --file-format RAW
+lr catalog find --capture-date-from "2024-06-01" --keyword "portrait"
+
+# バッチ現像
+lr develop batch-set --photo-ids 123,456,789 Exposure 0.5
+
+# プリセット一覧・検索
+lr catalog develop-presets --query "Portra"
+
+# コレクションから写真取得
+lr catalog collection-photos 12345
+
 # JSON 出力
 lr -o json develop get-settings
 
@@ -155,8 +168,8 @@ lr -o table catalog list --limit 10
 | Group | Commands | Description |
 |-------|----------|-------------|
 | [`lr system`](#lr-system) | 4 | 接続管理・ステータス確認 |
-| [`lr catalog`](#lr-catalog) | 27 | カタログ操作・写真検索・メタデータ |
-| [`lr develop`](#lr-develop) | 55 | 現像設定・マスク・カーブ・フィルタ |
+| [`lr catalog`](#lr-catalog) | 30 | カタログ操作・写真検索・メタデータ・プリセット |
+| [`lr develop`](#lr-develop) | 56 | 現像設定・バッチ編集・マスク・カーブ・フィルタ |
 | [`lr preview`](#lr-preview) | 4 | プレビュー生成・情報取得 |
 | [`lr selection`](#lr-selection) | 17 | 選択操作・フラグ・レーティング・ラベル |
 | [`lr plugin`](#lr-plugin) | 3 | プラグインのインストール・管理 |

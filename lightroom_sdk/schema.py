@@ -196,6 +196,35 @@ _register(
         response_fields=["applied", "settings"],
     ),
     CommandSchema(
+        "develop.batchSetValue",
+        "develop.batch-set",
+        "Batch set a single develop parameter across multiple photos",
+        params=[
+            ParamSchema(
+                "photoIds",
+                ParamType.JSON_ARRAY,
+                required=True,
+                description="Array of photo IDs",
+            ),
+            ParamSchema(
+                "param",
+                ParamType.STRING,
+                required=True,
+                description="Develop parameter name (e.g., Exposure, Contrast)",
+            ),
+            ParamSchema(
+                "value",
+                ParamType.FLOAT,
+                required=True,
+                description="Value to set",
+            ),
+        ],
+        mutating=True,
+        timeout=120.0,
+        supports_dry_run=True,
+        response_fields=["results", "successCount", "failCount"],
+    ),
+    CommandSchema(
         "develop.setAutoTone",
         "develop.auto-tone",
         "Apply auto tone adjustments",

@@ -106,11 +106,33 @@ def get_flag(ctx, photo_id, **kwargs):
 )
 @click.option("--color-label", help="Color label (red/yellow/green/blue/purple/none)")
 @click.option("--camera", help="Camera model name")
+@click.option("--folder-path", help="Folder path (substring match)")
+@click.option("--capture-date-from", help="Capture date from (YYYY-MM-DD or ISO 8601)")
+@click.option("--capture-date-to", help="Capture date to (YYYY-MM-DD or ISO 8601, inclusive)")
+@click.option("--file-format", help="File format (RAW/DNG/JPEG)")
+@click.option("--keyword", "keyword_filter", help="Keyword (substring match)")
+@click.option("--filename", help="Filename (substring match)")
 @click.option("--limit", default=50, type=int, help="Max results")
 @click.option("--offset", default=0, type=int, help="Offset for pagination")
 @json_input_options
 @click.pass_context
-def find_photos(ctx, flag, rating, rating_op, color_label, camera, limit, offset, **kwargs):
+def find_photos(
+    ctx,
+    flag,
+    rating,
+    rating_op,
+    color_label,
+    camera,
+    folder_path,
+    capture_date_from,
+    capture_date_to,
+    file_format,
+    keyword_filter,
+    filename,
+    limit,
+    offset,
+    **kwargs,
+):
     """Find photos by structured criteria"""
     search_desc = {}
     if flag:
@@ -122,6 +144,18 @@ def find_photos(ctx, flag, rating, rating_op, color_label, camera, limit, offset
         search_desc["colorLabel"] = color_label
     if camera:
         search_desc["camera"] = camera
+    if folder_path:
+        search_desc["folderPath"] = folder_path
+    if capture_date_from:
+        search_desc["captureDateFrom"] = capture_date_from
+    if capture_date_to:
+        search_desc["captureDateTo"] = capture_date_to
+    if file_format:
+        search_desc["fileFormat"] = file_format
+    if keyword_filter:
+        search_desc["keyword"] = keyword_filter
+    if filename:
+        search_desc["filename"] = filename
 
     execute_command(
         ctx,

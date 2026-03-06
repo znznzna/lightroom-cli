@@ -2,6 +2,32 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.0] - 2026-03-07
+
+Stability improvements, batch develop, extended search filters, and new catalog commands.
+
+### Added
+- **Extended search filters** for `catalog find` — `--folder-path`, `--capture-date-from`, `--capture-date-to`, `--file-format`, `--keyword`, `--filename`
+- **`develop batch-set`** — batch set a single develop parameter across multiple photos (`--photo-ids`)
+- **`catalog collection-photos`** — get photos from a collection by ID with pagination
+- **`catalog develop-presets`** — list/search develop presets by name or folder
+- **NDJSON streaming** — `StreamAggregator` for chunked responses with progress callbacks
+- **Command cancellation** — Lua-side `shouldAbort()` checks at chunk boundaries
+- **Version sync** — `scripts/sync_version.py` + CI `check-version` job
+- **`protocolVersion`** field in ping response
+
+### Fixed
+- `searchPhotos` backward compatibility — delegates to `findPhotos` with `hasMore` field preserved
+- `captureDateTo` inclusive date handling — date-only input appends `T23:59:59`
+- Keyword filter uses plain text matching (`string.find` with `plain=true`)
+- Stream cleanup — `_pending_streams` entry removed after final event
+- `getCommandRouter` uses correct global key (`commandRouter`, not `router`)
+- Negative offset crash in `getCollectionPhotos` — clamped with `math.max`
+
+### Changed
+- `searchPhotos` deprecated in favor of `findPhotos`
+- 814+ tests (was 750+)
+
 ## [1.1.0] - 2026-03-06
 
 MCP Server support, Windows compatibility, and reliability improvements.
