@@ -35,15 +35,6 @@ def _get_claude_config_path() -> Path:
         return Path.home() / ".config" / "claude" / "claude_desktop_config.json"
 
 
-def _check_fastmcp_installed() -> bool:
-    """fastmcp がインストールされているか確認。"""
-    try:
-        import fastmcp  # noqa: F401
-
-        return True
-    except ImportError:
-        return False
-
 
 def _get_port_file_for_test() -> str | None:
     """テスト用のポートファイルパスを返す。"""
@@ -89,13 +80,6 @@ def mcp():
 @click.option("--force", is_flag=True, help="Overwrite existing MCP server entry")
 def install(force):
     """Install lightroom-cli MCP server into Claude Desktop config."""
-    if not _check_fastmcp_installed():
-        click.echo(
-            "Error: fastmcp is not installed.\nRun: pip install lightroom-cli[mcp]",
-            err=True,
-        )
-        raise SystemExit(1)
-
     config_path = _get_claude_config_path()
     config = _read_config(config_path)
 
@@ -146,22 +130,12 @@ def status():
         click.echo("Status: Not installed")
         click.echo("Run 'lr mcp install' to set up.")
 
-    if _check_fastmcp_installed():
-        click.echo("fastmcp: Available")
-    else:
-        click.echo("fastmcp: Not installed (run: pip install lightroom-cli[mcp])")
+    click.echo("fastmcp: Available")
 
 
 @mcp.command()
 def test():
     """Test MCP server by connecting to Lightroom and sending a ping."""
-    if not _check_fastmcp_installed():
-        click.echo(
-            "Error: fastmcp is not installed.\nRun: pip install lightroom-cli[mcp]",
-            err=True,
-        )
-        raise SystemExit(1)
-
     click.echo("Testing MCP server connection...")
     try:
         import asyncio

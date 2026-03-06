@@ -229,7 +229,7 @@ Structured JSON errors with `code`, `message`, and `suggestions` fields:
 
 For non-CLI environments (Claude Desktop, Cowork), use the MCP Server:
 
-1. `pip install lightroom-cli[mcp]`
+1. `pip install lightroom-cli`
 2. `lr mcp install`
 3. Restart Claude Desktop / Cowork
 

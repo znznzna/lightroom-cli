@@ -15,15 +15,14 @@ class TestMcpInstall:
         config_file.write_text("{}")
 
         with patch("cli.commands.mcp._get_claude_config_path", return_value=config_file):
-            with patch("cli.commands.mcp._check_fastmcp_installed", return_value=True):
-                runner = CliRunner()
-                result = runner.invoke(cli, ["mcp", "install"])
-                assert result.exit_code == 0
+            runner = CliRunner()
+            result = runner.invoke(cli, ["mcp", "install"])
+            assert result.exit_code == 0
 
-                config = json.loads(config_file.read_text())
-                assert "mcpServers" in config
-                assert "lightroom-cli" in config["mcpServers"]
-                assert config["mcpServers"]["lightroom-cli"]["command"] == "lr-mcp"
+            config = json.loads(config_file.read_text())
+            assert "mcpServers" in config
+            assert "lightroom-cli" in config["mcpServers"]
+            assert config["mcpServers"]["lightroom-cli"]["command"] == "lr-mcp"
 
     def test_install_preserves_existing_servers(self, tmp_path):
         """既存の mcpServers エントリを保持する"""
@@ -31,32 +30,23 @@ class TestMcpInstall:
         config_file.write_text(json.dumps({"mcpServers": {"other-server": {"command": "other"}}}))
 
         with patch("cli.commands.mcp._get_claude_config_path", return_value=config_file):
-            with patch("cli.commands.mcp._check_fastmcp_installed", return_value=True):
-                runner = CliRunner()
-                result = runner.invoke(cli, ["mcp", "install"])
-                assert result.exit_code == 0
+            runner = CliRunner()
+            result = runner.invoke(cli, ["mcp", "install"])
+            assert result.exit_code == 0
 
-                config = json.loads(config_file.read_text())
-                assert "other-server" in config["mcpServers"]
-                assert "lightroom-cli" in config["mcpServers"]
+            config = json.loads(config_file.read_text())
+            assert "other-server" in config["mcpServers"]
+            assert "lightroom-cli" in config["mcpServers"]
 
     def test_install_creates_config_file_if_missing(self, tmp_path):
         """設定ファイルが存在しない場合は新規作成"""
         config_file = tmp_path / "claude_desktop_config.json"
 
         with patch("cli.commands.mcp._get_claude_config_path", return_value=config_file):
-            with patch("cli.commands.mcp._check_fastmcp_installed", return_value=True):
-                runner = CliRunner()
-                result = runner.invoke(cli, ["mcp", "install"])
-                assert result.exit_code == 0
-                assert config_file.exists()
-
-    def test_install_checks_fastmcp_availability(self):
-        """fastmcp がない場合はエラー"""
-        with patch("cli.commands.mcp._check_fastmcp_installed", return_value=False):
             runner = CliRunner()
             result = runner.invoke(cli, ["mcp", "install"])
-            assert result.exit_code != 0
+            assert result.exit_code == 0
+            assert config_file.exists()
 
     def test_install_warns_on_existing_entry_without_force(self, tmp_path):
         """I4: 既存エントリがある場合は --force なしで警告して上書きしない"""
@@ -65,14 +55,13 @@ class TestMcpInstall:
         config_file.write_text(json.dumps({"mcpServers": {"lightroom-cli": original_entry}}))
 
         with patch("cli.commands.mcp._get_claude_config_path", return_value=config_file):
-            with patch("cli.commands.mcp._check_fastmcp_installed", return_value=True):
-                runner = CliRunner()
-                result = runner.invoke(cli, ["mcp", "install"])
-                assert result.exit_code == 0
-                assert "already installed" in result.output.lower()
+            runner = CliRunner()
+            result = runner.invoke(cli, ["mcp", "install"])
+            assert result.exit_code == 0
+            assert "already installed" in result.output.lower()
 
-                config = json.loads(config_file.read_text())
-                assert config["mcpServers"]["lightroom-cli"]["command"] == "old-lr-mcp"
+            config = json.loads(config_file.read_text())
+            assert config["mcpServers"]["lightroom-cli"]["command"] == "old-lr-mcp"
 
     def test_install_overwrites_with_force(self, tmp_path):
         """I4: --force フラグで既存エントリを上書き"""
@@ -80,13 +69,12 @@ class TestMcpInstall:
         config_file.write_text(json.dumps({"mcpServers": {"lightroom-cli": {"command": "old-lr-mcp"}}}))
 
         with patch("cli.commands.mcp._get_claude_config_path", return_value=config_file):
-            with patch("cli.commands.mcp._check_fastmcp_installed", return_value=True):
-                runner = CliRunner()
-                result = runner.invoke(cli, ["mcp", "install", "--force"])
-                assert result.exit_code == 0
+            runner = CliRunner()
+            result = runner.invoke(cli, ["mcp", "install", "--force"])
+            assert result.exit_code == 0
 
-                config = json.loads(config_file.read_text())
-                assert config["mcpServers"]["lightroom-cli"]["command"] == "lr-mcp"
+            config = json.loads(config_file.read_text())
+            assert config["mcpServers"]["lightroom-cli"]["command"] == "lr-mcp"
 
 
 class TestMcpUninstall:
@@ -158,10 +146,7 @@ class TestMcpTest:
         mock_client.disconnect = AsyncMock()
         mock_client.ping = AsyncMock(return_value={"status": "ok"})
 
-        with (
-            patch("cli.commands.mcp._check_fastmcp_installed", return_value=True),
-            patch("cli.commands.mcp._create_test_client", return_value=mock_client),
-        ):
+        with patch("cli.commands.mcp._create_test_client", return_value=mock_client):
             runner = CliRunner()
             result = runner.invoke(cli, ["mcp", "test"])
             assert result.exit_code == 0, f"output: {result.output}"
@@ -171,10 +156,7 @@ class TestMcpTest:
 
     def test_mcp_test_fails_without_lightroom(self):
         """I1: Lightroom が起動していない場合にエラー"""
-        with (
-            patch("cli.commands.mcp._check_fastmcp_installed", return_value=True),
-            patch("cli.commands.mcp._get_port_file_for_test", return_value="/tmp/nonexistent_test.txt"),
-        ):
+        with patch("cli.commands.mcp._get_port_file_for_test", return_value="/tmp/nonexistent_test.txt"):
             runner = CliRunner()
             result = runner.invoke(cli, ["mcp", "test"])
             assert result.exit_code != 0

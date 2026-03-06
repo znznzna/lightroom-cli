@@ -26,12 +26,10 @@ dependencies = [
     "rich>=13.0",
     "pydantic>=2.0",
     "platformdirs>=3.0",
+    "fastmcp>=3.0",
 ]
 
 [project.optional-dependencies]
-mcp = [
-    "fastmcp>=3.0",
-]
 dev = [
     "pytest>=7.0",
     "pytest-asyncio>=0.21",
