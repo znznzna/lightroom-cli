@@ -1787,12 +1787,10 @@ function CatalogModule.getDevelopPresets(params, callback)
             local presetName = preset:getName()
             local include = true
             if searchQuery then
-                -- Case-insensitive substring match
-                include = string.find(
-                    string.lower(presetName),
-                    string.lower(searchQuery),
-                    1, true
-                ) ~= nil
+                -- Case-insensitive substring match on name or folder
+                local lowerQuery = string.lower(searchQuery)
+                include = string.find(string.lower(presetName), lowerQuery, 1, true) ~= nil
+                    or string.find(string.lower(folderName), lowerQuery, 1, true) ~= nil
             end
             if include then
                 table.insert(resultPresets, {
