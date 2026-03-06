@@ -468,8 +468,8 @@ local MAX_PAGE_SIZE = 2000
 
 -- Get CommandRouter from global state for abort checking
 local function getCommandRouter()
-    if _G.LightroomPythonBridge and _G.LightroomPythonBridge.router then
-        return _G.LightroomPythonBridge.router
+    if _G.LightroomPythonBridge and _G.LightroomPythonBridge.commandRouter then
+        return _G.LightroomPythonBridge.commandRouter
     end
     return nil
 end
