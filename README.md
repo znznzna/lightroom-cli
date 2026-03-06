@@ -34,7 +34,7 @@ A Lua plugin runs inside Lightroom Classic and communicates with the Python SDK 
 
 - **Python 3.10+**
 - **Adobe Lightroom Classic** (desktop version)
-- macOS / Windows
+- macOS / Windows (Windows is supported but not yet tested on real hardware — [please report issues](https://github.com/znznzna/lightroom-cli/issues))
 
 ### Installation
 
@@ -359,6 +359,8 @@ lightroom-cli/
 - Python >= 3.10
 - Adobe Lightroom Classic
 - macOS / Windows
+
+> **Windows users:** Windows support is new in v1.1.0 and has not been tested on real hardware. If you encounter any issues, please [open an issue](https://github.com/znznzna/lightroom-cli/issues).
 
 ### Python Dependencies
 

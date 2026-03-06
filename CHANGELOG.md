@@ -11,7 +11,7 @@ MCP Server support, Windows compatibility, and reliability improvements.
   - `lr mcp install` / `uninstall` / `status` / `test` commands
   - All 107 CLI commands available as MCP tools (`lr_` prefix + snake_case)
   - Auto-resolves absolute path for Claude Desktop's PATH-limited environment
-- **Windows support** — platform-aware path resolution (`platformdirs`), CI matrix with `windows-latest`
+- **Windows support** — platform-aware path resolution (`platformdirs`), CI matrix with `windows-latest`. Not yet tested on real hardware — [please report issues](https://github.com/znznzna/lightroom-cli/issues)
 - **Input validation layer** — `lightroom_sdk/validation.py` with type coercion, range checks, enum validation, string sanitization
 - **Schema-driven architecture** — `lightroom_sdk/schema.py` as single source of truth for all command parameters
 - **`--json` / `--json-stdin`** — JSON input for all commands, enables pipe-based workflows
