@@ -2,6 +2,7 @@
 
 import asyncio
 import time
+from pathlib import Path
 
 import pytest
 
@@ -25,7 +26,8 @@ async def test_lazy_connect(mock_lr_server):
 @pytest.mark.asyncio
 async def test_connection_error_returns_mcp_error():
     """接続できない場合に MCP エラーレスポンスを返す"""
-    cm = ConnectionManager(port_file="/tmp/nonexistent_port_file_test.txt")
+    import tempfile as _tf
+    cm = ConnectionManager(port_file=str(Path(_tf.gettempdir()) / "nonexistent_port_file_test.txt"))
 
     result = await cm.execute("system.ping", {}, timeout=2.0, mutating=False)
     assert result["isError"] is True
@@ -52,8 +54,9 @@ async def test_lock_serializes_commands(mock_lr_server):
 
     (label_a, start_a, end_a) = timestamps[0]
     (label_b, start_b, end_b) = timestamps[1]
-    # At least one must have finished before the other started (within tolerance)
-    assert end_a <= start_b + 0.05 or end_b <= start_a + 0.05, (
+    # At least one must have finished before the other started
+    # Windows timer resolution is ~15ms, so use generous tolerance
+    assert end_a <= start_b + 0.1 or end_b <= start_a + 0.1, (
         f"Commands overlapped: {label_a}=[{start_a:.3f},{end_a:.3f}], {label_b}=[{start_b:.3f},{end_b:.3f}]"
     )
     await cm.shutdown()
@@ -62,7 +65,8 @@ async def test_lock_serializes_commands(mock_lr_server):
 @pytest.mark.asyncio
 async def test_mutating_not_retried_after_reconnect():
     """C1: mutating コマンドは接続エラー時に再送されずエラーを返す"""
-    cm = ConnectionManager(port_file="/tmp/nonexistent_port_file_test.txt")
+    import tempfile as _tf
+    cm = ConnectionManager(port_file=str(Path(_tf.gettempdir()) / "nonexistent_port_file_test.txt"))
     result = await cm.execute(
         "develop.setValue",
         {"param": "Exposure", "value": 0.5},
