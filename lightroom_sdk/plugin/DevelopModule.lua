@@ -748,6 +748,136 @@ function DevelopModule.batchApplySettings(params, callback)
     })
 end
 
+-- Batch set a single parameter to multiple photos
+function DevelopModule.batchSetValue(params, callback)
+    ensureLrModules()
+    local logger = getLogger()
+
+    if not params then
+        callback({
+            error = {
+                code = "MISSING_PARAMS",
+                message = "Parameters are required"
+            }
+        })
+        return
+    end
+
+    local photoIds = params.photoIds
+    local param = params.param
+    local value = params.value
+
+    if not photoIds or type(photoIds) ~= "table" or #photoIds == 0 then
+        callback({
+            error = {
+                code = "MISSING_PHOTO_IDS",
+                message = "Photo IDs array is required"
+            }
+        })
+        return
+    end
+
+    if #photoIds > 50 then
+        callback({
+            error = {
+                code = "BATCH_SIZE_EXCEEDED",
+                message = "Maximum batch size is 50 photos"
+            }
+        })
+        return
+    end
+
+    if not param or type(param) ~= "string" then
+        callback({
+            error = {
+                code = "MISSING_PARAM",
+                message = "Parameter name is required"
+            }
+        })
+        return
+    end
+
+    if value == nil then
+        callback({
+            error = {
+                code = "MISSING_VALUE",
+                message = "Value is required"
+            }
+        })
+        return
+    end
+
+    logger:info("Batch setting " .. param .. " = " .. tostring(value) .. " on " .. #photoIds .. " photos")
+
+    local catalog = LrApplication.activeCatalog()
+
+    -- Save current selection state
+    local originalPhoto = catalog:getTargetPhoto()
+    local originalPhotos = catalog:getTargetPhotos()
+
+    -- Ensure we're in Develop module
+    if LrApplicationView then
+        local currentModule = LrApplicationView.getCurrentModuleName()
+        if currentModule ~= "develop" then
+            LrApplicationView.switchToModule("develop")
+            LrTasks.sleep(0.5)
+        end
+    end
+
+    local results = {}
+    local succeeded = 0
+
+    catalog:withWriteAccessDo("Batch Set Value: " .. param, function()
+        for _, photoId in ipairs(photoIds) do
+            local photo = catalog:getPhotoByLocalId(tonumber(photoId))
+
+            if not photo then
+                table.insert(results, {
+                    photoId = photoId,
+                    success = false,
+                    error = "Photo not found"
+                })
+            else
+                catalog:setSelectedPhotos(photo, {photo})
+                LrTasks.sleep(0.1)
+
+                local success, err = ErrorUtils.safeCall(function()
+                    LrDevelopController.setValue(param, value)
+                end)
+
+                if success then
+                    succeeded = succeeded + 1
+                    table.insert(results, {
+                        photoId = photoId,
+                        success = true
+                    })
+                else
+                    table.insert(results, {
+                        photoId = photoId,
+                        success = false,
+                        error = tostring(err)
+                    })
+                end
+            end
+        end
+
+        -- Restore original selection
+        if originalPhoto and originalPhotos and #originalPhotos > 0 then
+            ErrorUtils.safeCall(function()
+                catalog:setSelectedPhotos(originalPhoto, originalPhotos)
+            end)
+        end
+    end)
+
+    callback({
+        result = {
+            processed = #results,
+            succeeded = succeeded,
+            results = results
+        }
+    })
+end
+
 -- Get value of a single develop parameter
 function DevelopModule.getValue(params, callback)
     ensureLrModules()
