@@ -50,6 +50,15 @@ lr plugin install
 
 The plugin appears under **File > Plug-in Manager** as "Lightroom CLI Bridge".
 
+### Upgrading
+
+```bash
+pip install --upgrade lightroom-cli
+lr plugin install
+```
+
+After upgrading, restart Lightroom Classic to load the updated plugin.
+
 ### Choose Your Integration
 
 #### Option A: Claude Code (SKILL-based)
