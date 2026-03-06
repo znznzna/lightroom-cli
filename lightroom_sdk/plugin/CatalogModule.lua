@@ -1798,7 +1798,6 @@ function CatalogModule.getDevelopPresets(params, callback)
                 table.insert(resultPresets, {
                     name = presetName,
                     folder = folderName,
-                    uuid = preset:getUniqueID(),
                 })
             end
         end
