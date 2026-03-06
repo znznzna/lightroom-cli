@@ -407,11 +407,12 @@ function CatalogModule.setSelectedPhotos(params, callback)
     local catalog = LrApplication.activeCatalog()
     
     -- Use withWriteAccessDo with timeout to prevent blocking
+    local selectResult = nil
     local writeSuccess, writeError = ErrorUtils.safeCall(function()
         catalog:withWriteAccessDo("Set Photo Selection", function()
             local photos = {}
             local notFound = {}
-            
+
             -- Find all photos by localIdentifier
             for _, photoId in ipairs(photoIds) do
                 local photo = catalog:getPhotoByLocalId(tonumber(photoId))
@@ -421,33 +422,32 @@ function CatalogModule.setSelectedPhotos(params, callback)
                     table.insert(notFound, photoId)
                 end
             end
-            
+
             if #photos == 0 then
                 error("No photos found with provided IDs")
             end
-            
+
             -- Set selection
             catalog:setSelectedPhotos(photos[1], photos)
-            
-            -- Return results for success callback
-            return {
+
+            selectResult = {
                 selected = #photos,
                 notFound = #notFound > 0 and notFound or nil
             }
         end, { timeout = 10 })  -- 10 second timeout
     end)
-    
-    if writeSuccess then
-        logger:info("Successfully set selection to " .. writeError.selected .. " photos")  -- writeError contains results when successful
+
+    if writeSuccess and selectResult then
+        logger:info("Successfully set selection to " .. selectResult.selected .. " photos")
         callback({
-            result = writeError  -- writeError is actually the success result
+            result = selectResult
         })
     else
-        logger:error("Failed to set photo selection (write access): " .. tostring(writeError))
+        logger:error("Failed to set photo selection: " .. tostring(writeError))
         callback({
             error = {
                 code = "WRITE_ACCESS_BLOCKED",
-                message = "Failed to set photo selection (write access blocked): " .. tostring(writeError)
+                message = "Failed to set photo selection: " .. tostring(writeError)
             }
         })
     end
@@ -870,8 +870,14 @@ function CatalogModule.batchGetFormattedMetadata(params, callback)
         local batchResults = catalog:batchGetFormattedMetadata(photos, keys)
         
         local results = {}
-        for i, photo in ipairs(photos) do
-            local metadata = batchResults[i] or {}
+        for _, photo in ipairs(photos) do
+            local metadata = {}
+            local photoMeta = batchResults[photo]
+            if photoMeta then
+                for k, v in pairs(photoMeta) do
+                    metadata[k] = v
+                end
+            end
             metadata.id = photo.localIdentifier
             table.insert(results, metadata)
         end
@@ -898,7 +904,7 @@ function CatalogModule.setRating(params, callback)
         callback(ErrorUtils.createError("MISSING_PARAM", "photoId is required"))
         return
     end
-    if not rating or rating < 0 or rating > 5 then
+    if rating == nil or rating < 0 or rating > 5 then
         callback(ErrorUtils.createError("INVALID_PARAM_VALUE", "rating must be between 0 and 5"))
         return
     end
@@ -1462,21 +1468,42 @@ function CatalogModule.removeKeyword(params, callback)
         return
     end
     local catalog = LrApplication.activeCatalog()
-    catalog:withWriteAccessDo("Remove Keyword", function()
-        local photo = catalog:getPhotoByLocalId(tonumber(photoId))
-        if not photo then
-            callback(ErrorUtils.createError("PHOTO_NOT_FOUND", "Photo not found"))
-            return
-        end
-        local success, err = ErrorUtils.safeCall(function()
-            photo:removeKeyword(keyword)
-        end)
-        if success then
-            callback(ErrorUtils.createSuccess({ photoId = photoId, keyword = keyword, message = "Keyword removed" }))
-        else
-            callback(ErrorUtils.createError("OPERATION_FAILED", tostring(err)))
-        end
-    end, { timeout = 10 })
+    local opResult = nil
+    local opError = nil
+    local writeSuccess, writeErr = ErrorUtils.safeCall(function()
+        catalog:withWriteAccessDo("Remove Keyword", function()
+            local photo = catalog:getPhotoByLocalId(tonumber(photoId))
+            if not photo then
+                opError = { code = "PHOTO_NOT_FOUND", message = "Photo not found" }
+                return
+            end
+            -- Find keyword object by name
+            local keywords = photo:getRawMetadata("keywords")
+            local keywordObj = nil
+            if keywords then
+                for _, kw in ipairs(keywords) do
+                    if kw:getName() == keyword then
+                        keywordObj = kw
+                        break
+                    end
+                end
+            end
+            if not keywordObj then
+                opError = { code = "KEYWORD_NOT_FOUND", message = "Keyword '" .. keyword .. "' not found on this photo" }
+                return
+            end
+            photo:removeKeyword(keywordObj)
+            opResult = { photoId = photoId, keyword = keyword, message = "Keyword removed" }
+        end, { timeout = 10 })
+    end)
+
+    if opError then
+        callback(ErrorUtils.createError(opError.code, opError.message))
+    elseif writeSuccess and opResult then
+        callback(ErrorUtils.createSuccess(opResult))
+    else
+        callback(ErrorUtils.createError("OPERATION_FAILED", tostring(writeErr)))
+    end
 end
 
 function CatalogModule.setViewFilter(params, callback)
