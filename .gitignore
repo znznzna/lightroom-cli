@@ -47,6 +47,9 @@ TASK.md
 # Claude
 .claude/
 
+# Worktrees
+.worktrees/
+
 # Development plans (dev-only)
 docs/plans/
 
