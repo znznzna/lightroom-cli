@@ -22,9 +22,9 @@ def test_preview_generate_current(mock_get_bridge, runner):
     }
     mock_get_bridge.return_value = mock_bridge
 
-    result = runner.invoke(cli, ["preview", "generate-current"])
+    result = runner.invoke(cli, ["preview", "generate-current", "photo-123"])
     assert result.exit_code == 0
-    mock_bridge.send_command.assert_called_once_with("preview.generatePreview", {}, timeout=120.0)
+    mock_bridge.send_command.assert_called_once_with("preview.generatePreview", {"photoId": "photo-123"}, timeout=120.0)
 
 
 @patch("cli.helpers.get_bridge")
@@ -38,10 +38,10 @@ def test_preview_generate_with_options(mock_get_bridge, runner):
     }
     mock_get_bridge.return_value = mock_bridge
 
-    result = runner.invoke(cli, ["preview", "generate", "--size", "2048", "--format", "png"])
+    result = runner.invoke(cli, ["preview", "generate", "photo-456", "--size", "2048", "--format", "png"])
     assert result.exit_code == 0
     mock_bridge.send_command.assert_called_once_with(
-        "preview.generatePreview", {"size": 2048, "format": "png"}, timeout=120.0
+        "preview.generatePreview", {"photoId": "photo-456", "size": "2048", "format": "png"}, timeout=120.0
     )
 
 
@@ -56,9 +56,11 @@ def test_preview_generate_batch(mock_get_bridge, runner):
     }
     mock_get_bridge.return_value = mock_bridge
 
-    result = runner.invoke(cli, ["preview", "generate-batch"])
+    result = runner.invoke(cli, ["preview", "generate-batch", "--photo-ids", "p1,p2,p3"])
     assert result.exit_code == 0
-    mock_bridge.send_command.assert_called_once_with("preview.generateBatchPreviews", {}, timeout=300.0)
+    mock_bridge.send_command.assert_called_once_with(
+        "preview.generateBatchPreviews", {"photoIds": ["p1", "p2", "p3"]}, timeout=300.0
+    )
 
 
 @patch("cli.helpers.get_bridge")

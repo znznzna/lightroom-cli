@@ -34,11 +34,13 @@ def list_photos(ctx, limit, offset, **kwargs):
 @catalog.command("search")
 @click.argument("query")
 @click.option("--limit", default=50, type=int)
+@click.option("--offset", default=0, type=int, help="Result offset for pagination")
 @json_input_options
 @click.pass_context
-def search(ctx, query, limit, **kwargs):
+def search(ctx, query, limit, offset, **kwargs):
     """Search photos by keyword"""
-    execute_command(ctx, "catalog.searchPhotos", {"query": query, "limit": limit}, timeout=60.0)
+    criteria = {"query": query}
+    execute_command(ctx, "catalog.searchPhotos", {"criteria": criteria, "limit": limit, "offset": offset}, timeout=60.0)
 
 
 @catalog.command("get-info")

@@ -2,7 +2,7 @@
 
 import pytest
 
-from cli.validation import ValidationError, validate_params
+from lightroom_sdk.validation import ValidationError, validate_params
 
 
 class TestRangeValidation:
@@ -23,7 +23,7 @@ class TestRangeValidation:
         assert result["rating"] == 5
 
     def test_no_min_max_skips_check(self):
-        result = validate_params("develop.setValue", {"parameter": "Exposure", "value": 999.0})
+        result = validate_params("develop.setValue", {"param": "Exposure", "value": 999.0})
         assert result["value"] == 999.0
 
     def test_suggestions_include_valid_range(self):

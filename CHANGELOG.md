@@ -2,6 +2,36 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.0] - 2026-03-06
+
+MCP Server support, Windows compatibility, and reliability improvements.
+
+### Added
+- **MCP Server** — `lr-mcp` entry point for Claude Desktop / Cowork integration
+  - `lr mcp install` / `uninstall` / `status` / `test` commands
+  - All 107 CLI commands available as MCP tools (`lr_` prefix + snake_case)
+  - Auto-resolves absolute path for Claude Desktop's PATH-limited environment
+- **Windows support** — platform-aware path resolution (`platformdirs`), CI matrix with `windows-latest`. Not yet tested on real hardware — [please report issues](https://github.com/znznzna/lightroom-cli/issues)
+- **Input validation layer** — `lightroom_sdk/validation.py` with type coercion, range checks, enum validation, string sanitization
+- **Schema-driven architecture** — `lightroom_sdk/schema.py` as single source of truth for all command parameters
+- **`--json` / `--json-stdin`** — JSON input for all commands, enables pipe-based workflows
+- **`--dry-run`** — preview command execution without sending to Lightroom
+
+### Fixed
+- Schema/Lua parameter name mismatches (14 commands fixed)
+- `catalog set-rating 0` — Lua `and/or` idiom fails with `nil`; use explicit `if` statement
+- `catalog remove-keyword` — pass keyword object instead of string to `photo:removeKeyword()`
+- `catalog select` — `withWriteAccessDo` return value not propagated; use external variable
+- `catalog batch-metadata` — iterate photo-keyed table instead of integer-indexed
+- `develop range` — `math.abs()` for correct min/max when range is negative number
+- `develop set` — unknown parameter detection changed from `getRange` to `getValue`
+- Exit code 0 on Lightroom errors — added `success: false` check in `helpers.py`
+
+### Changed
+- `fastmcp` is now a required dependency (was optional `[mcp]` extra)
+- `develop set` with multiple pairs uses individual `setValue` calls instead of `batchApplySettings`
+- 750+ tests (was 680+)
+
 ## [1.0.0] - 2026-03-06
 
 Initial public release — 107 CLI commands covering all Lightroom Classic Lua API operations.
@@ -13,5 +43,5 @@ Initial public release — 107 CLI commands covering all Lightroom Classic Lua A
 - **Agent-first design** — `lr schema` for dynamic discovery, `--fields`, `--dry-run`, structured JSON errors
 - **ResilientSocketBridge** with auto-reconnect, heartbeat, per-command timeouts
 - **Lua plugin** bundled and installable via `lr plugin install`
-- **3 output formats**: `text`, `json`, `table` (auto-detects TTY)
+- **3 output formats**: `text`, `json`, `table`
 - **680+ tests** (unit + integration)

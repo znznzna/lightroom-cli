@@ -24,7 +24,7 @@ def test_develop_local_get(mock_get_bridge, runner):
 
     result = runner.invoke(cli, ["develop", "local", "get", "Exposure"])
     assert result.exit_code == 0
-    mock_bridge.send_command.assert_called_once_with("develop.getLocalValue", {"parameter": "Exposure"}, timeout=30.0)
+    mock_bridge.send_command.assert_called_once_with("develop.getLocalValue", {"param": "Exposure"}, timeout=30.0)
 
 
 @patch("cli.helpers.get_bridge")
@@ -41,7 +41,7 @@ def test_develop_local_set(mock_get_bridge, runner):
     result = runner.invoke(cli, ["develop", "local", "set", "Exposure", "0.5"])
     assert result.exit_code == 0
     mock_bridge.send_command.assert_called_once_with(
-        "develop.setLocalValue", {"parameter": "Exposure", "value": 0.5}, timeout=30.0
+        "develop.setLocalValue", {"param": "Exposure", "value": 0.5}, timeout=30.0
     )
 
 

@@ -110,6 +110,9 @@ _register(
         "develop.getSettings",
         "develop.get-settings",
         "Get all current develop settings",
+        params=[
+            ParamSchema("photoId", ParamType.STRING, required=True, description="Target photo ID"),
+        ],
         response_fields=[
             "Exposure",
             "Contrast",
@@ -127,7 +130,7 @@ _register(
         "Set develop parameter(s)",
         params=[
             ParamSchema(
-                "parameter",
+                "param",
                 ParamType.STRING,
                 required=True,
                 description="Develop parameter name (e.g., Exposure, Contrast)",
@@ -151,13 +154,19 @@ _register(
     CommandSchema(
         "develop.applySettings",
         "develop.apply",
-        "Apply develop settings from JSON",
+        "Apply develop settings to a specific photo",
         params=[
+            ParamSchema(
+                "photoId",
+                ParamType.STRING,
+                required=False,
+                description="Target photo ID (required by Lightroom — use catalog.getSelected to obtain)",
+            ),
             ParamSchema(
                 "settings",
                 ParamType.JSON_OBJECT,
                 required=True,
-                description="JSON object of settings to apply",
+                description='JSON object of settings to apply (e.g., {"Exposure": 0.5, "Contrast": 20})',
             ),
         ],
         mutating=True,
@@ -167,13 +176,19 @@ _register(
     CommandSchema(
         "develop.batchApplySettings",
         "develop.batch-apply",
-        "Batch apply develop settings (used internally by develop set with multiple pairs)",
+        "Batch apply develop settings to multiple photos",
         params=[
+            ParamSchema(
+                "photoIds",
+                ParamType.JSON_ARRAY,
+                required=False,
+                description="Array of photo IDs to apply settings to (required by Lightroom)",
+            ),
             ParamSchema(
                 "settings",
                 ParamType.JSON_OBJECT,
                 required=True,
-                description="JSON object of settings to apply",
+                description='JSON object of settings to apply (e.g., {"Exposure": 0.5, "Contrast": 20})',
             ),
         ],
         mutating=True,
@@ -336,7 +351,12 @@ _register(
                 ParamType.STRING,
                 required=True,
                 description="Curve parameter name",
-            )
+            ),
+            ParamSchema(
+                "strength",
+                ParamType.INTEGER,
+                description="S-curve strength 0-100 (default: 25)",
+            ),
         ],
         mutating=True,
         supports_dry_run=True,
@@ -422,11 +442,16 @@ _register(
         "Get a local adjustment parameter value",
         params=[
             ParamSchema(
-                "parameter",
+                "param",
                 ParamType.STRING,
                 required=True,
-                description="Local adjustment parameter name",
-            )
+                description="Local adjustment parameter name (e.g., local_Exposure)",
+            ),
+            ParamSchema(
+                "maskId",
+                ParamType.STRING,
+                description="Mask ID to select before reading value",
+            ),
         ],
         response_fields=["parameter", "value"],
     ),
@@ -436,7 +461,7 @@ _register(
         "Set a local adjustment parameter value",
         params=[
             ParamSchema(
-                "parameter",
+                "param",
                 ParamType.STRING,
                 required=True,
                 description="Local adjustment parameter name",
@@ -445,7 +470,12 @@ _register(
                 "value",
                 ParamType.FLOAT,
                 required=True,
-                description="Numeric value to set",
+                description="Parameter value",
+            ),
+            ParamSchema(
+                "maskId",
+                ParamType.STRING,
+                description="Mask ID to select before setting value",
             ),
         ],
         mutating=True,
@@ -461,6 +491,11 @@ _register(
                 ParamType.JSON_OBJECT,
                 required=True,
                 description="JSON object of local adjustment settings",
+            ),
+            ParamSchema(
+                "maskId",
+                ParamType.STRING,
+                description="Mask ID to select before applying settings",
             ),
         ],
         mutating=True,
@@ -487,6 +522,11 @@ _register(
                 "localSettings",
                 ParamType.JSON_OBJECT,
                 description="Local adjustment settings to apply to the mask",
+            ),
+            ParamSchema(
+                "maskSubtype",
+                ParamType.STRING,
+                description="Mask subtype passed to mask creation",
             ),
         ],
         mutating=True,
@@ -687,6 +727,14 @@ _register(
         "develop.createGreenSwatch",
         "develop.color.green-swatch",
         "Create green color swatch",
+        params=[
+            ParamSchema("saturationBoost", ParamType.FLOAT, description="Saturation scale value (default: 0)"),
+            ParamSchema("luminanceAdjust", ParamType.FLOAT, description="Luminance scale value (default: 0)"),
+            ParamSchema("hueShift", ParamType.FLOAT, description="Hue shift amount (default: -0.1)"),
+            ParamSchema(
+                "rangeWidth", ParamType.STRING, description="Range width: tight, normal, wide (default: normal)"
+            ),
+        ],
         mutating=True,
         supports_dry_run=True,
     ),
@@ -694,6 +742,14 @@ _register(
         "develop.createCyanSwatch",
         "develop.color.cyan-swatch",
         "Create cyan color swatch",
+        params=[
+            ParamSchema("saturationBoost", ParamType.FLOAT, description="Saturation scale value (default: 0.2)"),
+            ParamSchema("luminanceAdjust", ParamType.FLOAT, description="Luminance scale value (default: 0)"),
+            ParamSchema("hueShift", ParamType.FLOAT, description="Hue shift amount (default: 0)"),
+            ParamSchema(
+                "rangeWidth", ParamType.STRING, description="Range width: tight, normal, wide (default: normal)"
+            ),
+        ],
         mutating=True,
         supports_dry_run=True,
     ),
@@ -707,7 +763,12 @@ _register(
                 ParamType.ENUM,
                 description="Color enhancement preset",
                 enum_values=["natural", "vivid", "muted"],
-            )
+            ),
+            ParamSchema(
+                "preserveExisting",
+                ParamType.BOOLEAN,
+                description="Merge with existing PointColors (default: false)",
+            ),
         ],
         mutating=True,
         supports_dry_run=True,
@@ -852,6 +913,11 @@ _register(
                 default=False,
                 description="Continue processing if a photo fails",
             ),
+            ParamSchema(
+                "part",
+                ParamType.STRING,
+                description="Specific part to mask (e.g. eyes, hair, mountain)",
+            ),
         ],
         mutating=True,
         timeout=300.0,
@@ -891,19 +957,24 @@ _register(
     CommandSchema(
         "catalog.searchPhotos",
         "catalog.search",
-        "Search photos by keyword",
+        "Search photos by criteria",
         params=[
             ParamSchema(
-                "query",
-                ParamType.STRING,
-                required=True,
-                description="Search keyword or phrase",
+                "criteria",
+                ParamType.JSON_OBJECT,
+                description="Search criteria object",
             ),
             ParamSchema(
                 "limit",
                 ParamType.INTEGER,
-                default=50,
-                description="Maximum number of results to return",
+                default=100,
+                description="Maximum number of results (1-10000, default: 100)",
+            ),
+            ParamSchema(
+                "offset",
+                ParamType.INTEGER,
+                default=0,
+                description="Result offset (default: 0)",
             ),
         ],
         timeout=60.0,
@@ -1426,18 +1497,37 @@ _register(
         supports_dry_run=True,
     ),
     CommandSchema(
-        "selection.toggleColorLabel",
-        "selection.toggle-label",
-        "Toggle color label for selected photo(s)",
-        params=[
-            ParamSchema(
-                "color",
-                ParamType.ENUM,
-                required=True,
-                description="Color label to toggle",
-                enum_values=["red", "yellow", "green", "blue", "purple"],
-            ),
-        ],
+        "selection.toggleRedLabel",
+        "selection.toggle-red-label",
+        "Toggle red label for selected photo(s)",
+        mutating=True,
+        supports_dry_run=True,
+    ),
+    CommandSchema(
+        "selection.toggleYellowLabel",
+        "selection.toggle-yellow-label",
+        "Toggle yellow label for selected photo(s)",
+        mutating=True,
+        supports_dry_run=True,
+    ),
+    CommandSchema(
+        "selection.toggleGreenLabel",
+        "selection.toggle-green-label",
+        "Toggle green label for selected photo(s)",
+        mutating=True,
+        supports_dry_run=True,
+    ),
+    CommandSchema(
+        "selection.toggleBlueLabel",
+        "selection.toggle-blue-label",
+        "Toggle blue label for selected photo(s)",
+        mutating=True,
+        supports_dry_run=True,
+    ),
+    CommandSchema(
+        "selection.togglePurpleLabel",
+        "selection.toggle-purple-label",
+        "Toggle purple label for selected photo(s)",
         mutating=True,
         supports_dry_run=True,
     ),
@@ -1522,17 +1612,30 @@ _register(
         "Generate preview with specified size and format",
         params=[
             ParamSchema(
+                "photoId",
+                ParamType.STRING,
+                required=True,
+                description="Target photo ID",
+            ),
+            ParamSchema(
                 "size",
+                ParamType.STRING,
+                description="Preview size: small, medium, large, or custom number",
+            ),
+            ParamSchema(
+                "quality",
                 ParamType.INTEGER,
-                default=1024,
-                description="Preview size in pixels (longest edge)",
+                description="JPEG quality (default: 90)",
             ),
             ParamSchema(
                 "format",
-                ParamType.ENUM,
-                default="jpeg",
-                description="Image format for preview",
-                enum_values=["jpeg", "png"],
+                ParamType.STRING,
+                description="Output format (default: jpeg)",
+            ),
+            ParamSchema(
+                "base64",
+                ParamType.BOOLEAN,
+                description="Base64 encode output (default: true)",
             ),
         ],
         timeout=120.0,
@@ -1542,6 +1645,29 @@ _register(
         "preview.generateBatchPreviews",
         "preview.generate-batch",
         "Generate batch previews",
+        params=[
+            ParamSchema(
+                "photoIds",
+                ParamType.JSON_ARRAY,
+                required=True,
+                description="Array of photo IDs",
+            ),
+            ParamSchema(
+                "size",
+                ParamType.STRING,
+                description="Preview size: small, medium, large, or custom number",
+            ),
+            ParamSchema(
+                "quality",
+                ParamType.INTEGER,
+                description="JPEG quality (default: 90)",
+            ),
+            ParamSchema(
+                "base64",
+                ParamType.BOOLEAN,
+                description="Base64 encode output (default: true)",
+            ),
+        ],
         timeout=300.0,
         response_fields=["previews", "total"],
     ),

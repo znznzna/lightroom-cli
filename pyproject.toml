@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lightroom-cli"
-version = "1.0.0"
-description = "CLI tool for Adobe Lightroom Classic — 107 commands for full Lightroom control"
+version = "1.1.0"
+description = "CLI tool for Adobe Lightroom Classic -- 107 commands for full Lightroom control"
 authors = [{name = "M.Endo", email = "motoki@clockwork-sound.com"}]
 readme = "README.md"
 license = {text = "MIT"}
@@ -19,12 +19,14 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Topic :: Multimedia :: Graphics",
     "Operating System :: MacOS",
+    "Operating System :: Microsoft :: Windows",
 ]
 dependencies = [
     "click>=8.1",
     "rich>=13.0",
     "pydantic>=2.0",
     "platformdirs>=3.0",
+    "fastmcp>=3.0",
 ]
 
 [project.optional-dependencies]
@@ -42,9 +44,10 @@ Issues = "https://github.com/znznzna/lightroom-cli/issues"
 
 [project.scripts]
 lr = "cli.main:cli"
+lr-mcp = "mcp_server.server:main"
 
 [tool.setuptools]
-packages = ["lightroom_sdk", "lightroom_sdk.types", "cli", "cli.commands"]
+packages = ["lightroom_sdk", "lightroom_sdk.types", "cli", "cli.commands", "mcp_server"]
 
 [tool.setuptools.package-data]
 lightroom_sdk = ["plugin/*.lua"]
@@ -72,4 +75,3 @@ line-length = 120
 [tool.ruff.lint]
 select = ["E", "F", "W", "I"]
 ignore = ["E402"]
-
