@@ -698,7 +698,16 @@ def batch_set(ctx, photo_ids, param, value, **kwargs):
     """Set a single develop parameter on multiple photos"""
     from lightroom_sdk.retry import calculate_batch_timeout
 
-    ids = [int(pid.strip()) for pid in photo_ids.split(",")]
+    try:
+        ids = [int(pid.strip()) for pid in photo_ids.split(",") if pid.strip()]
+    except ValueError:
+        fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+        click.echo(
+            OutputFormatter.format_error("Invalid photo ID (must be integers)", fmt, code="VALIDATION_ERROR"),
+            err=True,
+        )
+        ctx.exit(2)
+        return
     if len(ids) > 50:
         fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
         click.echo(

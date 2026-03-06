@@ -75,11 +75,12 @@ function CatalogModule.searchPhotos(params, callback)
 
     CatalogModule.findPhotos(findParams, function(response)
         -- Add legacy hasMore field for backward compatibility
-        if response and response.photos then
-            local total = response.total or 0
-            local offset = response.offset or 0
-            local returned = response.returned or #response.photos
-            response.hasMore = (offset + returned) < total
+        local r = response and response.result
+        if r and r.photos then
+            local total = r.total or 0
+            local off = r.offset or 0
+            local returned = r.returned or #r.photos
+            r.hasMore = (off + returned) < total
         end
         callback(response)
     end)
