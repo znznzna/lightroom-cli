@@ -69,23 +69,23 @@ class TestJsonSanitizeRecursive:
 
     def test_json_object_with_null_char_rejected(self):
         with pytest.raises(ValidationError, match="null character"):
-            validate_params("develop.applySettings", {"settings": {"Exposure": "val\x00ue"}})
+            validate_params("develop.applySettings", {"photoId": "1", "settings": {"Exposure": "val\x00ue"}})
 
     def test_json_object_with_control_char_rejected(self):
         with pytest.raises(ValidationError, match="control characters"):
-            validate_params("develop.applySettings", {"settings": {"Exposure": "val\x07ue"}})
+            validate_params("develop.applySettings", {"photoId": "1", "settings": {"Exposure": "val\x07ue"}})
 
     def test_json_object_with_overlong_string_rejected(self):
         with pytest.raises(ValidationError, match="exceeds maximum length"):
-            validate_params("develop.applySettings", {"settings": {"key": "x" * 11_000}})
+            validate_params("develop.applySettings", {"photoId": "1", "settings": {"key": "x" * 11_000}})
 
     def test_json_object_with_normal_strings_passes(self):
-        result = validate_params("develop.applySettings", {"settings": {"Exposure": 1.0}})
+        result = validate_params("develop.applySettings", {"photoId": "1", "settings": {"Exposure": 1.0}})
         assert result["settings"]["Exposure"] == 1.0
 
     def test_json_object_nested_dict_sanitized(self):
         with pytest.raises(ValidationError, match="null character"):
-            validate_params("develop.applySettings", {"settings": {"nested": {"key": "a\x00b"}}})
+            validate_params("develop.applySettings", {"photoId": "1", "settings": {"nested": {"key": "a\x00b"}}})
 
     def test_json_array_with_null_char_rejected(self):
         with pytest.raises(ValidationError, match="null character"):

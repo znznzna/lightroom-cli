@@ -22,9 +22,9 @@ def test_develop_get_settings(mock_get_bridge, runner):
     }
     mock_get_bridge.return_value = mock_bridge
 
-    result = runner.invoke(cli, ["develop", "get-settings"])
+    result = runner.invoke(cli, ["develop", "get-settings", "photo-123"])
     assert result.exit_code == 0
-    mock_bridge.send_command.assert_called_once_with("develop.getSettings", {}, timeout=30.0)
+    mock_bridge.send_command.assert_called_once_with("develop.getSettings", {"photoId": "photo-123"}, timeout=30.0)
 
 
 @patch("cli.helpers.get_bridge")
@@ -41,13 +41,13 @@ def test_develop_set_single_param(mock_get_bridge, runner):
     result = runner.invoke(cli, ["develop", "set", "Exposure", "1.5"])
     assert result.exit_code == 0
     mock_bridge.send_command.assert_called_once_with(
-        "develop.setValue", {"parameter": "Exposure", "value": 1.5}, timeout=30.0
+        "develop.setValue", {"param": "Exposure", "value": 1.5}, timeout=30.0
     )
 
 
 @patch("cli.helpers.get_bridge")
 def test_develop_set_multiple_params(mock_get_bridge, runner):
-    """lr develop set Exposure 1.5 Contrast 25 が複数パラメータを一括設定する"""
+    """lr develop set Exposure 1.5 Contrast 25 が個別にsetValueを呼ぶ"""
     mock_bridge = AsyncMock()
     mock_bridge.send_command.return_value = {
         "id": "3",
@@ -58,11 +58,10 @@ def test_develop_set_multiple_params(mock_get_bridge, runner):
 
     result = runner.invoke(cli, ["develop", "set", "Exposure", "1.5", "Contrast", "25"])
     assert result.exit_code == 0
-    mock_bridge.send_command.assert_called_once_with(
-        "develop.batchApplySettings",
-        {"settings": {"Exposure": 1.5, "Contrast": 25.0}},
-        timeout=30.0,
-    )
+    assert mock_bridge.send_command.call_count == 2
+    calls = mock_bridge.send_command.call_args_list
+    assert calls[0].args == ("develop.setValue", {"param": "Exposure", "value": 1.5})
+    assert calls[1].args == ("develop.setValue", {"param": "Contrast", "value": 25.0})
 
 
 @patch("cli.helpers.get_bridge")
@@ -335,7 +334,7 @@ class TestJsonInput:
             "result": {},
         }
         mock_get_bridge.return_value = mock_bridge
-        result = runner.invoke(cli, ["develop", "get-settings", "--json", "{}"])
+        result = runner.invoke(cli, ["develop", "get-settings", "photo-1", "--json", '{"photoId": "photo-1"}'])
         assert result.exit_code == 0
 
     @patch("cli.helpers.get_bridge")
@@ -343,5 +342,5 @@ class TestJsonInput:
         """空の --json がエラーになる"""
         mock_bridge = AsyncMock()
         mock_get_bridge.return_value = mock_bridge
-        result = runner.invoke(cli, ["develop", "get-settings", "--json", "  "])
+        result = runner.invoke(cli, ["develop", "get-settings", "photo-1", "--json", "  "])
         assert result.exit_code == 2

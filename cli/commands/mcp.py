@@ -3,10 +3,23 @@
 from __future__ import annotations
 
 import json
+import shutil
 import sys
 from pathlib import Path
 
 import click
+
+
+def _resolve_lr_mcp_command() -> str:
+    """lr-mcp コマンドの絶対パスを解決する。
+
+    Claude Desktop は限られた PATH しか持たないため、
+    venv 内の lr-mcp を見つけられない。絶対パスで登録する。
+    """
+    resolved = shutil.which("lr-mcp")
+    if resolved:
+        return resolved
+    return "lr-mcp"
 
 
 def _get_claude_config_path() -> Path:
@@ -58,10 +71,12 @@ def _write_config(config_path: Path, config: dict) -> None:
     config_path.write_text(json.dumps(config, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
 
-MCP_SERVER_ENTRY = {
-    "command": "lr-mcp",
-    "args": [],
-}
+def _build_mcp_server_entry() -> dict:
+    """MCP Server エントリを生成する。コマンドは絶対パスで解決。"""
+    return {
+        "command": _resolve_lr_mcp_command(),
+        "args": [],
+    }
 
 
 @click.group()
@@ -91,7 +106,7 @@ def install(force):
         click.echo("lightroom-cli is already installed in the config.\nUse --force to overwrite the existing entry.")
         return
 
-    config["mcpServers"]["lightroom-cli"] = MCP_SERVER_ENTRY
+    config["mcpServers"]["lightroom-cli"] = _build_mcp_server_entry()
     _write_config(config_path, config)
 
     click.echo(f"MCP server installed to {config_path}")

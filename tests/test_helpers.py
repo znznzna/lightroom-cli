@@ -95,9 +95,11 @@ class TestExecuteCommand:
         mock_bridge.send_command.return_value = {"result": {}}
 
         with patch("cli.helpers.get_bridge", return_value=mock_bridge):
-            execute_command(mock_ctx, "preview.generatePreview", {}, timeout=120.0)
+            execute_command(mock_ctx, "preview.generatePreview", {"photoId": "photo-1"}, timeout=120.0)
 
-        mock_bridge.send_command.assert_called_once_with("preview.generatePreview", {}, timeout=120.0)
+        mock_bridge.send_command.assert_called_once_with(
+            "preview.generatePreview", {"photoId": "photo-1"}, timeout=120.0
+        )
 
     def test_validation_error_exit_code_2(self):
         from cli.helpers import execute_command
@@ -107,7 +109,7 @@ class TestExecuteCommand:
         with patch("cli.helpers.get_bridge") as mock_get:
             mock_bridge = AsyncMock()
             mock_get.return_value = mock_bridge
-            execute_command(mock_ctx, "develop.setValue", {"Exposre": 0.5})
+            execute_command(mock_ctx, "develop.setValue", {"Exposre": 0.5})  # intentionally misspelled
 
         mock_ctx.exit.assert_called_with(2)
         mock_bridge.send_command.assert_not_called()
@@ -120,7 +122,7 @@ class TestExecuteCommand:
         mock_bridge.send_command.return_value = {"result": {"status": "ok"}}
 
         with patch("cli.helpers.get_bridge", return_value=mock_bridge):
-            execute_command(mock_ctx, "develop.setValue", {"parameter": "Exposure", "value": 0.5})
+            execute_command(mock_ctx, "develop.setValue", {"param": "Exposure", "value": 0.5})
 
         mock_bridge.send_command.assert_called_once()
 
@@ -131,7 +133,7 @@ class TestExecuteCommand:
         mock_bridge = AsyncMock()
 
         with patch("cli.helpers.get_bridge", return_value=mock_bridge):
-            execute_command(mock_ctx, "develop.setValue", {"parameter": "Exposure", "value": 0.5})
+            execute_command(mock_ctx, "develop.setValue", {"param": "Exposure", "value": 0.5})
 
         mock_bridge.send_command.assert_not_called()
 
@@ -143,22 +145,22 @@ class TestExecuteCommand:
         mock_bridge.send_command.return_value = {"result": {"ok": True}}
 
         with patch("cli.helpers.get_bridge", return_value=mock_bridge):
-            execute_command(mock_ctx, "develop.setValue", {"parameter": "Exposure", "value": 0.5})
+            execute_command(mock_ctx, "develop.setValue", {"param": "Exposure", "value": 0.5})
 
         mock_bridge.send_command.assert_called_once()
 
     def test_json_input_overrides_params(self):
         from cli.helpers import execute_command
 
-        mock_ctx = self._make_ctx(params={"json_str": '{"parameter": "Contrast", "value": 50}'})
+        mock_ctx = self._make_ctx(params={"json_str": '{"param": "Contrast", "value": 50}'})
         mock_bridge = AsyncMock()
         mock_bridge.send_command.return_value = {"result": {"ok": True}}
 
         with patch("cli.helpers.get_bridge", return_value=mock_bridge):
-            execute_command(mock_ctx, "develop.setValue", {"parameter": "Exposure", "value": 0.5})
+            execute_command(mock_ctx, "develop.setValue", {"param": "Exposure", "value": 0.5})
 
         call_args = mock_bridge.send_command.call_args
-        assert call_args[0][1]["parameter"] == "Contrast"
+        assert call_args[0][1]["param"] == "Contrast"
         assert call_args[0][1]["value"] == 50
 
     def test_empty_json_string_rejected(self):

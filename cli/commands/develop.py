@@ -35,11 +35,12 @@ develop.add_command(ai)
 
 
 @develop.command("get-settings")
+@click.argument("photo_id")
 @json_input_options
 @click.pass_context
-def get_settings(ctx, **kwargs):
-    """Get all current develop settings"""
-    execute_command(ctx, "develop.getSettings", {})
+def get_settings(ctx, photo_id, **kwargs):
+    """Get all current develop settings for a photo"""
+    execute_command(ctx, "develop.getSettings", {"photoId": photo_id})
 
 
 @develop.command("set")
@@ -62,11 +63,8 @@ def set_values(ctx, pairs, dry_run, **kwargs):
         )
         ctx.exit(2)
         return
-    if len(parsed) == 1:
-        param, value = next(iter(parsed.items()))
-        execute_command(ctx, "develop.setValue", {"parameter": param, "value": value})
-    else:
-        execute_command(ctx, "develop.batchApplySettings", {"settings": parsed})
+    for param, value in parsed.items():
+        execute_command(ctx, "develop.setValue", {"param": param, "value": value})
 
 
 @develop.command("auto-tone")
@@ -89,10 +87,11 @@ def get_value(ctx, parameter, **kwargs):
 
 @develop.command("apply")
 @click.option("--settings", required=True, help="JSON string of settings to apply")
+@click.option("--photo-id", default=None, help="Target photo ID (required)")
 @click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @json_input_options
 @click.pass_context
-def apply_settings(ctx, settings, dry_run, **kwargs):
+def apply_settings(ctx, settings, photo_id, dry_run, **kwargs):
     """Apply develop settings from JSON"""
     try:
         parsed = json.loads(settings)
@@ -107,7 +106,10 @@ def apply_settings(ctx, settings, dry_run, **kwargs):
         )
         ctx.exit(1)
         return
-    execute_command(ctx, "develop.applySettings", {"settings": parsed})
+    params = {"settings": parsed}
+    if photo_id:
+        params["photoId"] = photo_id
+    execute_command(ctx, "develop.applySettings", params)
 
 
 @develop.command("auto-wb")
@@ -377,7 +379,7 @@ def local_adj():
 @click.pass_context
 def local_get(ctx, parameter, **kwargs):
     """Get a local adjustment parameter value"""
-    execute_command(ctx, "develop.getLocalValue", {"parameter": parameter})
+    execute_command(ctx, "develop.getLocalValue", {"param": parameter})
 
 
 @local_adj.command("set")
@@ -388,7 +390,7 @@ def local_get(ctx, parameter, **kwargs):
 @click.pass_context
 def local_set(ctx, parameter, value, dry_run, **kwargs):
     """Set a local adjustment parameter value"""
-    execute_command(ctx, "develop.setLocalValue", {"parameter": parameter, "value": value})
+    execute_command(ctx, "develop.setLocalValue", {"param": parameter, "value": value})
 
 
 @local_adj.command("apply")

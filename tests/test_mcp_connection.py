@@ -65,7 +65,7 @@ async def test_mutating_not_retried_after_reconnect():
     cm = ConnectionManager(port_file="/tmp/nonexistent_port_file_test.txt")
     result = await cm.execute(
         "develop.setValue",
-        {"parameter": "Exposure", "value": 0.5},
+        {"param": "Exposure", "value": 0.5},
         timeout=2.0,
         mutating=True,
     )
@@ -86,7 +86,7 @@ async def test_mutating_flag_prevents_retry_explicitly(mock_lr_server):
 
     result = await cm.execute(
         "develop.setValue",
-        {"parameter": "Exposure", "value": 0.5},
+        {"param": "Exposure", "value": 0.5},
         timeout=5.0,
         mutating=True,
     )

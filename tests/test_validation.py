@@ -9,8 +9,8 @@ class TestValidateParams:
     def test_valid_params_pass_through(self):
         from lightroom_sdk.validation import validate_params
 
-        result = validate_params("develop.setValue", {"parameter": "Exposure", "value": 0.5})
-        assert result["parameter"] == "Exposure"
+        result = validate_params("develop.setValue", {"param": "Exposure", "value": 0.5})
+        assert result["param"] == "Exposure"
         assert result["value"] == 0.5
 
     def test_unknown_param_raises(self):
@@ -23,12 +23,12 @@ class TestValidateParams:
         from lightroom_sdk.validation import ValidationError, validate_params
 
         with pytest.raises(ValidationError, match="Required parameter"):
-            validate_params("develop.setValue", {"parameter": "Exposure"})
+            validate_params("develop.setValue", {"param": "Exposure"})
 
     def test_type_coercion_string_to_float(self):
         from lightroom_sdk.validation import validate_params
 
-        result = validate_params("develop.setValue", {"parameter": "Exposure", "value": "0.5"})
+        result = validate_params("develop.setValue", {"param": "Exposure", "value": "0.5"})
         assert result["value"] == 0.5
         assert isinstance(result["value"], float)
 
@@ -36,7 +36,7 @@ class TestValidateParams:
         from lightroom_sdk.validation import ValidationError, validate_params
 
         with pytest.raises(ValidationError, match="Invalid type"):
-            validate_params("develop.setValue", {"parameter": "Exposure", "value": "not_a_number"})
+            validate_params("develop.setValue", {"param": "Exposure", "value": "not_a_number"})
 
     def test_unknown_command_skips_validation(self):
         from lightroom_sdk.validation import validate_params
@@ -67,14 +67,14 @@ class TestValidateParams:
     def test_json_object_valid(self):
         from lightroom_sdk.validation import validate_params
 
-        result = validate_params("develop.applySettings", {"settings": {"Exposure": 0.5}})
+        result = validate_params("develop.applySettings", {"photoId": "1", "settings": {"Exposure": 0.5}})
         assert result["settings"] == {"Exposure": 0.5}
 
     def test_json_object_invalid_raises(self):
         from lightroom_sdk.validation import ValidationError, validate_params
 
         with pytest.raises(ValidationError, match="expected JSON object"):
-            validate_params("develop.applySettings", {"settings": "not_a_dict"})
+            validate_params("develop.applySettings", {"photoId": "1", "settings": "not_a_dict"})
 
     def test_json_array_valid(self):
         from lightroom_sdk.validation import validate_params
@@ -126,7 +126,7 @@ class TestSuggestions:
         with pytest.raises(ValidationError) as exc_info:
             validate_params("develop.setValue", {"Exposre": 0.5})
         assert len(exc_info.value.suggestions) > 0
-        assert "Exposure" in exc_info.value.suggestions[0] or "parameter" in exc_info.value.suggestions[0]
+        assert "Exposure" in exc_info.value.suggestions[0] or "param" in exc_info.value.suggestions[0]
 
     def test_enum_error_has_suggestions(self):
         """enum バリデーションエラー時に有効な値の一覧が suggestions に含まれる"""
@@ -143,7 +143,7 @@ class TestSuggestions:
         from lightroom_sdk.validation import ValidationError, validate_params
 
         with pytest.raises(ValidationError) as exc_info:
-            validate_params("develop.setValue", {"parameter": "Exposure", "value": "not_a_number"})
+            validate_params("develop.setValue", {"param": "Exposure", "value": "not_a_number"})
         assert len(exc_info.value.suggestions) > 0
 
     def test_format_error_json_includes_suggestions(self):
