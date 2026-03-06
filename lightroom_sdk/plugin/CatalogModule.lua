@@ -459,12 +459,129 @@ local KNOWN_FILTER_KEYS = {
     fileFormat = true, keyword = true, filename = true,
 }
 
+-- Chunk processing constants
+local FILTER_CHUNK_SIZE = 50
+local METADATA_CHUNK_SIZE = 50
+local DEFAULT_PAGE_SIZE = 500
+local MAX_PAGE_SIZE = 2000
+
+-- Get CommandRouter from global state for abort checking
+local function getCommandRouter()
+    if _G.LightroomPythonBridge and _G.LightroomPythonBridge.router then
+        return _G.LightroomPythonBridge.router
+    end
+    return nil
+end
+
+-- Match a single photo against search criteria
+local function matchPhoto(photo, searchDesc)
+    -- Light filters first --
+
+    -- Rating filter
+    if searchDesc.rating then
+        local rating = photo:getRawMetadata("rating") or 0
+        local op = searchDesc.ratingOp or "=="
+        if op == "==" and rating ~= searchDesc.rating then return false end
+        if op == ">=" and rating < searchDesc.rating then return false end
+        if op == "<=" and rating > searchDesc.rating then return false end
+        if op == ">" and rating <= searchDesc.rating then return false end
+        if op == "<" and rating >= searchDesc.rating then return false end
+    end
+
+    -- Flag filter
+    if searchDesc.flag then
+        local pickStatus = photo:getRawMetadata("pickStatus") or 0
+        if searchDesc.flag == "pick" and pickStatus ~= 1 then return false end
+        if searchDesc.flag == "reject" and pickStatus ~= -1 then return false end
+        if searchDesc.flag == "none" and pickStatus ~= 0 then return false end
+    end
+
+    -- Color label filter
+    if searchDesc.colorLabel then
+        local label = photo:getRawMetadata("colorNameForLabel") or ""
+        if searchDesc.colorLabel == "none" then
+            if label ~= "" and label ~= "none" then return false end
+        else
+            if label ~= searchDesc.colorLabel then return false end
+        end
+    end
+
+    -- File format filter (exact match)
+    if searchDesc.fileFormat then
+        local fmt = photo:getRawMetadata("fileFormat") or ""
+        if fmt ~= searchDesc.fileFormat then return false end
+    end
+
+    -- Heavy filters --
+
+    -- Camera filter
+    if searchDesc.camera then
+        local camera = photo:getFormattedMetadata("cameraModel") or ""
+        if not string.find(string.lower(camera), string.lower(searchDesc.camera)) then
+            return false
+        end
+    end
+
+    -- Capture date range filter (use raw date + W3C format for locale-independent comparison)
+    if searchDesc.captureDateFrom or searchDesc.captureDateTo then
+        local rawDate = photo:getRawMetadata("dateTimeOriginal")
+        if rawDate then
+            local isoDate
+            if LrDate and LrDate.timeToW3CDate then
+                isoDate = LrDate.timeToW3CDate(rawDate)
+            else
+                isoDate = photo:getFormattedMetadata("dateTimeOriginal") or ""
+            end
+            if searchDesc.captureDateFrom and isoDate < searchDesc.captureDateFrom then
+                return false
+            end
+            if searchDesc.captureDateTo and isoDate > searchDesc.captureDateTo then
+                return false
+            end
+        else
+            return false
+        end
+    end
+
+    -- Folder path filter (substring match)
+    if searchDesc.folderPath then
+        local path = photo:getRawMetadata("path") or ""
+        if not string.find(path, searchDesc.folderPath, 1, true) then
+            return false
+        end
+    end
+
+    -- Filename filter (substring match)
+    if searchDesc.filename then
+        local fname = photo:getFormattedMetadata("fileName") or ""
+        if not string.find(fname, searchDesc.filename, 1, true) then
+            return false
+        end
+    end
+
+    -- Keyword filter (substring match on keyword names)
+    if searchDesc.keyword then
+        local keywords = photo:getRawMetadata("keywords") or {}
+        local keywordMatch = false
+        for _, kw in ipairs(keywords) do
+            local kwName = kw:getName()
+            if string.find(string.lower(kwName), string.lower(searchDesc.keyword), 1, true) then
+                keywordMatch = true
+                break
+            end
+        end
+        if not keywordMatch then return false end
+    end
+
+    return true
+end
+
 -- Advanced photo search with criteria
 function CatalogModule.findPhotos(params, callback)
     ensureLrModules()
     local logger = getLogger()
     local searchDesc = params.searchDesc or {}
-    local limit = params.limit or 100
+    local limit = math.min(params.limit or DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE)
     local offset = math.max(params.offset or 0, 0)
 
     logger:debug("Finding photos with search criteria")
@@ -489,192 +606,174 @@ function CatalogModule.findPhotos(params, callback)
     end
 
     local catalog = LrApplication.activeCatalog()
+    local partialErrors = {}
+    local aborted = false
+    local abortReason = nil
+    local requestId = params._requestId
+    local command = params._command or "catalog.findPhotos"
+    local router = getCommandRouter()
 
+    -- Step 1: Get all photos (lightweight, no chunking needed)
+    local allPhotos
     catalog:withReadAccessDo(function()
-        local allPhotos = catalog:getAllPhotos()
+        allPhotos = catalog:getAllPhotos()
+    end)
 
-        if not allPhotos or #allPhotos == 0 then
-            callback({
-                result = {
-                    photos = {},
-                    total = 0,
-                    returned = 0,
-                    warnings = #warnings > 0 and warnings or nil
-                }
-            })
-            return
-        end
-
-        -- Apply filters (light filters first, heavy filters last)
-        local filtered = {}
-        for _, photo in ipairs(allPhotos) do
-            local match = true
-
-            -- Light filters first --
-
-            -- Rating filter
-            if match and searchDesc.rating then
-                local rating = photo:getRawMetadata("rating") or 0
-                local op = searchDesc.ratingOp or "=="
-                if op == "==" and rating ~= searchDesc.rating then match = false end
-                if op == ">=" and rating < searchDesc.rating then match = false end
-                if op == "<=" and rating > searchDesc.rating then match = false end
-                if op == ">" and rating <= searchDesc.rating then match = false end
-                if op == "<" and rating >= searchDesc.rating then match = false end
-            end
-
-            -- Flag filter
-            if match and searchDesc.flag then
-                local pickStatus = photo:getRawMetadata("pickStatus") or 0
-                if searchDesc.flag == "pick" and pickStatus ~= 1 then match = false end
-                if searchDesc.flag == "reject" and pickStatus ~= -1 then match = false end
-                if searchDesc.flag == "none" and pickStatus ~= 0 then match = false end
-            end
-
-            -- Color label filter
-            if match and searchDesc.colorLabel then
-                local label = photo:getRawMetadata("colorNameForLabel") or ""
-                if searchDesc.colorLabel == "none" then
-                    if label ~= "" and label ~= "none" then match = false end
-                else
-                    if label ~= searchDesc.colorLabel then match = false end
-                end
-            end
-
-            -- File format filter (exact match)
-            if match and searchDesc.fileFormat then
-                local fmt = photo:getRawMetadata("fileFormat") or ""
-                if fmt ~= searchDesc.fileFormat then match = false end
-            end
-
-            -- Heavy filters --
-
-            -- Camera filter
-            if match and searchDesc.camera then
-                local camera = photo:getFormattedMetadata("cameraModel") or ""
-                if not string.find(string.lower(camera), string.lower(searchDesc.camera)) then
-                    match = false
-                end
-            end
-
-            -- Capture date range filter (use raw date + W3C format for locale-independent comparison)
-            if match and (searchDesc.captureDateFrom or searchDesc.captureDateTo) then
-                local rawDate = photo:getRawMetadata("dateTimeOriginal")
-                if rawDate then
-                    local isoDate
-                    if LrDate and LrDate.timeToW3CDate then
-                        isoDate = LrDate.timeToW3CDate(rawDate)
-                    else
-                        isoDate = photo:getFormattedMetadata("dateTimeOriginal") or ""
-                    end
-                    if searchDesc.captureDateFrom and isoDate < searchDesc.captureDateFrom then
-                        match = false
-                    end
-                    if match and searchDesc.captureDateTo and isoDate > searchDesc.captureDateTo then
-                        match = false
-                    end
-                else
-                    match = false
-                end
-            end
-
-            -- Folder path filter (substring match)
-            if match and searchDesc.folderPath then
-                local path = photo:getRawMetadata("path") or ""
-                if not string.find(path, searchDesc.folderPath, 1, true) then
-                    match = false
-                end
-            end
-
-            -- Filename filter (substring match)
-            if match and searchDesc.filename then
-                local fname = photo:getFormattedMetadata("fileName") or ""
-                if not string.find(fname, searchDesc.filename, 1, true) then
-                    match = false
-                end
-            end
-
-            -- Keyword filter (substring match on keyword names)
-            if match and searchDesc.keyword then
-                local keywords = photo:getRawMetadata("keywords") or {}
-                local keywordMatch = false
-                for _, kw in ipairs(keywords) do
-                    local kwName = kw:getName()
-                    if string.find(string.lower(kwName), string.lower(searchDesc.keyword), 1, true) then
-                        keywordMatch = true
-                        break
-                    end
-                end
-                if not keywordMatch then match = false end
-            end
-
-            if match then
-                table.insert(filtered, photo)
-            end
-        end
-
-        -- Apply pagination
-        local total = #filtered
-        local startIndex = offset + 1
-        local endIndex = math.min(offset + limit, total)
-        local resultPhotos = {}
-
-        for i = startIndex, endIndex do
-            local photo = filtered[i]
-            table.insert(resultPhotos, {
-                id = photo.localIdentifier,
-                filename = photo:getFormattedMetadata("fileName"),
-                path = photo:getRawMetadata("path"),
-                captureTime = photo:getFormattedMetadata("dateTimeOriginal"),
-                fileFormat = photo:getRawMetadata("fileFormat"),
-                rating = photo:getRawMetadata("rating"),
-                pickStatus = photo:getRawMetadata("pickStatus"),
-                colorLabel = photo:getRawMetadata("colorNameForLabel")
-            })
-        end
-
+    if not allPhotos or #allPhotos == 0 then
         callback({
             result = {
-                photos = resultPhotos,
-                total = total,
-                returned = #resultPhotos,
+                photos = {},
+                total = 0,
+                returned = 0,
                 offset = offset,
                 limit = limit,
                 warnings = #warnings > 0 and warnings or nil
             }
         })
-    end)
+        return
+    end
+
+    -- Step 2: Filter in chunks (yield between chunks to avoid blocking)
+    local filtered = {}
+    local totalPhotos = #allPhotos
+    for chunkStart = 1, totalPhotos, FILTER_CHUNK_SIZE do
+        -- Abort check at chunk boundary
+        if router and requestId and router:shouldAbort(requestId, command) then
+            aborted = true
+            abortReason = router:isCancelled(requestId) and "cancelled" or "timeout"
+            break
+        end
+        local chunkEnd = math.min(chunkStart + FILTER_CHUNK_SIZE - 1, totalPhotos)
+        local chunkOk, chunkErr = LrTasks.pcall(function()
+            catalog:withReadAccessDo(function()
+                for i = chunkStart, chunkEnd do
+                    if matchPhoto(allPhotos[i], searchDesc) then
+                        table.insert(filtered, allPhotos[i])
+                    end
+                end
+            end)
+        end)
+        if not chunkOk then
+            table.insert(partialErrors, {
+                chunk = chunkStart .. "-" .. chunkEnd,
+                error = tostring(chunkErr)
+            })
+        end
+        LrTasks.yield()
+    end
+
+    -- Step 3: Apply pagination
+    local total = #filtered
+    local startIndex = offset + 1
+    local endIndex = math.min(offset + limit, total)
+    local pagedPhotos = {}
+    for i = startIndex, endIndex do
+        table.insert(pagedPhotos, filtered[i])
+    end
+
+    -- Step 4: Build metadata in chunks
+    local resultPhotos = {}
+    if not aborted then
+        for chunkStart = 1, #pagedPhotos, METADATA_CHUNK_SIZE do
+            -- Abort check at chunk boundary
+            if router and requestId and router:shouldAbort(requestId, command) then
+                aborted = true
+                abortReason = router:isCancelled(requestId) and "cancelled" or "timeout"
+                break
+            end
+            local chunkEnd = math.min(chunkStart + METADATA_CHUNK_SIZE - 1, #pagedPhotos)
+            local chunkOk, chunkErr = LrTasks.pcall(function()
+                catalog:withReadAccessDo(function()
+                    for i = chunkStart, chunkEnd do
+                        local photo = pagedPhotos[i]
+                        table.insert(resultPhotos, {
+                            id = photo.localIdentifier,
+                            filename = photo:getFormattedMetadata("fileName"),
+                            path = photo:getRawMetadata("path"),
+                            captureTime = photo:getFormattedMetadata("dateTimeOriginal"),
+                            fileFormat = photo:getRawMetadata("fileFormat"),
+                            rating = photo:getRawMetadata("rating"),
+                            pickStatus = photo:getRawMetadata("pickStatus"),
+                            colorLabel = photo:getRawMetadata("colorNameForLabel")
+                        })
+                    end
+                end)
+            end)
+            if not chunkOk then
+                table.insert(partialErrors, {
+                    chunk = "metadata " .. chunkStart .. "-" .. chunkEnd,
+                    error = tostring(chunkErr)
+                })
+            end
+            LrTasks.yield()
+        end
+    end
+
+    local responseResult = {
+        photos = resultPhotos,
+        total = total,
+        returned = #resultPhotos,
+        offset = offset,
+        limit = limit,
+        processedCount = #resultPhotos,
+        totalCount = total,
+        warnings = #warnings > 0 and warnings or nil
+    }
+
+    if aborted then
+        responseResult.incomplete = true
+        responseResult.reason = abortReason
+    elseif #partialErrors > 0 then
+        responseResult.incomplete = true
+        responseResult.reason = "chunk_errors"
+        responseResult.partialErrors = partialErrors
+    end
+
+    callback({ result = responseResult })
 end
 
 -- Get collections in catalog
 function CatalogModule.getCollections(params, callback)
     ensureLrModules()
     local logger = getLogger()
-    
+
     logger:debug("Getting collections from catalog")
-    
+
     local catalog = LrApplication.activeCatalog()
-    
+    local includePhotoCounts = params and params.includePhotoCounts
+
+    local collections
     catalog:withReadAccessDo(function()
-        local collections = catalog:getChildCollections()
-        
-        local resultCollections = {}
-        for _, collection in ipairs(collections) do
-            table.insert(resultCollections, {
-                id = collection.localIdentifier,
-                name = collection:getName(),
-                type = collection:type(),
-                photoCount = #collection:getPhotos()
-            })
-        end
-        
-        callback({
-            result = {
-                collections = resultCollections,
-                count = #resultCollections
-            }
-        })
+        collections = catalog:getChildCollections()
     end)
+
+    local resultCollections = {}
+    local COLLECTION_CHUNK_SIZE = 50
+    for chunkStart = 1, #collections, COLLECTION_CHUNK_SIZE do
+        local chunkEnd = math.min(chunkStart + COLLECTION_CHUNK_SIZE - 1, #collections)
+        catalog:withReadAccessDo(function()
+            for i = chunkStart, chunkEnd do
+                local collection = collections[i]
+                local entry = {
+                    id = collection.localIdentifier,
+                    name = collection:getName(),
+                    type = collection:type(),
+                }
+                if includePhotoCounts then
+                    entry.photoCount = #collection:getPhotos()
+                end
+                table.insert(resultCollections, entry)
+            end
+        end)
+        LrTasks.yield()
+    end
+
+    callback({
+        result = {
+            collections = resultCollections,
+            count = #resultCollections
+        }
+    })
 end
 
 -- Get keywords in catalog

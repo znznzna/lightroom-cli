@@ -34,15 +34,48 @@ end
 
 local CommandRouter = {}
 
+-- Per-command Lua-side timeout limits (seconds)
+local LUA_COMMAND_TIMEOUT = {
+    ["preview.generate"] = 110,
+    ["preview.get_info"] = 110,
+    ["catalog.findPhotos"] = 80,
+    ["catalog.getAllPhotos"] = 80,
+    ["catalog.getCollections"] = 60,
+    ["develop.batchApplySettings"] = 110,
+    ["develop.batchSetValue"] = 110,
+    ["develop.batchAIMask"] = 280,
+}
+local DEFAULT_LUA_TIMEOUT = 80
+
 function CommandRouter:init()
     self.handlers = {}
     self.handlerModes = {}  -- Track execution mode for each handler
     self.pendingRequests = {}
     self.eventSubscribers = {}
     self.socketBridge = nil  -- Will be set during integration
-    
+    self.commandStartTime = {}   -- requestId → os.clock()
+    self.cancelledRequests = {}   -- requestId → true
+
     local logger = getLogger()
     logger:info("CommandRouter initialized")
+end
+
+-- Check if a request has timed out (Lua-side self-detection)
+function CommandRouter:isTimedOut(requestId, command)
+    local startTime = self.commandStartTime[requestId]
+    if not startTime then return false end
+    local limit = LUA_COMMAND_TIMEOUT[command] or DEFAULT_LUA_TIMEOUT
+    return (os.clock() - startTime) >= limit
+end
+
+-- Check if a request has been cancelled
+function CommandRouter:isCancelled(requestId)
+    return self.cancelledRequests[requestId] == true
+end
+
+-- Check if a request should be aborted (timed out or cancelled)
+function CommandRouter:shouldAbort(requestId, command)
+    return self:isCancelled(requestId) or self:isTimedOut(requestId, command)
 end
 
 -- Set socket bridge reference for sending messages
@@ -107,6 +140,15 @@ function CommandRouter:dispatch(message)
          message.event and "event:" .. message.event or 
          (message.id and message.success ~= nil) and "response" or "unknown"))
     
+    -- Handle cancel request
+    if message.command == "cancelCommand" and message.params and message.params.requestId then
+        local targetId = message.params.requestId
+        self.cancelledRequests[targetId] = true
+        logger:info("Cancel requested for: " .. targetId)
+        self:_sendResponse(message.id, { result = { cancelled = true, requestId = targetId } })
+        return
+    end
+
     -- Handle different message types
     if message.command then
         logger:info("TRACE: CommandRouter:dispatch - Dispatching command: " .. message.command .. " with ID: " .. tostring(message.id))
@@ -165,11 +207,19 @@ end
 -- Execute handler in async task context (required for withReadAccessDo)
 function CommandRouter:_executeHandler(handler, message)
     local logger = getLogger()
-    
+
     LrTasks.startAsyncTask(function()
         logger:info("TRACE: CommandRouter - About to call handler for: " .. message.command)
-        
-        local success, result = LrTasks.pcall(handler, message.params, function(response)
+
+        -- Record start time for timeout self-detection
+        self.commandStartTime[message.id] = os.clock()
+
+        -- Inject _requestId and _command for abort checking in handlers
+        local params = message.params or {}
+        params._requestId = message.id
+        params._command = message.command
+
+        local success, result = LrTasks.pcall(handler, params, function(response)
             logger:info("TRACE: CommandRouter - Handler callback invoked for: " .. message.command)
             logger:info("TRACE: CommandRouter - Response type: " .. type(response))
             if response and response.error then
@@ -177,7 +227,11 @@ function CommandRouter:_executeHandler(handler, message)
             end
             self:_sendResponse(message.id, response)
         end)
-        
+
+        -- Cleanup tracking state
+        self.commandStartTime[message.id] = nil
+        self.cancelledRequests[message.id] = nil
+
         if not success then
             logger:error("Handler error for " .. message.command .. ": " .. tostring(result))
             self:_sendErrorResponse(message.id, "HANDLER_ERROR", tostring(result))
