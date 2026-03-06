@@ -686,3 +686,40 @@ def reset_healing(ctx, dry_run, **kwargs):
 def edit_in_photoshop(ctx, dry_run, **kwargs):
     """Open current photo in Photoshop"""
     execute_command(ctx, "develop.editInPhotoshop", {})
+
+
+@develop.command("batch-set")
+@click.option("--photo-ids", required=True, help="Comma-separated photo IDs")
+@click.argument("param")
+@click.argument("value", type=float)
+@json_input_options
+@click.pass_context
+def batch_set(ctx, photo_ids, param, value, **kwargs):
+    """Set a single develop parameter on multiple photos"""
+    from lightroom_sdk.retry import calculate_batch_timeout
+
+    try:
+        ids = [int(pid.strip()) for pid in photo_ids.split(",") if pid.strip()]
+    except ValueError:
+        fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+        click.echo(
+            OutputFormatter.format_error("Invalid photo ID (must be integers)", fmt, code="VALIDATION_ERROR"),
+            err=True,
+        )
+        ctx.exit(2)
+        return
+    if len(ids) > 50:
+        fmt = ctx.obj.get("output", "text") if ctx.obj else "text"
+        click.echo(
+            OutputFormatter.format_error("Maximum batch size is 50 photos", fmt, code="BATCH_SIZE_EXCEEDED"),
+            err=True,
+        )
+        ctx.exit(2)
+        return
+    dynamic_timeout = calculate_batch_timeout(len(ids))
+    execute_command(
+        ctx,
+        "develop.batchSetValue",
+        {"photoIds": ids, "param": param, "value": value},
+        timeout=dynamic_timeout,
+    )

@@ -82,7 +82,7 @@ lr catalog set-rating 12345 5
 Discover full command lists with `lr schema MODULE`. Below is what each module does.
 
 - **system** — Connection management: ping, status, check-connection, reconnect
-- **catalog** — Photo management: list, search, find, get-info, set-rating, add-keywords, set-flag, collections, folders, metadata operations. Use explicit PHOTO_ID for predictable results.
+- **catalog** — Photo management: list, find, get-info, set-rating, add-keywords, set-flag, collections, folders, metadata operations. Use explicit PHOTO_ID for predictable results.
 - **develop** — Image editing: get/set parameters, auto-tone, auto-wb, reset, apply JSON settings, presets, snapshots, tone curve, AI masks (subject/sky/background/etc with `--adjust`), graduated/radial/brush filters, local adjustments, crop/transform resets
 - **selection** — Navigation & flagging: next/previous, flag/reject/unflag, set-rating, color-label, select-all/none/inverse
 - **preview** — Preview generation: generate for current/batch, get preview info
@@ -108,7 +108,31 @@ lr catalog add-keywords PHOTO_ID1 portfolio
 lr catalog add-keywords PHOTO_ID2 portfolio
 ```
 
-> **Note:** There is no "find and mutate" single command. Parse JSON from `find`/`search`/`list` and call mutating commands per photo ID.
+> **Note:** There is no "find and mutate" single command. Parse JSON from `find`/`list` and call mutating commands per photo ID.
+
+### catalog find — filter options
+
+```bash
+# Basic filters
+lr -o json catalog find --rating 5                          # Exact rating
+lr -o json catalog find --rating 3 --rating-op ">="         # Rating >= 3
+lr -o json catalog find --flag pick                          # Flagged photos
+lr -o json catalog find --color-label red                    # Color label
+lr -o json catalog find --camera "Canon"                     # Camera model (substring)
+
+# New filters (v1.2.0)
+lr -o json catalog find --folder-path "2024/vacation"        # Folder path (substring)
+lr -o json catalog find --capture-date-from "2024-06-01"     # Captured after date
+lr -o json catalog find --capture-date-to "2024-12-31"       # Captured before date
+lr -o json catalog find --file-format RAW                    # File format (exact: RAW/DNG/JPEG)
+lr -o json catalog find --keyword "landscape"                # Keyword (substring)
+lr -o json catalog find --filename "IMG_00"                  # Filename (substring)
+
+# Combined filters
+lr -o json catalog find --rating 4 --rating-op ">=" --flag pick --file-format RAW
+```
+
+Unknown filter keys return a `warnings` field in the response. Invalid values (e.g., non-numeric rating) return a validation error.
 
 ### Safe editing with snapshots
 

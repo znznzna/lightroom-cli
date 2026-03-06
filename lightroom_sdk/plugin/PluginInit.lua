@@ -202,7 +202,8 @@ local function registerSystemCommands()
             result = {
                 pong = true,
                 timestamp = os.time(),
-                version = "1.0.0"
+                version = "1.1.0",
+                protocolVersion = "1"
             }
         })
     end)
@@ -257,6 +258,7 @@ local function registerApiCommands()
     router:register("develop.getSettings", DevelopModule.getSettings, "sync")
     router:register("develop.applySettings", DevelopModule.applySettings, "sync")
     router:register("develop.batchApplySettings", DevelopModule.batchApplySettings, "sync")
+    router:register("develop.batchSetValue", DevelopModule.batchSetValue, "sync")
     router:register("develop.getValue", DevelopModule.getValue, "sync")
     router:register("develop.setValue", DevelopModule.setValue, "sync")
     router:register("develop.getRange", DevelopModule.getRange, "sync")
@@ -375,6 +377,8 @@ local function registerApiCommands()
     router:register("catalog.setViewFilter", CatalogModule.setViewFilter, "sync")
     router:register("catalog.getCurrentViewFilter", CatalogModule.getCurrentViewFilter, "sync")
     router:register("catalog.removeFromCatalog", CatalogModule.removeFromCatalog, "sync")
+    router:register("catalog.getCollectionPhotos", CatalogModule.getCollectionPhotos, "sync")
+    router:register("catalog.getDevelopPresets", CatalogModule.getDevelopPresets, "sync")
 
     -- Preview module commands (registered as sync for catalog API access)
     Logger:info("Registering preview commands...")

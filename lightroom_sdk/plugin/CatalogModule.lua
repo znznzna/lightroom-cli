@@ -5,6 +5,7 @@
 -- Lazy imports to avoid loading issues
 local LrApplication = nil
 local LrTasks = import 'LrTasks'
+local LrDate = nil
 local LrProgressScope = nil
 
 -- Get ErrorUtils from global state (created in PluginInit.lua)
@@ -33,6 +34,12 @@ local function ensureLrModules()
     if not LrProgressScope then
         LrProgressScope = import 'LrProgressScope'
     end
+    if not LrDate then
+        local success, dateModule = ErrorUtils.safeCall(import, 'LrDate')
+        if success and dateModule then
+            LrDate = dateModule
+        end
+    end
 end
 
 -- Get logger from global state (defensive)
@@ -48,144 +55,34 @@ end
 
 local CatalogModule = {}
 
--- Search photos with flexible criteria
+-- Search photos (deprecated: delegates to findPhotos)
 function CatalogModule.searchPhotos(params, callback)
-    local wrappedCallback = ErrorUtils.wrapCallback(callback, "searchPhotos")
-    
-    -- Ensure modules are loaded
-    local moduleSuccess, moduleError = ErrorUtils.safeCall(ensureLrModules)
-    if not moduleSuccess then
-        wrappedCallback(ErrorUtils.createError(ErrorUtils.CODES.RESOURCE_UNAVAILABLE, 
-            "Failed to load Lightroom modules: " .. tostring(moduleError)))
-        return
-    end
-    
     local logger = getLogger()
-    local criteria = (params and params.criteria) or {}
-    local limit = (params and params.limit) or 100
-    local offset = (params and params.offset) or 0
-    
-    -- Validate limit parameter
-    if limit < 1 or limit > 10000 then
-        wrappedCallback(ErrorUtils.createError(ErrorUtils.CODES.INVALID_PARAM_VALUE, 
-            "Limit must be between 1 and 10000"))
-        return
-    end
-    
-    -- Validate offset parameter
-    if offset < 0 then
-        wrappedCallback(ErrorUtils.createError(ErrorUtils.CODES.INVALID_PARAM_VALUE, 
-            "Offset must be 0 or greater"))
-        return
-    end
-    
-    logger:debug("Searching photos with criteria")
-    
-    local catalog = LrApplication.activeCatalog()
-    
-    catalog:withReadAccessDo(function()
-        -- Get photos using the most appropriate method
-        local allPhotos
-        local photosSuccess, photosResult = ErrorUtils.safeCall(function()
-            return catalog:getTargetPhotos()
-        end)
-        
-        if photosSuccess and photosResult and #photosResult > 0 then
-            allPhotos = photosResult
-        else
-            -- Fallback to all photos
-            local allSuccess, allResult = ErrorUtils.safeCall(function()
-                return catalog:getAllPhotos()
-            end)
-            
-            if allSuccess then
-                allPhotos = allResult
-            else
-                wrappedCallback(ErrorUtils.createError(ErrorUtils.CODES.CATALOG_ACCESS_FAILED, 
-                    "Failed to access catalog photos"))
-                return
-            end
-        end
-        
-        if not allPhotos or #allPhotos == 0 then
-            wrappedCallback(ErrorUtils.createSuccess({
-                photos = {},
-                total = 0,
-                offset = offset,
-                limit = limit,
-                hasMore = false
-            }, "No photos found in catalog"))
-            return
-        end
-        
-        local results = {}
-        local total = #allPhotos
-        local startIndex = offset + 1
-        local endIndex = math.min(offset + limit, total)
-        
-        for i = startIndex, endIndex do
-            local photo = allPhotos[i]
-            
-            local photoData = {
-                id = photo.localIdentifier,
-                keywords = {},
-                collections = {}
-            }
-            
-            -- Safely get photo metadata
-            ErrorUtils.safeCall(function()
-                photoData.filename = photo:getFormattedMetadata("fileName")
-                photoData.folderPath = photo:getFormattedMetadata("folderName")
-                photoData.path = photo:getRawMetadata("path")
-                photoData.captureTime = photo:getFormattedMetadata("dateTimeOriginal")
-                photoData.rating = photo:getRawMetadata("rating")
-                photoData.pickStatus = photo:getRawMetadata("pickStatus")
-                photoData.fileFormat = photo:getRawMetadata("fileFormat")
-                photoData.isVirtualCopy = photo:getRawMetadata("isVirtualCopy")
-            end)
+    logger:warn("deprecated: searchPhotos は findPhotos に統合されました。次バージョンで削除予定。")
 
-            -- Get keywords
-            ErrorUtils.safeCall(function()
-                local keywords = photo:getRawMetadata("keywords")
-                if keywords then
-                    for _, keyword in ipairs(keywords) do
-                        local success, name = ErrorUtils.safeCall(function()
-                            return keyword:getName()
-                        end)
-                        if success and name then
-                            table.insert(photoData.keywords, name)
-                        end
-                    end
-                end
-            end)
-            
-            -- Get collections
-            ErrorUtils.safeCall(function()
-                local collections = photo:getContainedCollections()
-                if collections then
-                    for _, collection in ipairs(collections) do
-                        local success, name = ErrorUtils.safeCall(function()
-                            return collection:getName()
-                        end)
-                        if success and name then
-                            table.insert(photoData.collections, name)
-                        end
-                    end
-                end
-            end)
-            
-            table.insert(results, photoData)
+    -- Convert criteria to searchDesc format
+    local criteria = (params and params.criteria) or {}
+    local searchDesc = {}
+    for k, v in pairs(criteria) do
+        searchDesc[k] = v
+    end
+
+    local findParams = {
+        searchDesc = searchDesc,
+        limit = (params and params.limit) or 100,
+        offset = (params and params.offset) or 0,
+    }
+
+    CatalogModule.findPhotos(findParams, function(response)
+        -- Add legacy hasMore field for backward compatibility
+        local r = response and response.result
+        if r and r.photos then
+            local total = r.total or 0
+            local off = r.offset or 0
+            local returned = r.returned or #r.photos
+            r.hasMore = (off + returned) < total
         end
-        
-        logger:info("Found " .. total .. " photos, returning " .. #results)
-        
-        wrappedCallback(ErrorUtils.createSuccess({
-            photos = results,
-            total = total,
-            offset = offset,
-            limit = limit,
-            hasMore = endIndex < total
-        }, "Photos retrieved successfully"))
+        callback(response)
     end)
 end
 
@@ -556,140 +453,368 @@ function CatalogModule.findPhotoByPath(params, callback)
     end)
 end
 
+-- Known filter keys for findPhotos
+local KNOWN_FILTER_KEYS = {
+    flag = true, rating = true, ratingOp = true, colorLabel = true, camera = true,
+    folderPath = true, captureDateFrom = true, captureDateTo = true,
+    fileFormat = true, keyword = true, filename = true,
+}
+
+-- Chunk processing constants
+local FILTER_CHUNK_SIZE = 50
+local METADATA_CHUNK_SIZE = 50
+local DEFAULT_PAGE_SIZE = 500
+local MAX_PAGE_SIZE = 2000
+
+-- Get CommandRouter from global state for abort checking
+local function getCommandRouter()
+    if _G.LightroomPythonBridge and _G.LightroomPythonBridge.commandRouter then
+        return _G.LightroomPythonBridge.commandRouter
+    end
+    return nil
+end
+
+-- Match a single photo against search criteria
+local function matchPhoto(photo, searchDesc)
+    -- Light filters first --
+
+    -- Rating filter
+    if searchDesc.rating then
+        local rating = photo:getRawMetadata("rating") or 0
+        local op = searchDesc.ratingOp or "=="
+        if op == "==" and rating ~= searchDesc.rating then return false end
+        if op == ">=" and rating < searchDesc.rating then return false end
+        if op == "<=" and rating > searchDesc.rating then return false end
+        if op == ">" and rating <= searchDesc.rating then return false end
+        if op == "<" and rating >= searchDesc.rating then return false end
+    end
+
+    -- Flag filter
+    if searchDesc.flag then
+        local pickStatus = photo:getRawMetadata("pickStatus") or 0
+        if searchDesc.flag == "pick" and pickStatus ~= 1 then return false end
+        if searchDesc.flag == "reject" and pickStatus ~= -1 then return false end
+        if searchDesc.flag == "none" and pickStatus ~= 0 then return false end
+    end
+
+    -- Color label filter
+    if searchDesc.colorLabel then
+        local label = photo:getRawMetadata("colorNameForLabel") or ""
+        if searchDesc.colorLabel == "none" then
+            if label ~= "" and label ~= "none" then return false end
+        else
+            if label ~= searchDesc.colorLabel then return false end
+        end
+    end
+
+    -- File format filter (exact match)
+    if searchDesc.fileFormat then
+        local fmt = photo:getRawMetadata("fileFormat") or ""
+        if fmt ~= searchDesc.fileFormat then return false end
+    end
+
+    -- Heavy filters --
+
+    -- Camera filter
+    if searchDesc.camera then
+        local camera = photo:getFormattedMetadata("cameraModel") or ""
+        if not string.find(string.lower(camera), string.lower(searchDesc.camera)) then
+            return false
+        end
+    end
+
+    -- Capture date range filter (use raw date + W3C format for locale-independent comparison)
+    if searchDesc.captureDateFrom or searchDesc.captureDateTo then
+        local rawDate = photo:getRawMetadata("dateTimeOriginal")
+        if rawDate then
+            local isoDate
+            if LrDate and LrDate.timeToW3CDate then
+                isoDate = LrDate.timeToW3CDate(rawDate)
+            else
+                isoDate = photo:getFormattedMetadata("dateTimeOriginal") or ""
+            end
+            if searchDesc.captureDateFrom and isoDate < searchDesc.captureDateFrom then
+                return false
+            end
+            if searchDesc.captureDateTo then
+                local upperBound = searchDesc.captureDateTo
+                -- If date-only (YYYY-MM-DD), make it inclusive by appending end-of-day
+                if #upperBound == 10 then
+                    upperBound = upperBound .. "T23:59:59"
+                end
+                if isoDate > upperBound then
+                    return false
+                end
+            end
+        else
+            return false
+        end
+    end
+
+    -- Folder path filter (substring match)
+    if searchDesc.folderPath then
+        local path = photo:getRawMetadata("path") or ""
+        if not string.find(path, searchDesc.folderPath, 1, true) then
+            return false
+        end
+    end
+
+    -- Filename filter (substring match)
+    if searchDesc.filename then
+        local fname = photo:getFormattedMetadata("fileName") or ""
+        if not string.find(fname, searchDesc.filename, 1, true) then
+            return false
+        end
+    end
+
+    -- Keyword filter (substring match on keyword names)
+    if searchDesc.keyword then
+        local keywords = photo:getRawMetadata("keywords") or {}
+        local keywordMatch = false
+        for _, kw in ipairs(keywords) do
+            local kwName = kw:getName()
+            if string.find(string.lower(kwName), string.lower(searchDesc.keyword), 1, true) then
+                keywordMatch = true
+                break
+            end
+        end
+        if not keywordMatch then return false end
+    end
+
+    return true
+end
+
 -- Advanced photo search with criteria
 function CatalogModule.findPhotos(params, callback)
     ensureLrModules()
     local logger = getLogger()
     local searchDesc = params.searchDesc or {}
-    local limit = params.limit or 100
+    local limit = math.min(params.limit or DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE)
     local offset = math.max(params.offset or 0, 0)
 
     logger:debug("Finding photos with search criteria")
 
-    local catalog = LrApplication.activeCatalog()
-
-    catalog:withReadAccessDo(function()
-        local allPhotos = catalog:getAllPhotos()
-
-        if not allPhotos or #allPhotos == 0 then
-            callback({
-                result = {
-                    photos = {},
-                    total = 0,
-                    returned = 0
-                }
-            })
-            return
+    -- Validate: check for unknown filter keys
+    local warnings = {}
+    for key, _ in pairs(searchDesc) do
+        if not KNOWN_FILTER_KEYS[key] then
+            table.insert(warnings, "Unknown filter key: " .. tostring(key))
         end
+    end
 
-        -- Apply filters
-        local filtered = {}
-        for _, photo in ipairs(allPhotos) do
-            local match = true
-
-            -- Flag filter
-            if searchDesc.flag then
-                local pickStatus = photo:getRawMetadata("pickStatus") or 0
-                if searchDesc.flag == "pick" and pickStatus ~= 1 then match = false end
-                if searchDesc.flag == "reject" and pickStatus ~= -1 then match = false end
-                if searchDesc.flag == "none" and pickStatus ~= 0 then match = false end
-            end
-
-            -- Rating filter
-            if match and searchDesc.rating then
-                local rating = photo:getRawMetadata("rating") or 0
-                local op = searchDesc.ratingOp or "=="
-                if op == "==" and rating ~= searchDesc.rating then match = false end
-                if op == ">=" and rating < searchDesc.rating then match = false end
-                if op == "<=" and rating > searchDesc.rating then match = false end
-                if op == ">" and rating <= searchDesc.rating then match = false end
-                if op == "<" and rating >= searchDesc.rating then match = false end
-            end
-
-            -- Color label filter
-            if match and searchDesc.colorLabel then
-                local label = photo:getRawMetadata("colorNameForLabel") or ""
-                if searchDesc.colorLabel == "none" then
-                    if label ~= "" and label ~= "none" then match = false end
-                else
-                    if label ~= searchDesc.colorLabel then match = false end
-                end
-            end
-
-            -- Camera filter
-            if match and searchDesc.camera then
-                local camera = photo:getFormattedMetadata("cameraModel") or ""
-                if not string.find(string.lower(camera), string.lower(searchDesc.camera)) then
-                    match = false
-                end
-            end
-
-            if match then
-                table.insert(filtered, photo)
-            end
-        end
-
-        -- Apply pagination
-        local total = #filtered
-        local startIndex = offset + 1
-        local endIndex = math.min(offset + limit, total)
-        local resultPhotos = {}
-
-        for i = startIndex, endIndex do
-            local photo = filtered[i]
-            table.insert(resultPhotos, {
-                id = photo.localIdentifier,
-                filename = photo:getFormattedMetadata("fileName"),
-                path = photo:getRawMetadata("path"),
-                captureTime = photo:getFormattedMetadata("dateTimeOriginal"),
-                fileFormat = photo:getRawMetadata("fileFormat"),
-                rating = photo:getRawMetadata("rating"),
-                pickStatus = photo:getRawMetadata("pickStatus"),
-                colorLabel = photo:getRawMetadata("colorNameForLabel")
-            })
-        end
-
+    -- Validate: rating must be a number
+    if searchDesc.rating ~= nil and type(searchDesc.rating) ~= "number" then
         callback({
-            result = {
-                photos = resultPhotos,
-                total = total,
-                returned = #resultPhotos,
-                offset = offset,
-                limit = limit
+            error = {
+                code = "INVALID_PARAM",
+                message = "rating must be a number"
             }
         })
+        return
+    end
+
+    local catalog = LrApplication.activeCatalog()
+    local partialErrors = {}
+    local aborted = false
+    local abortReason = nil
+    local requestId = params._requestId
+    local command = params._command or "catalog.findPhotos"
+    local router = getCommandRouter()
+    local streamMode = params._stream == true and router ~= nil and requestId ~= nil
+
+    -- Step 1: Get all photos (lightweight, no chunking needed)
+    local allPhotos
+    catalog:withReadAccessDo(function()
+        allPhotos = catalog:getAllPhotos()
     end)
+
+    if not allPhotos or #allPhotos == 0 then
+        callback({
+            result = {
+                photos = {},
+                total = 0,
+                returned = 0,
+                offset = offset,
+                limit = limit,
+                warnings = #warnings > 0 and warnings or nil
+            }
+        })
+        return
+    end
+
+    -- Step 2: Filter in chunks (yield between chunks to avoid blocking)
+    local filtered = {}
+    local totalPhotos = #allPhotos
+    for chunkStart = 1, totalPhotos, FILTER_CHUNK_SIZE do
+        -- Abort check at chunk boundary
+        if router and requestId and router:shouldAbort(requestId, command) then
+            aborted = true
+            abortReason = router:isCancelled(requestId) and "cancelled" or "timeout"
+            break
+        end
+        local chunkEnd = math.min(chunkStart + FILTER_CHUNK_SIZE - 1, totalPhotos)
+        local chunkOk, chunkErr = LrTasks.pcall(function()
+            catalog:withReadAccessDo(function()
+                for i = chunkStart, chunkEnd do
+                    if matchPhoto(allPhotos[i], searchDesc) then
+                        table.insert(filtered, allPhotos[i])
+                    end
+                end
+            end)
+        end)
+        if not chunkOk then
+            table.insert(partialErrors, {
+                chunk = chunkStart .. "-" .. chunkEnd,
+                error = tostring(chunkErr)
+            })
+        end
+        LrTasks.yield()
+    end
+
+    -- Step 3: Apply pagination
+    local total = #filtered
+    local startIndex = offset + 1
+    local endIndex = math.min(offset + limit, total)
+    local pagedPhotos = {}
+    for i = startIndex, endIndex do
+        table.insert(pagedPhotos, filtered[i])
+    end
+
+    -- Step 4: Build metadata in chunks (with optional NDJSON streaming)
+    local resultPhotos = {}
+    local streamedCount = 0
+    if not aborted then
+        for chunkStart = 1, #pagedPhotos, METADATA_CHUNK_SIZE do
+            -- Abort check at chunk boundary
+            if router and requestId and router:shouldAbort(requestId, command) then
+                aborted = true
+                abortReason = router:isCancelled(requestId) and "cancelled" or "timeout"
+                break
+            end
+            local chunkEnd = math.min(chunkStart + METADATA_CHUNK_SIZE - 1, #pagedPhotos)
+            local chunkPhotos = {}
+            local chunkOk, chunkErr = LrTasks.pcall(function()
+                catalog:withReadAccessDo(function()
+                    for i = chunkStart, chunkEnd do
+                        local photo = pagedPhotos[i]
+                        local entry = {
+                            id = photo.localIdentifier,
+                            filename = photo:getFormattedMetadata("fileName"),
+                            path = photo:getRawMetadata("path"),
+                            captureTime = photo:getFormattedMetadata("dateTimeOriginal"),
+                            fileFormat = photo:getRawMetadata("fileFormat"),
+                            rating = photo:getRawMetadata("rating"),
+                            pickStatus = photo:getRawMetadata("pickStatus"),
+                            colorLabel = photo:getRawMetadata("colorNameForLabel")
+                        }
+                        table.insert(chunkPhotos, entry)
+                        table.insert(resultPhotos, entry)
+                    end
+                end)
+            end)
+            if chunkOk then
+                streamedCount = streamedCount + #chunkPhotos
+                -- Send NDJSON streaming events if in stream mode
+                if streamMode then
+                    router:sendStreamEvent(requestId, "data", { photos = chunkPhotos })
+                    router:sendStreamEvent(requestId, "progress", {
+                        processed = streamedCount,
+                        total = #pagedPhotos
+                    })
+                end
+            else
+                table.insert(partialErrors, {
+                    chunk = "metadata " .. chunkStart .. "-" .. chunkEnd,
+                    error = tostring(chunkErr)
+                })
+                if streamMode then
+                    router:sendStreamEvent(requestId, "error", {
+                        chunk = "metadata " .. chunkStart .. "-" .. chunkEnd,
+                        error = tostring(chunkErr)
+                    })
+                end
+            end
+            LrTasks.yield()
+        end
+    end
+
+    local responseResult = {
+        photos = resultPhotos,
+        total = total,
+        returned = #resultPhotos,
+        offset = offset,
+        limit = limit,
+        processedCount = #resultPhotos,
+        totalCount = total,
+        warnings = #warnings > 0 and warnings or nil
+    }
+
+    if aborted then
+        responseResult.incomplete = true
+        responseResult.reason = abortReason
+    elseif #partialErrors > 0 then
+        responseResult.incomplete = true
+        responseResult.reason = "chunk_errors"
+        responseResult.partialErrors = partialErrors
+    end
+
+    -- Send final streaming event if in stream mode
+    if streamMode then
+        router:sendStreamEvent(requestId, "final", {
+            total = total,
+            returned = #resultPhotos,
+            processedCount = #resultPhotos,
+            totalCount = total,
+            incomplete = responseResult.incomplete,
+            reason = responseResult.reason
+        })
+    end
+
+    callback({ result = responseResult })
 end
 
 -- Get collections in catalog
 function CatalogModule.getCollections(params, callback)
     ensureLrModules()
     local logger = getLogger()
-    
+
     logger:debug("Getting collections from catalog")
-    
+
     local catalog = LrApplication.activeCatalog()
-    
+    local includePhotoCounts = params and params.includePhotoCounts
+
+    local collections
     catalog:withReadAccessDo(function()
-        local collections = catalog:getChildCollections()
-        
-        local resultCollections = {}
-        for _, collection in ipairs(collections) do
-            table.insert(resultCollections, {
-                id = collection.localIdentifier,
-                name = collection:getName(),
-                type = collection:type(),
-                photoCount = #collection:getPhotos()
-            })
-        end
-        
-        callback({
-            result = {
-                collections = resultCollections,
-                count = #resultCollections
-            }
-        })
+        collections = catalog:getChildCollections()
     end)
+
+    local resultCollections = {}
+    local COLLECTION_CHUNK_SIZE = 50
+    for chunkStart = 1, #collections, COLLECTION_CHUNK_SIZE do
+        local chunkEnd = math.min(chunkStart + COLLECTION_CHUNK_SIZE - 1, #collections)
+        catalog:withReadAccessDo(function()
+            for i = chunkStart, chunkEnd do
+                local collection = collections[i]
+                local entry = {
+                    id = collection.localIdentifier,
+                    name = collection:getName(),
+                    type = collection:type(),
+                }
+                if includePhotoCounts then
+                    entry.photoCount = #collection:getPhotos()
+                end
+                table.insert(resultCollections, entry)
+            end
+        end)
+        LrTasks.yield()
+    end
+
+    callback({
+        result = {
+            collections = resultCollections,
+            count = #resultCollections
+        }
+    })
 end
 
 -- Get keywords in catalog
@@ -1559,6 +1684,128 @@ function CatalogModule.removeFromCatalog(params, callback)
             callback(ErrorUtils.createError("OPERATION_FAILED", tostring(err)))
         end
     end, { timeout = 10 })
+end
+
+-- Get photos from a specific collection by ID
+function CatalogModule.getCollectionPhotos(params, callback)
+    ensureLrModules()
+    local logger = getLogger()
+
+    if not params or not params.collectionId then
+        callback(ErrorUtils.createError("MISSING_PARAM", "collectionId is required"))
+        return
+    end
+
+    local collectionId = tonumber(params.collectionId)
+    if not collectionId then
+        callback(ErrorUtils.createError("INVALID_PARAM", "collectionId must be a number"))
+        return
+    end
+
+    local limit = params.limit or DEFAULT_PAGE_SIZE
+    local offset = math.max(params.offset or 0, 0)
+
+    logger:debug("Getting photos from collection: " .. tostring(collectionId))
+
+    local catalog = LrApplication.activeCatalog()
+
+    -- Find the collection by ID
+    local targetCollection = nil
+    catalog:withReadAccessDo(function()
+        local collections = catalog:getChildCollections()
+        for _, collection in ipairs(collections) do
+            if collection.localIdentifier == collectionId then
+                targetCollection = collection
+                break
+            end
+        end
+    end)
+
+    if not targetCollection then
+        callback(ErrorUtils.createError("PHOTO_NOT_FOUND",
+            "Collection not found: " .. tostring(collectionId)))
+        return
+    end
+
+    -- Get photos from the collection
+    local allPhotos
+    catalog:withReadAccessDo(function()
+        allPhotos = targetCollection:getPhotos()
+    end)
+
+    local total = #allPhotos
+
+    -- Apply pagination
+    local startIdx = offset + 1
+    local endIdx = math.min(startIdx + limit - 1, total)
+    local resultPhotos = {}
+
+    local CHUNK_SIZE = METADATA_CHUNK_SIZE
+    for chunkStart = startIdx, endIdx, CHUNK_SIZE do
+        local chunkEnd = math.min(chunkStart + CHUNK_SIZE - 1, endIdx)
+        catalog:withReadAccessDo(function()
+            for i = chunkStart, chunkEnd do
+                local photo = allPhotos[i]
+                table.insert(resultPhotos, {
+                    id = photo.localIdentifier,
+                    uuid = photo:getRawMetadata("uuid"),
+                    filename = photo:getFormattedMetadata("fileName"),
+                    rating = photo:getRawMetadata("rating"),
+                    colorLabel = photo:getRawMetadata("colorNameForLabel"),
+                })
+            end
+        end)
+        LrTasks.yield()
+    end
+
+    callback(ErrorUtils.createSuccess({
+        photos = resultPhotos,
+        total = total,
+        returned = #resultPhotos,
+        offset = offset,
+        limit = limit,
+        collectionId = collectionId,
+        collectionName = targetCollection:getName(),
+    }))
+end
+
+-- Get develop presets (list/search)
+function CatalogModule.getDevelopPresets(params, callback)
+    ensureLrModules()
+    local logger = getLogger()
+
+    local searchQuery = params and params.query or nil
+    logger:debug("Getting develop presets" .. (searchQuery and (", query: " .. searchQuery) or ""))
+
+    local folders = LrApplication.developPresetFolders()
+    local resultPresets = {}
+
+    for _, folder in ipairs(folders) do
+        local folderName = folder:getName()
+        local presets = folder:getDevelopPresets()
+        for _, preset in ipairs(presets) do
+            local presetName = preset:getName()
+            local include = true
+            if searchQuery then
+                -- Case-insensitive substring match on name or folder
+                local lowerQuery = string.lower(searchQuery)
+                include = string.find(string.lower(presetName), lowerQuery, 1, true) ~= nil
+                    or string.find(string.lower(folderName), lowerQuery, 1, true) ~= nil
+            end
+            if include then
+                table.insert(resultPresets, {
+                    name = presetName,
+                    folder = folderName,
+                })
+            end
+        end
+        LrTasks.yield()
+    end
+
+    callback(ErrorUtils.createSuccess({
+        presets = resultPresets,
+        count = #resultPresets,
+    }))
 end
 
 return CatalogModule

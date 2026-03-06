@@ -38,7 +38,10 @@ class MockLightroomServer:
                     line, buffer = buffer.split(b"\n", 1)
                     msg = json.loads(line)
                     result = self._responses.get(msg["command"], {})
-                    resp = {"id": msg["id"], "success": True, "result": result}
+                    if isinstance(result, dict) and "error" in result and "code" in result.get("error", {}):
+                        resp = {"id": msg["id"], "success": False, "error": result["error"]}
+                    else:
+                        resp = {"id": msg["id"], "success": True, "result": result}
                     for w in self._sender_writers:
                         w.write(json.dumps(resp).encode() + b"\n")
                         await w.drain()

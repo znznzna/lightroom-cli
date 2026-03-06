@@ -5,6 +5,7 @@
 -- Lazy imports to avoid loading issues
 local LrDevelopController = nil
 local LrApplication = nil
+local LrApplicationView = nil
 local LrTasks = import 'LrTasks'
 local LrProgressScope = nil
 local LrUndo = nil
@@ -37,6 +38,12 @@ local function ensureLrModules()
     end
     if not LrProgressScope then
         LrProgressScope = import 'LrProgressScope'
+    end
+    if not LrApplicationView then
+        local success, appView = ErrorUtils.safeCall(import, 'LrApplicationView')
+        if success and appView then
+            LrApplicationView = appView
+        end
     end
     if not LrUndo then
         local success, undo = ErrorUtils.safeCall(import, 'LrUndo')
@@ -616,29 +623,17 @@ end
 function DevelopModule.batchApplySettings(params, callback)
     ensureLrModules()
     local logger = getLogger()
-    
-    -- Ensure LrUndo is available
-    if not LrUndo or not LrUndo.performWithUndo then
-        logger:debug("LrUndo not available for batch, creating fallback")
-        LrUndo = {
-            performWithUndo = function(name, func)
-                logger:debug("Executing batch without undo support: " .. name)
-                return func()
-            end
-        }
-    end
-    
+
     if not params then
         callback({
             error = {
                 code = "MISSING_PARAMS",
-                message = "Parameters are required",
-                severity = "error"
+                message = "Parameters are required"
             }
         })
         return
     end
-    
+
     local photoIds = params.photoIds
     local settings = params.settings
 
@@ -646,8 +641,18 @@ function DevelopModule.batchApplySettings(params, callback)
         callback({
             error = {
                 code = "MISSING_PHOTO_IDS",
-                message = "Photo IDs array is required",
-                severity = "error"
+                message = "Photo IDs array is required"
+            }
+        })
+        return
+    end
+
+    -- Batch size limit
+    if #photoIds > 50 then
+        callback({
+            error = {
+                code = "BATCH_SIZE_EXCEEDED",
+                message = "Maximum batch size is 50 photos"
             }
         })
         return
@@ -657,8 +662,7 @@ function DevelopModule.batchApplySettings(params, callback)
         callback({
             error = {
                 code = "INVALID_SETTINGS",
-                message = "Settings must be provided as a table",
-                severity = "error"
+                message = "Settings must be provided as a table"
             }
         })
         return
@@ -668,56 +672,210 @@ function DevelopModule.batchApplySettings(params, callback)
 
     local catalog = LrApplication.activeCatalog()
 
+    -- Save current selection state
+    local originalPhoto = catalog:getTargetPhoto()
+    local originalPhotos = catalog:getTargetPhotos()
+
+    -- Ensure we're in Develop module
+    if LrApplicationView then
+        local currentModule = LrApplicationView.getCurrentModuleName()
+        if currentModule ~= "develop" then
+            LrApplicationView.switchToModule("develop")
+            LrTasks.sleep(0.5)
+        end
+    end
+
+    local results = {}
+    local succeeded = 0
+
     catalog:withWriteAccessDo("Batch Apply Develop Settings", function()
-        local results = {}
+        for _, photoId in ipairs(photoIds) do
+            local photo = catalog:getPhotoByLocalId(tonumber(photoId))
 
-        logger:debug("Batch: About to use LrUndo.performWithUndo - LrUndo is: " .. tostring(LrUndo))
-        logger:debug("Batch: LrUndo.performWithUndo is: " .. tostring(LrUndo and LrUndo.performWithUndo))
-        
-        LrUndo.performWithUndo("Batch Apply Develop Settings", function()
-            for i, photoId in ipairs(photoIds) do
-                local photo = catalog:getPhotoByLocalId(tonumber(photoId))
+            if not photo then
+                table.insert(results, {
+                    photoId = photoId,
+                    success = false,
+                    error = "Photo not found"
+                })
+            else
+                -- Select this photo to make it active (requires write access)
+                catalog:setSelectedPhotos(photo, {photo})
+                LrTasks.sleep(0.1)
 
-                if not photo then
+                -- Apply settings to this photo
+                local appliedCount = 0
+                local errors = {}
+
+                for settingName, value in pairs(settings) do
+                    local success, err = ErrorUtils.safeCall(function()
+                        LrDevelopController.setValue(settingName, value)
+                    end)
+
+                    if success then
+                        appliedCount = appliedCount + 1
+                    else
+                        errors[settingName] = tostring(err)
+                    end
+                end
+
+                local photoSuccess = appliedCount > 0
+                if photoSuccess then succeeded = succeeded + 1 end
+
+                table.insert(results, {
+                    photoId = photoId,
+                    success = photoSuccess,
+                    applied = appliedCount,
+                    errors = next(errors) and errors or nil
+                })
+            end
+        end
+
+        -- Restore original selection
+        if originalPhoto and originalPhotos and #originalPhotos > 0 then
+            ErrorUtils.safeCall(function()
+                catalog:setSelectedPhotos(originalPhoto, originalPhotos)
+            end)
+        end
+    end)
+
+    callback({
+        result = {
+            processed = #results,
+            succeeded = succeeded,
+            results = results
+        }
+    })
+end
+
+-- Batch set a single parameter to multiple photos
+function DevelopModule.batchSetValue(params, callback)
+    ensureLrModules()
+    local logger = getLogger()
+
+    if not params then
+        callback({
+            error = {
+                code = "MISSING_PARAMS",
+                message = "Parameters are required"
+            }
+        })
+        return
+    end
+
+    local photoIds = params.photoIds
+    local param = params.param
+    local value = params.value
+
+    if not photoIds or type(photoIds) ~= "table" or #photoIds == 0 then
+        callback({
+            error = {
+                code = "MISSING_PHOTO_IDS",
+                message = "Photo IDs array is required"
+            }
+        })
+        return
+    end
+
+    if #photoIds > 50 then
+        callback({
+            error = {
+                code = "BATCH_SIZE_EXCEEDED",
+                message = "Maximum batch size is 50 photos"
+            }
+        })
+        return
+    end
+
+    if not param or type(param) ~= "string" then
+        callback({
+            error = {
+                code = "MISSING_PARAM",
+                message = "Parameter name is required"
+            }
+        })
+        return
+    end
+
+    if value == nil then
+        callback({
+            error = {
+                code = "MISSING_VALUE",
+                message = "Value is required"
+            }
+        })
+        return
+    end
+
+    logger:info("Batch setting " .. param .. " = " .. tostring(value) .. " on " .. #photoIds .. " photos")
+
+    local catalog = LrApplication.activeCatalog()
+
+    -- Save current selection state
+    local originalPhoto = catalog:getTargetPhoto()
+    local originalPhotos = catalog:getTargetPhotos()
+
+    -- Ensure we're in Develop module
+    if LrApplicationView then
+        local currentModule = LrApplicationView.getCurrentModuleName()
+        if currentModule ~= "develop" then
+            LrApplicationView.switchToModule("develop")
+            LrTasks.sleep(0.5)
+        end
+    end
+
+    local results = {}
+    local succeeded = 0
+
+    catalog:withWriteAccessDo("Batch Set Value: " .. param, function()
+        for _, photoId in ipairs(photoIds) do
+            local photo = catalog:getPhotoByLocalId(tonumber(photoId))
+
+            if not photo then
+                table.insert(results, {
+                    photoId = photoId,
+                    success = false,
+                    error = "Photo not found"
+                })
+            else
+                catalog:setSelectedPhotos(photo, {photo})
+                LrTasks.sleep(0.1)
+
+                local success, err = ErrorUtils.safeCall(function()
+                    LrDevelopController.setValue(param, value)
+                end)
+
+                if success then
+                    succeeded = succeeded + 1
+                    table.insert(results, {
+                        photoId = photoId,
+                        success = true
+                    })
+                else
                     table.insert(results, {
                         photoId = photoId,
                         success = false,
-                        error = "Photo not found"
-                    })
-                else
-                    -- Apply settings to this photo
-                    local appliedCount = 0
-                    local errors = {}
-
-                    for settingName, value in pairs(settings) do
-                        local success, error = ErrorUtils.safeCall(function()
-                            LrDevelopController.setValue(settingName, value)
-                        end)
-
-                        if success then
-                            appliedCount = appliedCount + 1
-                        else
-                            errors[settingName] = tostring(error)
-                        end
-                    end
-
-                    table.insert(results, {
-                        photoId = photoId,
-                        success = appliedCount > 0,
-                        applied = appliedCount,
-                        errors = next(errors) and errors or nil
+                        error = tostring(err)
                     })
                 end
             end
-        end)
+        end
 
-        callback({
-            result = {
-                processed = #results,
-                results = results
-            }
-        })
+        -- Restore original selection
+        if originalPhoto and originalPhotos and #originalPhotos > 0 then
+            ErrorUtils.safeCall(function()
+                catalog:setSelectedPhotos(originalPhoto, originalPhotos)
+            end)
+        end
     end)
+
+    callback({
+        result = {
+            processed = #results,
+            succeeded = succeeded,
+            results = results
+        }
+    })
 end
 
 -- Get value of a single develop parameter
