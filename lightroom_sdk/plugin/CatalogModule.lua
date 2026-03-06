@@ -5,6 +5,7 @@
 -- Lazy imports to avoid loading issues
 local LrApplication = nil
 local LrTasks = import 'LrTasks'
+local LrDate = nil
 local LrProgressScope = nil
 
 -- Get ErrorUtils from global state (created in PluginInit.lua)
@@ -32,6 +33,12 @@ local function ensureLrModules()
     end
     if not LrProgressScope then
         LrProgressScope = import 'LrProgressScope'
+    end
+    if not LrDate then
+        local success, dateModule = ErrorUtils.safeCall(import, 'LrDate')
+        if success and dateModule then
+            LrDate = dateModule
+        end
     end
 end
 
@@ -541,14 +548,25 @@ function CatalogModule.findPhotos(params, callback)
                 end
             end
 
-            -- Capture date range filter
-            if match and searchDesc.captureDateFrom then
-                local dt = photo:getFormattedMetadata("dateTimeOriginal") or ""
-                if dt < searchDesc.captureDateFrom then match = false end
-            end
-            if match and searchDesc.captureDateTo then
-                local dt = photo:getFormattedMetadata("dateTimeOriginal") or ""
-                if dt > searchDesc.captureDateTo then match = false end
+            -- Capture date range filter (use raw date + W3C format for locale-independent comparison)
+            if match and (searchDesc.captureDateFrom or searchDesc.captureDateTo) then
+                local rawDate = photo:getRawMetadata("dateTimeOriginal")
+                if rawDate then
+                    local isoDate
+                    if LrDate and LrDate.timeToW3CDate then
+                        isoDate = LrDate.timeToW3CDate(rawDate)
+                    else
+                        isoDate = photo:getFormattedMetadata("dateTimeOriginal") or ""
+                    end
+                    if searchDesc.captureDateFrom and isoDate < searchDesc.captureDateFrom then
+                        match = false
+                    end
+                    if match and searchDesc.captureDateTo and isoDate > searchDesc.captureDateTo then
+                        match = false
+                    end
+                else
+                    match = false
+                end
             end
 
             -- Folder path filter (substring match)

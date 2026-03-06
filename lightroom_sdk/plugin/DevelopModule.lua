@@ -688,54 +688,56 @@ function DevelopModule.batchApplySettings(params, callback)
     local results = {}
     local succeeded = 0
 
-    for _, photoId in ipairs(photoIds) do
-        local photo = catalog:getPhotoByLocalId(tonumber(photoId))
+    catalog:withWriteAccessDo("Batch Apply Develop Settings", function()
+        for _, photoId in ipairs(photoIds) do
+            local photo = catalog:getPhotoByLocalId(tonumber(photoId))
 
-        if not photo then
-            table.insert(results, {
-                photoId = photoId,
-                success = false,
-                error = "Photo not found"
-            })
-        else
-            -- Select this photo to make it active
-            catalog:setSelectedPhotos(photo, {photo})
-            LrTasks.sleep(0.1)
+            if not photo then
+                table.insert(results, {
+                    photoId = photoId,
+                    success = false,
+                    error = "Photo not found"
+                })
+            else
+                -- Select this photo to make it active (requires write access)
+                catalog:setSelectedPhotos(photo, {photo})
+                LrTasks.sleep(0.1)
 
-            -- Apply settings to this photo
-            local appliedCount = 0
-            local errors = {}
+                -- Apply settings to this photo
+                local appliedCount = 0
+                local errors = {}
 
-            for settingName, value in pairs(settings) do
-                local success, err = ErrorUtils.safeCall(function()
-                    LrDevelopController.setValue(settingName, value)
-                end)
+                for settingName, value in pairs(settings) do
+                    local success, err = ErrorUtils.safeCall(function()
+                        LrDevelopController.setValue(settingName, value)
+                    end)
 
-                if success then
-                    appliedCount = appliedCount + 1
-                else
-                    errors[settingName] = tostring(err)
+                    if success then
+                        appliedCount = appliedCount + 1
+                    else
+                        errors[settingName] = tostring(err)
+                    end
                 end
+
+                local photoSuccess = appliedCount > 0
+                if photoSuccess then succeeded = succeeded + 1 end
+
+                table.insert(results, {
+                    photoId = photoId,
+                    success = photoSuccess,
+                    applied = appliedCount,
+                    errors = next(errors) and errors or nil
+                })
             end
-
-            local photoSuccess = appliedCount > 0
-            if photoSuccess then succeeded = succeeded + 1 end
-
-            table.insert(results, {
-                photoId = photoId,
-                success = photoSuccess,
-                applied = appliedCount,
-                errors = next(errors) and errors or nil
-            })
         end
-    end
 
-    -- Restore original selection
-    if originalPhoto and originalPhotos and #originalPhotos > 0 then
-        ErrorUtils.safeCall(function()
-            catalog:setSelectedPhotos(originalPhoto, originalPhotos)
-        end)
-    end
+        -- Restore original selection
+        if originalPhoto and originalPhotos and #originalPhotos > 0 then
+            ErrorUtils.safeCall(function()
+                catalog:setSelectedPhotos(originalPhoto, originalPhotos)
+            end)
+        end
+    end)
 
     callback({
         result = {
