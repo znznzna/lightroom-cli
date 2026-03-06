@@ -27,6 +27,7 @@ async def test_lazy_connect(mock_lr_server):
 async def test_connection_error_returns_mcp_error():
     """接続できない場合に MCP エラーレスポンスを返す"""
     import tempfile as _tf
+
     cm = ConnectionManager(port_file=str(Path(_tf.gettempdir()) / "nonexistent_port_file_test.txt"))
 
     result = await cm.execute("system.ping", {}, timeout=2.0, mutating=False)
@@ -66,6 +67,7 @@ async def test_lock_serializes_commands(mock_lr_server):
 async def test_mutating_not_retried_after_reconnect():
     """C1: mutating コマンドは接続エラー時に再送されずエラーを返す"""
     import tempfile as _tf
+
     cm = ConnectionManager(port_file=str(Path(_tf.gettempdir()) / "nonexistent_port_file_test.txt"))
     result = await cm.execute(
         "develop.setValue",
