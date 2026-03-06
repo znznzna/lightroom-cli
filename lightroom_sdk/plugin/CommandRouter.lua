@@ -462,6 +462,45 @@ function CommandRouter:sendEvent(eventType, data)
     end
 end
 
+-- Send NDJSON streaming event to Python SDK
+-- eventType: "data", "progress", "error", "final"
+function CommandRouter:sendStreamEvent(requestId, eventType, payload)
+    local logger = getLogger()
+    local protocol = ensureMessageProtocol()
+
+    if not self._streamCounters then
+        self._streamCounters = {}
+    end
+    if not self._streamCounters[requestId] then
+        self._streamCounters[requestId] = 0
+    end
+    self._streamCounters[requestId] = self._streamCounters[requestId] + 1
+
+    local message = {
+        requestId = requestId,
+        type = eventType,
+        chunkIndex = self._streamCounters[requestId],
+        payload = payload or {}
+    }
+
+    local encoded = protocol:encode(message)
+    if encoded and self.socketBridge then
+        local success = self.socketBridge.send(encoded)
+        if success then
+            logger:debug("Sent stream event: " .. eventType .. " for " .. requestId)
+        else
+            logger:error("Failed to send stream event: " .. eventType)
+        end
+
+        -- Cleanup counter on final
+        if eventType == "final" then
+            self._streamCounters[requestId] = nil
+        end
+        return success
+    end
+    return false
+end
+
 -- Cleanup expired requests
 function CommandRouter:_cleanupExpiredRequests()
     local logger = getLogger()

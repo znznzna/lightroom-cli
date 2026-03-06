@@ -9,6 +9,17 @@ from typing import Any, Callable, Dict, Optional, Tuple
 logger = logging.getLogger(__name__)
 
 
+class StreamAggregator:
+    """Aggregates NDJSON streaming events for a single request"""
+
+    def __init__(self, loop: Optional[asyncio.AbstractEventLoop] = None):
+        self.chunks: list[Dict[str, Any]] = []
+        self.errors: list[Dict[str, Any]] = []
+        self.final: Optional[Dict[str, Any]] = None
+        self.future: asyncio.Future = (loop or asyncio.get_running_loop()).create_future()
+        self.progress_callback: Optional[Callable] = None
+
+
 class SocketBridge:
     """Manages dual socket connections to Lightroom plugin"""
 
@@ -24,6 +35,7 @@ class SocketBridge:
         self._receive_reader: Optional[StreamReader] = None
         self._receive_writer: Optional[StreamWriter] = None  # sender接続のwriter参照保持
         self._pending_requests: Dict[str, asyncio.Future] = {}
+        self._pending_streams: Dict[str, StreamAggregator] = {}
         self._receive_task: Optional[asyncio.Task] = None
         self._connected = False
         self._event_handlers: Dict[str, list[Callable]] = {}
@@ -153,6 +165,11 @@ class SocketBridge:
 
     async def _handle_message(self, message: Dict[str, Any]) -> None:
         """Route received messages to appropriate handlers"""
+        # Handle NDJSON streaming events (have "type" and "requestId" fields)
+        if "type" in message and "requestId" in message:
+            await self._handle_stream_event(message)
+            return
+
         # Handle events
         if "event" in message:
             event_name = message["event"]
@@ -171,24 +188,90 @@ class SocketBridge:
             if not future.cancelled():
                 future.set_result(message)
 
+    async def _handle_stream_event(self, message: Dict[str, Any]) -> None:
+        """Handle NDJSON streaming event"""
+        request_id = message["requestId"]
+        event_type = message["type"]
+        payload = message.get("payload", {})
+
+        stream = self._pending_streams.get(request_id)
+        if not stream:
+            logger.warning(f"Stream event for unknown request: {request_id}")
+            return
+
+        if event_type == "data":
+            stream.chunks.append(payload)
+        elif event_type == "progress":
+            if stream.progress_callback:
+                try:
+                    stream.progress_callback(payload)
+                except Exception as e:
+                    logger.error(f"Progress callback error: {e}")
+        elif event_type == "error":
+            stream.errors.append(payload)
+        elif event_type == "final":
+            stream.final = payload
+            # Resolve the future with aggregated result
+            if not stream.future.cancelled():
+                result = self._aggregate_stream(stream)
+                stream.future.set_result(result)
+        else:
+            logger.warning(f"Unknown stream event type: {event_type}")
+
+    def _aggregate_stream(self, stream: StreamAggregator) -> Dict[str, Any]:
+        """Aggregate streaming chunks into a single response"""
+        # Merge all data chunks
+        all_photos: list = []
+        for chunk in stream.chunks:
+            if "photos" in chunk:
+                all_photos.extend(chunk["photos"])
+
+        result: Dict[str, Any] = {
+            **(stream.final or {}),
+            "photos": all_photos,
+            "returned": len(all_photos),
+        }
+
+        if stream.errors:
+            result["streamErrors"] = stream.errors
+
+        return {"id": "stream", "success": True, "result": result}
+
     async def send_command(
         self,
         command: str,
         params: Optional[Dict[str, Any]] = None,
         timeout: float = 30.0,
+        stream: bool = False,
+        progress_callback: Optional[Callable] = None,
     ) -> Dict[str, Any]:
-        """Send command and await response"""
+        """Send command and await response.
+
+        If stream=True, registers a StreamAggregator so that NDJSON streaming
+        events are collected and aggregated into the final response.
+        """
         if not self._connected:
             from .exceptions import ConnectionError as LRConnectionError
 
             raise LRConnectionError("Not connected to Lightroom")
 
         request_id = str(uuid.uuid4())
-        request = {"id": request_id, "command": command, "params": params or {}}
+        request_params = dict(params or {})
+        if stream:
+            request_params["_stream"] = True
+        request = {"id": request_id, "command": command, "params": request_params}
 
-        # Create future for response
-        future = asyncio.Future()
-        self._pending_requests[request_id] = future
+        if stream:
+            # Set up streaming aggregator
+            aggregator = StreamAggregator()
+            aggregator.progress_callback = progress_callback
+            self._pending_streams[request_id] = aggregator
+            wait_future = aggregator.future
+        else:
+            # Normal single-response path
+            future = asyncio.Future()
+            self._pending_requests[request_id] = future
+            wait_future = future
 
         try:
             # Send request
@@ -197,16 +280,18 @@ class SocketBridge:
             await self._send_writer.drain()
 
             # Wait for response
-            response = await asyncio.wait_for(future, timeout=timeout)
+            response = await asyncio.wait_for(wait_future, timeout=timeout)
             return response
 
         except asyncio.TimeoutError:
             self._pending_requests.pop(request_id, None)
+            self._pending_streams.pop(request_id, None)
             from .exceptions import TimeoutError as LRTimeoutError
 
             raise LRTimeoutError(f"Command '{command}' timed out after {timeout}s")
         except Exception:
             self._pending_requests.pop(request_id, None)
+            self._pending_streams.pop(request_id, None)
             raise
 
     async def disconnect(self) -> None:

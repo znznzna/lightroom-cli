@@ -613,6 +613,7 @@ function CatalogModule.findPhotos(params, callback)
     local requestId = params._requestId
     local command = params._command or "catalog.findPhotos"
     local router = getCommandRouter()
+    local streamMode = params._stream == true and router ~= nil and requestId ~= nil
 
     -- Step 1: Get all photos (lightweight, no chunking needed)
     local allPhotos
@@ -672,8 +673,9 @@ function CatalogModule.findPhotos(params, callback)
         table.insert(pagedPhotos, filtered[i])
     end
 
-    -- Step 4: Build metadata in chunks
+    -- Step 4: Build metadata in chunks (with optional NDJSON streaming)
     local resultPhotos = {}
+    local streamedCount = 0
     if not aborted then
         for chunkStart = 1, #pagedPhotos, METADATA_CHUNK_SIZE do
             -- Abort check at chunk boundary
@@ -683,11 +685,12 @@ function CatalogModule.findPhotos(params, callback)
                 break
             end
             local chunkEnd = math.min(chunkStart + METADATA_CHUNK_SIZE - 1, #pagedPhotos)
+            local chunkPhotos = {}
             local chunkOk, chunkErr = LrTasks.pcall(function()
                 catalog:withReadAccessDo(function()
                     for i = chunkStart, chunkEnd do
                         local photo = pagedPhotos[i]
-                        table.insert(resultPhotos, {
+                        local entry = {
                             id = photo.localIdentifier,
                             filename = photo:getFormattedMetadata("fileName"),
                             path = photo:getRawMetadata("path"),
@@ -696,15 +699,33 @@ function CatalogModule.findPhotos(params, callback)
                             rating = photo:getRawMetadata("rating"),
                             pickStatus = photo:getRawMetadata("pickStatus"),
                             colorLabel = photo:getRawMetadata("colorNameForLabel")
-                        })
+                        }
+                        table.insert(chunkPhotos, entry)
+                        table.insert(resultPhotos, entry)
                     end
                 end)
             end)
-            if not chunkOk then
+            if chunkOk then
+                streamedCount = streamedCount + #chunkPhotos
+                -- Send NDJSON streaming events if in stream mode
+                if streamMode then
+                    router:sendStreamEvent(requestId, "data", { photos = chunkPhotos })
+                    router:sendStreamEvent(requestId, "progress", {
+                        processed = streamedCount,
+                        total = #pagedPhotos
+                    })
+                end
+            else
                 table.insert(partialErrors, {
                     chunk = "metadata " .. chunkStart .. "-" .. chunkEnd,
                     error = tostring(chunkErr)
                 })
+                if streamMode then
+                    router:sendStreamEvent(requestId, "error", {
+                        chunk = "metadata " .. chunkStart .. "-" .. chunkEnd,
+                        error = tostring(chunkErr)
+                    })
+                end
             end
             LrTasks.yield()
         end
@@ -728,6 +749,18 @@ function CatalogModule.findPhotos(params, callback)
         responseResult.incomplete = true
         responseResult.reason = "chunk_errors"
         responseResult.partialErrors = partialErrors
+    end
+
+    -- Send final streaming event if in stream mode
+    if streamMode then
+        router:sendStreamEvent(requestId, "final", {
+            total = total,
+            returned = #resultPhotos,
+            processedCount = #resultPhotos,
+            totalCount = total,
+            incomplete = responseResult.incomplete,
+            reason = responseResult.reason
+        })
     end
 
     callback({ result = responseResult })
