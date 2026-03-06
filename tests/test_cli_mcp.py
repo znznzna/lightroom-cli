@@ -23,7 +23,7 @@ class TestMcpInstall:
             assert "mcpServers" in config
             assert "lightroom-cli" in config["mcpServers"]
             command = config["mcpServers"]["lightroom-cli"]["command"]
-            assert command.endswith("lr-mcp") or command.endswith("lr-mcp.exe")
+            assert command.lower().endswith("lr-mcp") or command.lower().endswith("lr-mcp.exe")
 
     def test_install_preserves_existing_servers(self, tmp_path):
         """既存の mcpServers エントリを保持する"""
@@ -76,7 +76,7 @@ class TestMcpInstall:
 
             config = json.loads(config_file.read_text())
             command = config["mcpServers"]["lightroom-cli"]["command"]
-            assert command.endswith("lr-mcp") or command.endswith("lr-mcp.exe")
+            assert command.lower().endswith("lr-mcp") or command.lower().endswith("lr-mcp.exe")
 
 
 class TestMcpUninstall:
