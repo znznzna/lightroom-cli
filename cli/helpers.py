@@ -116,6 +116,20 @@ def execute_command(ctx, command: str, params: dict, *, timeout: float | None = 
         try:
             await bridge.connect()
             result = await bridge.send_command(command, validated, timeout=cmd_timeout)
+
+            if result.get("success") is False:
+                error_info = result.get("error", {})
+                click.echo(
+                    OutputFormatter.format_error(
+                        error_info.get("message", "Unknown error"),
+                        fmt,
+                        code=error_info.get("code", "LIGHTROOM_ERROR"),
+                    ),
+                    err=True,
+                )
+                ctx.exit(1)
+                return
+
             data = result.get("result", result)
             if post_process is not None:
                 data = post_process(data)

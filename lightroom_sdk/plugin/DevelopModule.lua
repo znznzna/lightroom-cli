@@ -825,7 +825,23 @@ function DevelopModule.setValue(params, callback)
     }
     
     local paramSpec = parameterSpecs[param]
-    
+
+    -- Validate parameter exists (use getRange as existence check for unknown params)
+    if not paramSpec then
+        local rangeSuccess, rangeResult = ErrorUtils.safeCall(function()
+            return LrDevelopController.getRange(param)
+        end)
+        if not rangeSuccess or rangeResult == nil then
+            callback({
+                error = {
+                    code = "UNKNOWN_PARAM",
+                    message = "Unknown develop parameter: '" .. param .. "'. Use 'develop debug probe' to list valid parameters."
+                }
+            })
+            return
+        end
+    end
+
     -- Validate parameter type
     if paramSpec and paramSpec.type == "number" and type(value) ~= "number" then
         -- Try to convert string to number
@@ -913,12 +929,14 @@ function DevelopModule.getRange(params, callback)
         
         -- Handle different return types from LrDevelopController.getRange
         if type(range) == "table" and range.min and range.max then
-            -- Standard range table
+            -- Standard range table (swap if reversed)
+            local min_val = math.min(range.min, range.max)
+            local max_val = math.max(range.min, range.max)
             callback({
                 result = {
                     param = param,
-                    min = range.min,
-                    max = range.max
+                    min = min_val,
+                    max = max_val
                 }
             })
         elseif type(range) == "number" then
