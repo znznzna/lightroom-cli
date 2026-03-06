@@ -18,13 +18,15 @@ Develop parameter adjustment, masking, tone curves, catalog management, selectio
 |  (Lua Plugin)       |   Dual socket: send/receive   |              |
 +---------------------+                               +------+-------+
                                                               |
-                                                       +------+-------+
-                                                       |   CLI (lr)   |
-                                                       |   Click app  |
-                                                       +--------------+
+                                              +---------------+---------------+
+                                              |               |               |
+                                       +------+-------+ +-----+------+ +------+------+
+                                       |   CLI (lr)   | | MCP Server | | Python SDK  |
+                                       |   Click app  | | (lr-mcp)   | |   Direct    |
+                                       +--------------+ +------------+ +-------------+
 ```
 
-A Lua plugin runs inside Lightroom Classic and communicates with the Python SDK via dual TCP sockets (one for sending, one for receiving) using JSON-RPC. The CLI operates as the `lr` command and controls Lightroom through the SDK.
+A Lua plugin runs inside Lightroom Classic and communicates with the Python SDK via dual TCP sockets. Three interfaces are available: the `lr` CLI, the MCP Server for Claude Desktop/Cowork, and the Python SDK for direct integration.
 
 ## Quick Start
 
@@ -32,59 +34,67 @@ A Lua plugin runs inside Lightroom Classic and communicates with the Python SDK 
 
 - **Python 3.10+**
 - **Adobe Lightroom Classic** (desktop version)
-- macOS (Windows untested)
+- macOS / Windows
 
 ### Installation
-
-This tool is designed as an **agent-first CLI** — AI agents operate Lightroom by reading a SKILL file and invoking CLI commands. All three steps below are required for full functionality.
-
-#### Step 1: Install the CLI
 
 ```bash
 pip install lightroom-cli
 ```
 
-#### Step 2: Install the Lightroom Plugin
-
-The Lua plugin enables communication between Lightroom Classic and the CLI.
+Then install the Lightroom plugin and restart Lightroom Classic:
 
 ```bash
 lr plugin install
 ```
 
-After installation, restart Lightroom Classic. The plugin appears under **File > Plug-in Manager** as "Lightroom CLI Bridge".
+The plugin appears under **File > Plug-in Manager** as "Lightroom CLI Bridge".
 
-#### Step 3: Install the Skill (Required)
+### Choose Your Integration
 
-The SKILL file tells AI agents how to discover and use all 107 commands. **Without it, agents cannot operate the CLI.** This step is mandatory — the CLI is designed to be driven by agents reading the SKILL file, not by humans typing commands directly.
+#### Option A: Claude Code (SKILL-based)
+
+For **Claude Code** users — install the Claude Code Plugin so the agent can discover and use all 107 commands via the SKILL file:
 
 ```bash
 /plugin marketplace add znznzna/lightroom-cli
 /plugin install lightroom-cli@lightroom-cli
 ```
 
-This installs the Claude Code Plugin, which includes `SKILL.md` — the agent's reference for all available commands, parameters, and workflows.
+The agent reads `SKILL.md` to understand available commands, parameters, and workflows. No manual command typing needed.
 
-#### For Contributors Only
+#### Option B: Claude Desktop / Cowork (MCP Server)
 
-> **Regular users can skip this section.** The steps above (Step 1–3) are all you need.
-
-If you want to contribute to lightroom-cli itself, install from source instead of pip:
+For **Claude Desktop** or **Cowork** users — register the MCP Server:
 
 ```bash
-git clone https://github.com/znznzna/lightroom-cli.git
-cd lightroom-cli
-pip install -e ".[dev]"
-lr plugin install --dev
+lr mcp install
 ```
 
-See the [Development](#development) section for running tests and linting.
+Restart Claude Desktop / Cowork. All 107 commands are available as MCP tools with `lr_` prefix (e.g., `lr_system_ping`, `lr_catalog_list`).
+
+Check MCP status:
+
+```bash
+lr mcp status
+lr mcp test      # Test connection to Lightroom
+```
+
+#### Option C: Direct CLI / Scripting
+
+Use the `lr` command directly for shell scripting and automation:
+
+```bash
+lr system ping
+lr catalog list --limit 10
+lr develop set Exposure 1.5
+```
 
 ### Verify Connection
 
 1. Open Lightroom Classic
 2. Go to **File > Plugin Extras > Start CLI Bridge**
-3. Run the following commands:
+3. Run:
 
 ```bash
 lr system ping
@@ -141,6 +151,7 @@ lr -o table catalog list --limit 10
 | [`lr preview`](#lr-preview) | 4 | Preview generation and info |
 | [`lr selection`](#lr-selection) | 17 | Selection, flags, ratings, labels |
 | [`lr plugin`](#lr-plugin) | 3 | Plugin installation and management |
+| [`lr mcp`](#lr-mcp) | 4 | MCP Server management |
 
 **For all 107 commands, see the [CLI Reference](docs/CLI_REFERENCE.md).**
 
@@ -245,6 +256,16 @@ lr selection select-inverse           # Invert selection
 lr selection extend --direction right # Extend selection
 ```
 
+### lr mcp
+
+```bash
+lr mcp install                # Register MCP server in Claude Desktop config
+lr mcp install --force        # Overwrite existing entry
+lr mcp uninstall              # Remove MCP server entry
+lr mcp status                 # Show installation status
+lr mcp test                   # Test connection via MCP
+```
+
 ## Global Options
 
 ```bash
@@ -270,15 +291,27 @@ lr --version            # Show version
 - **3 output formats**: `text` / `json` / `table`
 - **Tab completion**: Completion support for develop parameter names
 - **Per-command timeout**: Long-running operations like preview generation are automatically extended
+- **MCP Server**: Native integration with Claude Desktop and Cowork
 
 ## Development
+
+### For Contributors Only
+
+> **Regular users can skip this section.** `pip install lightroom-cli` is all you need.
+
+```bash
+git clone https://github.com/znznzna/lightroom-cli.git
+cd lightroom-cli
+pip install -e ".[dev]"
+lr plugin install --dev
+```
 
 ```bash
 # Run tests
 python -m pytest tests/ -v
 
 # With coverage
-python -m pytest tests/ -v --cov=lightroom_sdk --cov=cli
+python -m pytest tests/ -v --cov=lightroom_sdk --cov=cli --cov=mcp_server
 
 # Single test file
 python -m pytest tests/integration/test_cli_develop.py -v
@@ -291,8 +324,7 @@ lightroom-cli/
 +-- cli/                      # Click CLI application
 |   +-- main.py               # Entry point (lr command)
 |   +-- output.py             # OutputFormatter (json/text/table)
-|   +-- helpers.py            # bridge_command decorator
-|   +-- completions.py        # Tab completion
+|   +-- helpers.py            # Command execution helpers
 |   +-- commands/             # Command groups
 |       +-- system.py         # lr system
 |       +-- catalog.py        # lr catalog
@@ -300,10 +332,18 @@ lightroom-cli/
 |       +-- preview.py        # lr preview
 |       +-- selection.py      # lr selection
 |       +-- plugin.py         # lr plugin
+|       +-- mcp.py            # lr mcp
++-- mcp_server/               # MCP Server (FastMCP)
+|   +-- server.py             # Entry point (lr-mcp command)
+|   +-- tool_registry.py      # Schema-driven tool registration
+|   +-- connection.py         # Bridge connection management
+|   +-- instructions.py       # MCP server instructions
 +-- lightroom_sdk/            # Python SDK
 |   +-- client.py             # LightroomClient
 |   +-- socket_bridge.py      # Dual TCP socket
 |   +-- resilient_bridge.py   # Auto-reconnect + heartbeat
+|   +-- schema.py             # Command schemas (single source of truth)
+|   +-- validation.py         # Input validation + sanitization
 |   +-- retry.py              # Per-command timeout
 |   +-- protocol.py           # JSON-RPC protocol
 |   +-- paths.py              # Path resolution utilities
@@ -311,14 +351,14 @@ lightroom-cli/
 |       +-- PluginInit.lua    # Command router (107 commands)
 |       +-- DevelopModule.lua # Develop operations
 |       +-- CatalogModule.lua # Catalog operations
-+-- tests/                    # pytest test suite (680+ tests)
++-- tests/                    # pytest test suite (750+ tests)
 ```
 
 ## Requirements
 
 - Python >= 3.10
 - Adobe Lightroom Classic
-- macOS (Windows untested)
+- macOS / Windows
 
 ### Python Dependencies
 
@@ -326,6 +366,7 @@ lightroom-cli/
 - [rich](https://rich.readthedocs.io/) >= 13.0 — Table output
 - [pydantic](https://docs.pydantic.dev/) >= 2.0 — Data validation
 - [platformdirs](https://platformdirs.readthedocs.io/) >= 3.0 — Platform-specific directory paths
+- [fastmcp](https://github.com/jlowin/fastmcp) >= 3.0 — MCP Server framework
 
 ## License
 

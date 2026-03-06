@@ -35,7 +35,6 @@ def _get_claude_config_path() -> Path:
         return Path.home() / ".config" / "claude" / "claude_desktop_config.json"
 
 
-
 def _get_port_file_for_test() -> str | None:
     """テスト用のポートファイルパスを返す。"""
     return None
