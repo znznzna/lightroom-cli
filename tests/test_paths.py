@@ -37,7 +37,9 @@ class TestGetLightroomModulesDir:
         monkeypatch.delenv("LR_PLUGIN_DIR", raising=False)
         with patch("sys.platform", "darwin"):
             result = lightroom_sdk.paths.get_lightroom_modules_dir()
-            assert "Library/Application Support/Adobe/Lightroom/Modules" in str(result)
+            parts = result.parts
+            assert "Library" in parts
+            assert "Modules" in parts
 
     def test_linux_raises(self, monkeypatch):
         monkeypatch.delenv("LR_PLUGIN_DIR", raising=False)

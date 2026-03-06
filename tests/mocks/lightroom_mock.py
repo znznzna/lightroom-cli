@@ -1,5 +1,6 @@
 import asyncio
 import json
+import tempfile
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -7,7 +8,9 @@ from typing import Any, Dict, Optional
 class MockLightroomServer:
     """デュアルTCPソケットのLightroomプラグインモック"""
 
-    def __init__(self, port_file: str = "/tmp/lightroom_ports_test.txt"):
+    def __init__(self, port_file: str | None = None):
+        if port_file is None:
+            port_file = str(Path(tempfile.gettempdir()) / "lightroom_ports_test.txt")
         self.port_file = Path(port_file)
         self._responses: Dict[str, Any] = {}
         self._sender_server: Optional[asyncio.Server] = None  # LR→Python
