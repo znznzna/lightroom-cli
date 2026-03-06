@@ -73,7 +73,16 @@ function CatalogModule.searchPhotos(params, callback)
         offset = (params and params.offset) or 0,
     }
 
-    CatalogModule.findPhotos(findParams, callback)
+    CatalogModule.findPhotos(findParams, function(response)
+        -- Add legacy hasMore field for backward compatibility
+        if response and response.photos then
+            local total = response.total or 0
+            local offset = response.offset or 0
+            local returned = response.returned or #response.photos
+            response.hasMore = (offset + returned) < total
+        end
+        callback(response)
+    end)
 end
 
 -- Get photo metadata
@@ -591,7 +600,7 @@ function CatalogModule.findPhotos(params, callback)
                 local keywordMatch = false
                 for _, kw in ipairs(keywords) do
                     local kwName = kw:getName()
-                    if string.find(string.lower(kwName), string.lower(searchDesc.keyword)) then
+                    if string.find(string.lower(kwName), string.lower(searchDesc.keyword), 1, true) then
                         keywordMatch = true
                         break
                     end
