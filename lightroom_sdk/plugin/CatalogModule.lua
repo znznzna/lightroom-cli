@@ -898,7 +898,7 @@ function CatalogModule.setRating(params, callback)
     ensureLrModules()
     local logger = getLogger()
     local photoId = params.photoId
-    local rating = params.rating
+    local rating = params.rating ~= nil and tonumber(params.rating) or nil
 
     if not photoId then
         callback(ErrorUtils.createError("MISSING_PARAM", "photoId is required"))
@@ -915,7 +915,9 @@ function CatalogModule.setRating(params, callback)
             local photo = catalog:getPhotoByLocalId(tonumber(photoId))
             if not photo then error("Photo not found: " .. tostring(photoId)) end
             -- LR API: setRawMetadata("rating", 0) throws; use nil for unrated
-            photo:setRawMetadata("rating", rating == 0 and nil or rating)
+            local ratingValue = rating
+            if rating == 0 then ratingValue = nil end
+            photo:setRawMetadata("rating", ratingValue)
         end, { timeout = 10 })
     end)
 
