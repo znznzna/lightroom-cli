@@ -344,3 +344,38 @@ class TestJsonInput:
         mock_get_bridge.return_value = mock_bridge
         result = runner.invoke(cli, ["develop", "get-settings", "photo-1", "--json", "  "])
         assert result.exit_code == 2
+
+
+@patch("cli.helpers.get_bridge")
+def test_cli_develop_batch_set(mock_get_bridge, runner):
+    """lr develop batch-set --photo-ids 1,2,3 Exposure 0.5 の CLI テスト"""
+    mock_bridge = AsyncMock()
+    mock_bridge.send_command.return_value = {
+        "id": "batch-1",
+        "success": True,
+        "result": {
+            "processed": 3,
+            "succeeded": 3,
+            "results": [
+                {"photoId": 1, "success": True},
+                {"photoId": 2, "success": True},
+                {"photoId": 3, "success": True},
+            ],
+        },
+    }
+    mock_get_bridge.return_value = mock_bridge
+
+    result = runner.invoke(cli, ["develop", "batch-set", "--photo-ids", "1,2,3", "Exposure", "0.5"])
+    assert result.exit_code == 0
+    mock_bridge.send_command.assert_called_once_with(
+        "develop.batchSetValue",
+        {"photoIds": [1, 2, 3], "param": "Exposure", "value": 0.5},
+        timeout=30.0,  # 3 photos → max(30, 10+2*3) = 30
+    )
+
+
+def test_cli_develop_batch_set_exceeds_limit(runner):
+    """51枚指定時のバリデーションエラー"""
+    ids = ",".join(str(i) for i in range(1, 52))
+    result = runner.invoke(cli, ["develop", "batch-set", "--photo-ids", ids, "Exposure", "0.5"])
+    assert result.exit_code != 0
