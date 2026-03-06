@@ -157,6 +157,34 @@ def collections(ctx, **kwargs):
     execute_command(ctx, "catalog.getCollections", {})
 
 
+@catalog.command("collection-photos")
+@click.argument("collection_id", type=int)
+@click.option("--limit", default=500, type=int, help="Max photos to return")
+@click.option("--offset", default=0, type=int, help="Offset for pagination")
+@json_input_options
+@click.pass_context
+def collection_photos(ctx, collection_id, limit, offset, **kwargs):
+    """Get photos from a specific collection"""
+    execute_command(
+        ctx,
+        "catalog.getCollectionPhotos",
+        {"collectionId": collection_id, "limit": limit, "offset": offset},
+        timeout=60.0,
+    )
+
+
+@catalog.command("develop-presets")
+@click.option("--query", default=None, help="Search query to filter presets by name")
+@json_input_options
+@click.pass_context
+def develop_presets(ctx, query, **kwargs):
+    """List or search develop presets"""
+    params = {}
+    if query:
+        params["query"] = query
+    execute_command(ctx, "catalog.getDevelopPresets", params)
+
+
 @catalog.command("keywords")
 @json_input_options
 @click.pass_context

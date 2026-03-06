@@ -1686,4 +1686,129 @@ function CatalogModule.removeFromCatalog(params, callback)
     end, { timeout = 10 })
 end
 
+-- Get photos from a specific collection by ID
+function CatalogModule.getCollectionPhotos(params, callback)
+    ensureLrModules()
+    local logger = getLogger()
+
+    if not params or not params.collectionId then
+        callback(ErrorUtils.createError("MISSING_PARAM", "collectionId is required"))
+        return
+    end
+
+    local collectionId = tonumber(params.collectionId)
+    if not collectionId then
+        callback(ErrorUtils.createError("INVALID_PARAM", "collectionId must be a number"))
+        return
+    end
+
+    local limit = params.limit or DEFAULT_PAGE_SIZE
+    local offset = math.max(params.offset or 0, 0)
+
+    logger:debug("Getting photos from collection: " .. tostring(collectionId))
+
+    local catalog = LrApplication.activeCatalog()
+
+    -- Find the collection by ID
+    local targetCollection = nil
+    catalog:withReadAccessDo(function()
+        local collections = catalog:getChildCollections()
+        for _, collection in ipairs(collections) do
+            if collection.localIdentifier == collectionId then
+                targetCollection = collection
+                break
+            end
+        end
+    end)
+
+    if not targetCollection then
+        callback(ErrorUtils.createError("PHOTO_NOT_FOUND",
+            "Collection not found: " .. tostring(collectionId)))
+        return
+    end
+
+    -- Get photos from the collection
+    local allPhotos
+    catalog:withReadAccessDo(function()
+        allPhotos = targetCollection:getPhotos()
+    end)
+
+    local total = #allPhotos
+
+    -- Apply pagination
+    local startIdx = offset + 1
+    local endIdx = math.min(startIdx + limit - 1, total)
+    local resultPhotos = {}
+
+    local CHUNK_SIZE = METADATA_CHUNK_SIZE
+    for chunkStart = startIdx, endIdx, CHUNK_SIZE do
+        local chunkEnd = math.min(chunkStart + CHUNK_SIZE - 1, endIdx)
+        catalog:withReadAccessDo(function()
+            for i = chunkStart, chunkEnd do
+                local photo = allPhotos[i]
+                table.insert(resultPhotos, {
+                    id = photo.localIdentifier,
+                    uuid = photo:getRawMetadata("uuid"),
+                    filename = photo:getFormattedMetadata("fileName"),
+                    rating = photo:getRawMetadata("rating"),
+                    colorLabel = photo:getRawMetadata("colorNameForLabel"),
+                })
+            end
+        end)
+        LrTasks.yield()
+    end
+
+    callback(ErrorUtils.createSuccess({
+        photos = resultPhotos,
+        total = total,
+        returned = #resultPhotos,
+        offset = offset,
+        limit = limit,
+        collectionId = collectionId,
+        collectionName = targetCollection:getName(),
+    }))
+end
+
+-- Get develop presets (list/search)
+function CatalogModule.getDevelopPresets(params, callback)
+    ensureLrModules()
+    local logger = getLogger()
+
+    local searchQuery = params and params.query or nil
+    logger:debug("Getting develop presets" .. (searchQuery and (", query: " .. searchQuery) or ""))
+
+    local folders = LrApplication.developPresetFolders()
+    local resultPresets = {}
+
+    for _, folder in ipairs(folders) do
+        local folderName = folder:getName()
+        local presets = folder:getDevelopPresets()
+        for _, preset in ipairs(presets) do
+            local presetName = preset:getName()
+            local include = true
+            if searchQuery then
+                -- Case-insensitive substring match
+                include = string.find(
+                    string.lower(presetName),
+                    string.lower(searchQuery),
+                    1, true
+                ) ~= nil
+            end
+            if include then
+                table.insert(resultPresets, {
+                    name = presetName,
+                    folder = folderName,
+                    uuid = preset:getUniqueID(),
+                })
+            end
+        end
+        LrTasks.yield()
+    end
+
+    callback(ErrorUtils.createSuccess({
+        presets = resultPresets,
+        count = #resultPresets,
+    }))
+end
+
 return CatalogModule

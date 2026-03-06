@@ -1146,6 +1146,47 @@ _register(
         response_fields=["collections"],
     ),
     CommandSchema(
+        "catalog.getCollectionPhotos",
+        "catalog.collection-photos",
+        "Get photos from a specific collection",
+        params=[
+            ParamSchema(
+                "collectionId",
+                ParamType.INTEGER,
+                required=True,
+                description="Collection ID (obtain via catalog collections)",
+            ),
+            ParamSchema(
+                "limit",
+                ParamType.INTEGER,
+                default=500,
+                description="Max photos to return",
+            ),
+            ParamSchema(
+                "offset",
+                ParamType.INTEGER,
+                default=0,
+                min=0,
+                description="Offset for pagination",
+            ),
+        ],
+        timeout=60.0,
+        response_fields=["photos", "total", "returned", "collectionName"],
+    ),
+    CommandSchema(
+        "catalog.getDevelopPresets",
+        "catalog.develop-presets",
+        "List or search develop presets",
+        params=[
+            ParamSchema(
+                "query",
+                ParamType.STRING,
+                description="Search query to filter presets by name (case-insensitive)",
+            ),
+        ],
+        response_fields=["presets", "count"],
+    ),
+    CommandSchema(
         "catalog.getKeywords",
         "catalog.keywords",
         "List keywords in catalog",

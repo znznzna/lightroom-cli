@@ -14,6 +14,7 @@ COMMAND_TIMEOUTS: dict[str, float] = {
     "catalog.get_all_photos": 60.0,
     "catalog.getAllPhotos": 90.0,
     "catalog.getCollections": 60.0,
+    "catalog.getCollectionPhotos": 60.0,
     # AI Mask commands
     "develop.createAIMaskWithAdjustments": 60.0,
     "develop.batchAIMask": 300.0,
