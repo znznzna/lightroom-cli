@@ -32,9 +32,7 @@ def test_incomplete_flag_on_chunk_error():
         "totalCount": 50,
         "incomplete": True,
         "reason": "chunk_errors",
-        "partialErrors": [
-            {"chunk": "51-100", "error": "catalog access failed"}
-        ],
+        "partialErrors": [{"chunk": "51-100", "error": "catalog access failed"}],
     }
 
     assert result["incomplete"] is True

@@ -1,7 +1,5 @@
 """NDJSON ストリーミング受信・集約のテスト"""
 
-import asyncio
-
 import pytest
 
 from lightroom_sdk.socket_bridge import SocketBridge, StreamAggregator
@@ -34,22 +32,15 @@ async def test_ndjson_data_events_aggregated():
     agg = StreamAggregator()
     bridge._pending_streams["req-1"] = agg
 
-    await bridge._handle_stream_event({
-        "requestId": "req-1", "type": "data",
-        "payload": {"photos": [{"id": 1}, {"id": 2}]}
-    })
-    await bridge._handle_stream_event({
-        "requestId": "req-1", "type": "data",
-        "payload": {"photos": [{"id": 3}]}
-    })
+    await bridge._handle_stream_event(
+        {"requestId": "req-1", "type": "data", "payload": {"photos": [{"id": 1}, {"id": 2}]}}
+    )
+    await bridge._handle_stream_event({"requestId": "req-1", "type": "data", "payload": {"photos": [{"id": 3}]}})
 
     assert len(agg.chunks) == 2
     assert not agg.future.done()
 
-    await bridge._handle_stream_event({
-        "requestId": "req-1", "type": "final",
-        "payload": {"total": 3}
-    })
+    await bridge._handle_stream_event({"requestId": "req-1", "type": "final", "payload": {"total": 3}})
 
     assert agg.future.done()
     result = agg.future.result()
@@ -67,14 +58,12 @@ async def test_ndjson_progress_events_received():
     agg.progress_callback = lambda p: progress_reports.append(p)
     bridge._pending_streams["req-2"] = agg
 
-    await bridge._handle_stream_event({
-        "requestId": "req-2", "type": "progress",
-        "payload": {"processed": 50, "total": 200}
-    })
-    await bridge._handle_stream_event({
-        "requestId": "req-2", "type": "progress",
-        "payload": {"processed": 100, "total": 200}
-    })
+    await bridge._handle_stream_event(
+        {"requestId": "req-2", "type": "progress", "payload": {"processed": 50, "total": 200}}
+    )
+    await bridge._handle_stream_event(
+        {"requestId": "req-2", "type": "progress", "payload": {"processed": 100, "total": 200}}
+    )
 
     assert len(progress_reports) == 2
     assert progress_reports[0]["processed"] == 50
@@ -88,10 +77,9 @@ async def test_ndjson_final_event_triggers_response():
     agg = StreamAggregator()
     bridge._pending_streams["req-3"] = agg
 
-    await bridge._handle_stream_event({
-        "requestId": "req-3", "type": "final",
-        "payload": {"total": 0, "complete": True}
-    })
+    await bridge._handle_stream_event(
+        {"requestId": "req-3", "type": "final", "payload": {"total": 0, "complete": True}}
+    )
 
     assert agg.future.done()
     result = agg.future.result()
@@ -106,18 +94,13 @@ async def test_ndjson_error_event_recorded():
     agg = StreamAggregator()
     bridge._pending_streams["req-4"] = agg
 
-    await bridge._handle_stream_event({
-        "requestId": "req-4", "type": "data",
-        "payload": {"photos": [{"id": 1}]}
-    })
-    await bridge._handle_stream_event({
-        "requestId": "req-4", "type": "error",
-        "payload": {"chunk": "51-100", "error": "read access failed"}
-    })
-    await bridge._handle_stream_event({
-        "requestId": "req-4", "type": "final",
-        "payload": {"total": 1, "incomplete": True}
-    })
+    await bridge._handle_stream_event({"requestId": "req-4", "type": "data", "payload": {"photos": [{"id": 1}]}})
+    await bridge._handle_stream_event(
+        {"requestId": "req-4", "type": "error", "payload": {"chunk": "51-100", "error": "read access failed"}}
+    )
+    await bridge._handle_stream_event(
+        {"requestId": "req-4", "type": "final", "payload": {"total": 1, "incomplete": True}}
+    )
 
     result = agg.future.result()
     assert result["result"]["incomplete"] is True
@@ -134,22 +117,12 @@ async def test_ndjson_request_id_filtering():
     bridge._pending_streams["req-a"] = agg1
     bridge._pending_streams["req-b"] = agg2
 
-    await bridge._handle_stream_event({
-        "requestId": "req-a", "type": "data",
-        "payload": {"photos": [{"id": 1}]}
-    })
-    await bridge._handle_stream_event({
-        "requestId": "req-b", "type": "data",
-        "payload": {"photos": [{"id": 10}, {"id": 11}]}
-    })
-    await bridge._handle_stream_event({
-        "requestId": "req-a", "type": "final",
-        "payload": {"total": 1}
-    })
-    await bridge._handle_stream_event({
-        "requestId": "req-b", "type": "final",
-        "payload": {"total": 2}
-    })
+    await bridge._handle_stream_event({"requestId": "req-a", "type": "data", "payload": {"photos": [{"id": 1}]}})
+    await bridge._handle_stream_event(
+        {"requestId": "req-b", "type": "data", "payload": {"photos": [{"id": 10}, {"id": 11}]}}
+    )
+    await bridge._handle_stream_event({"requestId": "req-a", "type": "final", "payload": {"total": 1}})
+    await bridge._handle_stream_event({"requestId": "req-b", "type": "final", "payload": {"total": 2}})
 
     result_a = agg1.future.result()
     result_b = agg2.future.result()

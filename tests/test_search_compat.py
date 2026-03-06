@@ -39,10 +39,13 @@ async def test_search_photos_deprecated_log(mock_lr_server):
     searchPhotos が正常にレスポンスを返すことで委譲が機能していることを確認。
     deprecated ログの出力はE2Eテストで検証。
     """
-    mock_lr_server.register_response("catalog.searchPhotos", {
-        "photos": [],
-        "total": 0,
-    })
+    mock_lr_server.register_response(
+        "catalog.searchPhotos",
+        {
+            "photos": [],
+            "total": 0,
+        },
+    )
 
     async with LightroomClient(port_file=str(mock_lr_server.port_file)) as client:
         result = await client.execute_command(

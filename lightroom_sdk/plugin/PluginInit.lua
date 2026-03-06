@@ -202,7 +202,8 @@ local function registerSystemCommands()
             result = {
                 pong = true,
                 timestamp = os.time(),
-                version = "1.0.0"
+                version = "1.1.0",
+                protocolVersion = "1"
             }
         })
     end)
