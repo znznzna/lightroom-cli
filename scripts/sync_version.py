@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Sync version from pyproject.toml to all version files."""
 
+import json
 import re
 import sys
 from pathlib import Path
@@ -61,6 +62,31 @@ def sync_info_lua(version: str) -> bool:
     return False
 
 
+def sync_claude_plugin_json(version: str) -> bool:
+    paths = [
+        ROOT / ".claude-plugin" / "marketplace.json",
+        ROOT / "plugin" / ".claude-plugin" / "plugin.json",
+    ]
+    changed = False
+    for path in paths:
+        if not path.exists():
+            continue
+        data = json.loads(path.read_text())
+        updated = False
+        if "version" in data and data["version"] != version:
+            data["version"] = version
+            updated = True
+        for plugin in data.get("plugins", []):
+            if "version" in plugin and plugin["version"] != version:
+                plugin["version"] = version
+                updated = True
+        if updated:
+            path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
+            print(f"Updated: {path.relative_to(ROOT)}")
+            changed = True
+    return changed
+
+
 def main() -> int:
     version = read_pyproject_version()
     print(f"Source version (pyproject.toml): {version}")
@@ -69,6 +95,7 @@ def main() -> int:
     changed |= sync_init_py(version)
     changed |= sync_plugin_init_lua(version)
     changed |= sync_info_lua(version)
+    changed |= sync_claude_plugin_json(version)
 
     if not changed:
         print("All files already in sync.")

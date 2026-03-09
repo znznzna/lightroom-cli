@@ -1,5 +1,6 @@
 """バージョン同期スクリプトのテスト"""
 
+import json
 import re
 import subprocess
 import sys
@@ -80,6 +81,28 @@ def test_check_version_sync_all_match():
     )
     assert result.returncode == 0
     assert "All versions in sync" in result.stdout
+
+
+def test_sync_version_updates_marketplace_json():
+    """marketplace.json の version が更新されること"""
+    subprocess.run(
+        [sys.executable, str(ROOT / "scripts" / "sync_version.py")], capture_output=True, text=True, cwd=str(ROOT)
+    )
+
+    version = _read_pyproject_version()
+    data = json.loads((ROOT / ".claude-plugin" / "marketplace.json").read_text())
+    assert data["plugins"][0]["version"] == version
+
+
+def test_sync_version_updates_plugin_json():
+    """plugin.json の version が更新されること"""
+    subprocess.run(
+        [sys.executable, str(ROOT / "scripts" / "sync_version.py")], capture_output=True, text=True, cwd=str(ROOT)
+    )
+
+    version = _read_pyproject_version()
+    data = json.loads((ROOT / "plugin" / ".claude-plugin" / "plugin.json").read_text())
+    assert data["version"] == version
 
 
 def test_check_version_sync_mismatch():

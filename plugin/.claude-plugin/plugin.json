@@ -1,6 +1,6 @@
 {
   "name": "lightroom-cli",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Control Adobe Lightroom Classic via CLI — 107 commands for full Lightroom control",
   "author": {
     "name": "M.Endo",
@@ -9,5 +9,10 @@
   "homepage": "https://github.com/znznzna/lightroom-cli",
   "repository": "https://github.com/znznzna/lightroom-cli",
   "license": "MIT",
-  "keywords": ["lightroom", "photography", "cli", "adobe"]
+  "keywords": [
+    "lightroom",
+    "photography",
+    "cli",
+    "adobe"
+  ]
 }
