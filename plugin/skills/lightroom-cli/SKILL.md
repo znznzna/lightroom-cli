@@ -1,10 +1,15 @@
-# Lightroom CLI Skills for Claude Code
+---
+name: lightroom-cli
+description: |
+  Control Adobe Lightroom Classic via CLI. Use when the user wants to interact
+  with Lightroom — adjust develop settings, manage catalog, navigate photos,
+  apply presets, or automate photo workflows. Triggers: "Lightroomで",
+  "現像設定を", "写真を編集", "カタログから", "lr コマンド", "プリセットを適用",
+  "写真の露出", "ホワイトバランス", "プレビュー生成", "写真を検索".
+  Do NOT use for general image editing unrelated to Lightroom Classic.
+---
 
-## Prerequisites
-
-- lightroom-cli installed (`lr --version` to verify)
-- Lightroom Classic running with plugin active
-- Connection verified (`lr system check-connection`)
+# Lightroom CLI Skills for Claude Code (v1.2.0+)
 
 ## Agent Quick Contract
 
@@ -14,6 +19,12 @@
 4. **Use `--dry-run`** before mutating commands to preview changes
 5. **Exit codes matter**: 0=ok, 2=validation, 3=connection, 4=timeout
 6. **`requires_confirm` commands** need `--confirm` flag (see Destructive Commands below)
+
+## Prerequisites
+
+- lightroom-cli installed (`lr --version` to verify)
+- Lightroom Classic running with plugin active
+- Connection verified (`lr system check-connection`)
 
 ## Schema-First Discovery
 
@@ -112,27 +123,10 @@ lr catalog add-keywords PHOTO_ID2 portfolio
 
 ### catalog find — filter options
 
-```bash
-# Basic filters
-lr -o json catalog find --rating 5                          # Exact rating
-lr -o json catalog find --rating 3 --rating-op ">="         # Rating >= 3
-lr -o json catalog find --flag pick                          # Flagged photos
-lr -o json catalog find --color-label red                    # Color label
-lr -o json catalog find --camera "Canon"                     # Camera model (substring)
+Basic: `--rating`, `--rating-op`, `--flag`, `--color-label`, `--camera`
+Extended (v1.2.0): `--folder-path`, `--capture-date-from/to`, `--file-format`, `--keyword`, `--filename`
 
-# New filters (v1.2.0)
-lr -o json catalog find --folder-path "2024/vacation"        # Folder path (substring)
-lr -o json catalog find --capture-date-from "2024-06-01"     # Captured after date
-lr -o json catalog find --capture-date-to "2024-12-31"       # Captured before date
-lr -o json catalog find --file-format RAW                    # File format (exact: RAW/DNG/JPEG)
-lr -o json catalog find --keyword "landscape"                # Keyword (substring)
-lr -o json catalog find --filename "IMG_00"                  # Filename (substring)
-
-# Combined filters
-lr -o json catalog find --rating 4 --rating-op ">=" --flag pick --file-format RAW
-```
-
-Unknown filter keys return a `warnings` field in the response. Invalid values (e.g., non-numeric rating) return a validation error.
+Full examples and notes → `references/catalog-find-filters.md`
 
 ### Safe editing with snapshots
 
@@ -187,6 +181,17 @@ lr --fields Exposure,Contrast -o json develop get-settings
 lr --fields photos.id -o json catalog find --rating 5
 # → {"photos": [{"id": "123"}, {"id": "456"}]}
 ```
+
+### Recommended `--fields` patterns
+
+| Use case | Recommended fields |
+|----------|-------------------|
+| Photo listing / search | `--fields id,filename,rating` |
+| Photo detail | `--fields id,filename,rating,colorLabel,flag,keywords` |
+| Develop settings overview | `--fields Exposure,Contrast,Highlights,Shadows,Whites,Blacks` |
+| Color grading | `--fields Temperature,Tint,Vibrance,Saturation` |
+| Tone curve | `--fields ToneCurve,ToneCurvePV2012` |
+| Batch find (ID only) | `--fields photos.id` |
 
 ## Gotchas & Limitations
 
@@ -257,27 +262,32 @@ Structured JSON errors with `code`, `message`, and `suggestions` fields:
 | 3 | Connection error | `lr system check-connection` → ensure Lightroom running → `lr system reconnect` |
 | 4 | Timeout | Retry with `-t SECONDS` (default 30s; preview ops may need 120s+) |
 
-## Environment Variables
+## Environment Variables & MCP Server
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `LR_PORT_FILE` | Port file path | `/tmp/lightroom_ports.txt` |
-| `LR_PLUGIN_DIR` | Lightroom Modules dir | Auto-detected |
-| `LR_OUTPUT` | Default output format (`json`/`text`/`table`) | Auto-detect (TTY) |
-| `LR_TIMEOUT` | Default timeout in seconds | `30` |
-| `LR_FIELDS` | Default fields filter (comma-separated) | None |
-| `LR_VERBOSE` | Enable verbose output (`1`/`true`) | Off |
+Environment variables (`LR_PORT_FILE`, `LR_OUTPUT`, `LR_TIMEOUT`, etc.) and MCP Server setup → `references/environment-and-mcp.md`
 
-## MCP Server (Claude Desktop / Cowork)
+## Troubleshooting
 
-For non-CLI environments (Claude Desktop, Cowork), use the MCP Server:
+### Connection issues
 
-1. `pip install lightroom-cli`
-2. `lr mcp install`
-3. Restart Claude Desktop / Cowork
+| Symptom | Cause | Recovery |
+|---------|-------|----------|
+| Exit code 3 / "Connection refused" | Lightroom not running or plugin disabled | 1. Verify Lightroom is running → 2. File > Plug-in Manager: check "Lightroom CLI Bridge" is enabled → 3. `lr system reconnect` |
+| "Port file not found" | Port file not generated | 1. Restart Lightroom → 2. Confirm plugin shows "Start CLI Bridge" → 3. `ls /tmp/lightroom_ports.txt` to verify |
+| "Connection timeout" after reconnect | Stale port info | 1. `rm /tmp/lightroom_ports.txt` → 2. In Lightroom: Stop plugin → Start plugin → 3. `lr system check-connection` |
+| "Already connected" error | Another session is connected | 1. Check if `lr` is running in another terminal → 2. `lr system reconnect --force` |
 
-MCP tool names use `lr_` prefix + snake_case (e.g., `lr_system_ping`, `lr_catalog_list`).
-Parameters are identical to CLI. Use `dry_run=true` for mutating commands.
+### Plugin issues
 
-To check status: `lr mcp status`
-To uninstall: `lr mcp uninstall`
+| Symptom | Cause | Recovery |
+|---------|-------|----------|
+| Plugin not shown in Plug-in Manager | Wrong install path | 1. `lr plugin status` to check path → 2. `lr plugin install` to reinstall → 3. Restart Lightroom |
+| "Plugin is disabled" | Lightroom disabled it | File > Plug-in Manager → click "Enable" → `lr system check-connection` |
+
+### Command issues
+
+| Symptom | Cause | Recovery |
+|---------|-------|----------|
+| Exit code 2 / "VALIDATION_ERROR" | Invalid parameters | Check `lr schema CMD` for correct types/ranges → `lr develop range PARAM` for value bounds |
+| Exit code 4 / Timeout | Heavy operation | Add `-t 120` to extend timeout (preview ops need 120s+) |
+| "No photo selected" | No target photo | `lr catalog select PHOTO_ID` first, then retry |
