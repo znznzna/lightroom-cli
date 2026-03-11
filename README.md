@@ -70,6 +70,14 @@ For **Claude Code** users — install the Claude Code Plugin so the agent can di
 /plugin install lightroom-cli@lightroom-cli
 ```
 
+To update the plugin to the latest version:
+
+```bash
+/plugin uninstall lightroom-cli@lightroom-cli
+/plugin marketplace update
+/plugin install lightroom-cli@lightroom-cli
+```
+
 The agent reads `SKILL.md` to understand available commands, parameters, and workflows. No manual command typing needed.
 
 #### Option B: Claude Desktop / Cowork (MCP Server)

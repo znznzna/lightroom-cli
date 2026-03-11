@@ -70,6 +70,14 @@ lr plugin install
 /plugin install lightroom-cli@lightroom-cli
 ```
 
+プラグインを最新版に更新するには：
+
+```bash
+/plugin uninstall lightroom-cli@lightroom-cli
+/plugin marketplace update
+/plugin install lightroom-cli@lightroom-cli
+```
+
 エージェントは `SKILL.md` を読んで利用可能なコマンド、パラメータ、ワークフローを把握します。手動でコマンドを打つ必要はありません。
 
 #### Option B: Claude Desktop / Cowork（MCP Server）
