@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.2] - 2026-04-06
+
+### Fixed
+- macOS でポートファイルが見つからず接続できない問題を修正 — `/tmp` ハードコードを `tempfile.gettempdir()` に変更（macOS の実際のテンポラリディレクトリは `/var/folders/...` であり `/tmp` と異なる）
+
 ## [1.2.0] - 2026-03-07
 
 Stability improvements, batch develop, extended search filters, and new catalog commands.

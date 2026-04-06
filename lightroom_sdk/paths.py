@@ -2,12 +2,11 @@
 OS 横断のパス解決モジュール。
 優先順位: 環境変数 > OS判定デフォルト
 
-macOS/Linux: /tmp (Lightroom SDK の LrPathUtils.getStandardFilePath("temp") と一致)
-Windows: tempfile.gettempdir() (Lightroom SDK と同じ %TEMP% を使用)
+全OS: tempfile.gettempdir() を使用（Lightroom SDK の LrPathUtils.getStandardFilePath("temp") と一致）
+macOS では /tmp ではなく /var/folders/... が実際のテンポラリディレクトリとなるため /tmp ハードコードは不可
 """
 
 import os
-import sys
 import tempfile
 from pathlib import Path
 
@@ -18,10 +17,7 @@ def get_port_file() -> Path:
     env = os.environ.get("LR_PORT_FILE")
     if env:
         return Path(env)
-    if sys.platform == "win32":
-        return Path(tempfile.gettempdir()) / "lightroom_ports.txt"
-    # macOS/Linux: /tmp に固定（Lightroom SDK の LrPathUtils.getStandardFilePath("temp") と一致）
-    return Path("/tmp") / "lightroom_ports.txt"
+    return Path(tempfile.gettempdir()) / "lightroom_ports.txt"
 
 
 def get_lightroom_modules_dir() -> Path:
