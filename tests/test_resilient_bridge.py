@@ -253,3 +253,27 @@ async def test_retry_safe_read_gives_up_after_second_drop(mock_lr_server, monkey
     assert mock_lr_server.received.count("develop.getSettings") == 2
     assert bridge.state == ConnectionState.DISCONNECTED
     await bridge.disconnect()
+
+
+@pytest.mark.asyncio
+async def test_cleanup_after_result_unknown_does_not_close_dropped_bridge_again(mock_lr_server, lost_after_send):
+    """捨てた bridge を後片付けで閉じ直さない（閉じ直しの例外で RESULT_UNKNOWN が消えないように）"""
+    from lightroom_sdk.exceptions import ResultUnknownError
+
+    bridge = await _connected_bridge(mock_lr_server)
+    dropped = bridge._bridge
+    calls = []
+
+    async def failing_disconnect():
+        calls.append(1)
+        raise ConnectionResetError("reset while closing")
+
+    dropped.disconnect = failing_disconnect
+    lost_after_send.add("develop.setValue")
+
+    with pytest.raises(ResultUnknownError):
+        await bridge.send_command("develop.setValue", {"param": "Exposure", "value": 0.5})
+    await bridge.disconnect()  # CLI の finally と同じ後片付け
+
+    assert calls == [1]
+    assert bridge._bridge is None

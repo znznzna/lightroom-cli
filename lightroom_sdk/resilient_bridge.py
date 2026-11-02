@@ -122,9 +122,11 @@ class ResilientSocketBridge:
         """Close the current bridge; the next send_command reconnects from scratch"""
         self._state = ConnectionState.DISCONNECTED
         await self._stop_heartbeat()
-        if self._bridge:
+        # Forget the bridge first so later cleanup (CLI finally / __aexit__) never closes it a second time
+        bridge, self._bridge = self._bridge, None
+        if bridge:
             try:
-                await self._bridge.disconnect()
+                await bridge.disconnect()
             except Exception:
                 pass
 
@@ -166,6 +168,7 @@ class ResilientSocketBridge:
                 await asyncio.sleep(delay)
                 delay = min(delay * 2, 30.0)
         self._state = ConnectionState.DISCONNECTED
+        self._bridge = None  # already closed above
         from .exceptions import ConnectionError as LRConnectionError
 
         raise LRConnectionError("Reconnection failed")
