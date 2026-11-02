@@ -277,3 +277,35 @@ async def test_cleanup_after_result_unknown_does_not_close_dropped_bridge_again(
 
     assert calls == [1]
     assert bridge._bridge is None
+
+
+@pytest.mark.asyncio
+async def test_drop_does_not_close_a_bridge_reconnected_meanwhile(mock_lr_server, lost_after_send):
+    """ハートビートの停止を待つ間に別のコマンドが繋ぎ直しても、その新しい接続は閉じない"""
+    from lightroom_sdk.exceptions import ResultUnknownError
+
+    mock_lr_server.register_response("system.ping", {"status": "ok"})
+    bridge = ResilientSocketBridge(port_file=str(mock_lr_server.port_file), heartbeat_interval=30)
+    await bridge.connect()
+    original_stop = bridge._stop_heartbeat
+    concurrent = []
+    started = []
+
+    async def stop_with_concurrent_command():
+        await original_stop()
+        if not started:  # 1 回目（_drop_bridge の中）だけ、待ち時間の間に別のコマンドを走らせる
+            started.append(True)
+            concurrent.append(await bridge.send_command("system.ping"))
+
+    bridge._stop_heartbeat = stop_with_concurrent_command
+    lost_after_send.add("develop.setValue")
+
+    with pytest.raises(ResultUnknownError):
+        await bridge.send_command("develop.setValue", {"param": "Exposure", "value": 0.5})
+
+    assert concurrent and concurrent[0]["result"]["status"] == "ok"
+    assert bridge.state == ConnectionState.CONNECTED
+    assert bridge._bridge is not None and bridge._bridge._connected
+    result = await bridge.send_command("system.ping")
+    assert result["result"]["status"] == "ok"
+    await bridge.disconnect()

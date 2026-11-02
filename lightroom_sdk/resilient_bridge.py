@@ -120,10 +120,12 @@ class ResilientSocketBridge:
 
     async def _drop_bridge(self) -> None:
         """Close the current bridge; the next send_command reconnects from scratch"""
+        # Detach synchronously, before the first await: a concurrent send_command may reconnect
+        # meanwhile, and its new bridge must not be the one closed here. Forgetting the reference
+        # also keeps later cleanup (CLI finally / __aexit__) from closing the dead bridge a second time.
         self._state = ConnectionState.DISCONNECTED
-        await self._stop_heartbeat()
-        # Forget the bridge first so later cleanup (CLI finally / __aexit__) never closes it a second time
         bridge, self._bridge = self._bridge, None
+        await self._stop_heartbeat()
         if bridge:
             try:
                 await bridge.disconnect()
