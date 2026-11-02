@@ -52,6 +52,8 @@ end
 local PreviewModule = {}
 
 -- Generate JPEG preview
+local PREVIEW_TIMEOUT = 60  -- seconds to wait for a thumbnail before giving up
+
 function PreviewModule.generatePreview(params, callback)
     ensureLrModules()
     local logger = getLogger()
@@ -95,6 +97,15 @@ function PreviewModule.generatePreview(params, callback)
         })
         
         progressScope:setPortionComplete(0.1)
+            local rawCallback = callback
+            local finished = false
+            callback = function(resp)
+                if not finished then
+                    finished = true
+                    progressScope:done()
+                end
+                rawCallback(resp)
+            end
             
             -- Determine pixel size
             local pixelSize
@@ -124,7 +135,8 @@ function PreviewModule.generatePreview(params, callback)
             local previewError = nil
             local jpegData = nil
             
-            photo:requestJpegThumbnail(pixelSize, pixelSize, function(jpg, errorMessage)
+            -- Keep the request handle referenced; otherwise Lightroom may cancel the request
+            local thumbRequest = photo:requestJpegThumbnail(pixelSize, pixelSize, function(jpg, errorMessage)
                 if errorMessage then
                     logger:error("Preview generation error: " .. errorMessage)
                     previewError = errorMessage
@@ -135,9 +147,15 @@ function PreviewModule.generatePreview(params, callback)
                 previewGenerated = true
             end)
             
-            -- Wait for async operation to complete
+            -- Wait for async operation to complete (with timeout)
+            local waited = 0
             while not previewGenerated do
                 LrTasks.sleep(0.1)
+                waited = waited + 0.1
+                if waited >= PREVIEW_TIMEOUT then
+                    previewError = "timed out after " .. PREVIEW_TIMEOUT .. "s"
+                    break
+                end
                 if progressScope:isCanceled() then
                     logger:info("Preview generation cancelled by user")
                     callback({
@@ -150,6 +168,7 @@ function PreviewModule.generatePreview(params, callback)
                 end
             end
             
+            thumbRequest = nil
             if previewError then
                 callback({
                     error = {
@@ -196,7 +215,6 @@ function PreviewModule.generatePreview(params, callback)
                 
                 progressScope:setCaption("Preview prepared for chunked transfer")
                 progressScope:setPortionComplete(1.0)
-                progressScope:done()
                 
                 callback({
                     result = {
@@ -224,7 +242,6 @@ function PreviewModule.generatePreview(params, callback)
                 
                 progressScope:setCaption("Preview generated successfully")
                 progressScope:setPortionComplete(1.0)
-                progressScope:done()
                 
                 logger:info("Generated " .. pixelSize .. "px preview (" .. string.len(jpegData) .. " bytes)")
                 
@@ -323,7 +340,7 @@ function PreviewModule.generateBatchPreviews(params, callback)
                     local previewError = nil
                     local jpegData = nil
                     
-                    photo:requestJpegThumbnail(pixelSize, pixelSize, function(jpg, errorMessage)
+                    local thumbRequest = photo:requestJpegThumbnail(pixelSize, pixelSize, function(jpg, errorMessage)
                         if errorMessage then
                             previewError = errorMessage
                         else
@@ -332,10 +349,17 @@ function PreviewModule.generateBatchPreviews(params, callback)
                         previewGenerated = true
                     end)
                     
-                    -- Wait for async operation
+                    -- Wait for async operation (with timeout)
+                    local waited = 0
                     while not previewGenerated do
                         LrTasks.sleep(0.1)
+                        waited = waited + 0.1
+                        if waited >= PREVIEW_TIMEOUT or progressScope:isCanceled() then
+                            previewError = previewError or "timed out or cancelled"
+                            break
+                        end
                     end
+                    thumbRequest = nil
                     
                     if previewError or not jpegData then
                         table.insert(results, {
