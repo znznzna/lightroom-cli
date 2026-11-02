@@ -27,12 +27,17 @@ class TestOutputSanitize:
         data = json.loads(result)
         assert data[0]["key"] == "ab"
 
-    def test_overlong_string_truncated_in_json_mode(self):
-        long_str = "a" * 60_000
-        result = OutputFormatter.format({"key": long_str}, "json")
+    def test_long_base64_kept_intact_in_json_mode(self):
+        """base64 のプレビューを切り詰めない（切ると画像として復元できない）"""
+        import base64
+        import os
+
+        raw = os.urandom(200_000)
+        encoded = base64.b64encode(raw).decode()
+        result = OutputFormatter.format({"preview": encoded, "photoId": "1"}, "json")
         data = json.loads(result)
-        assert len(data["key"]) < 60_000
-        assert "truncated" in data["key"]
+        assert base64.b64decode(data["preview"]) == raw
+        assert "_truncated" not in data
 
     def test_overlong_string_not_truncated_in_text_mode(self):
         long_str = "a" * 60_000
