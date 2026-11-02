@@ -1,9 +1,5 @@
--- AppShutdown.lua
--- Handles app shutdown — must complete quickly to avoid timeout dialog
+-- AppShutdown.lua (LrShutdownApp)
+-- Stops the CLI bridge when Lightroom quits. Sockets are closed immediately;
+-- LrShutdownFunction then waits briefly and always calls doneFunction.
 
-local bridge = _G.LightroomPythonBridge
-if bridge then
-    bridge.shuttingDown = true
-    bridge.socketServerRunning = false
-    bridge.running = false
-end
+return require('BridgeShutdown').begin("app")
