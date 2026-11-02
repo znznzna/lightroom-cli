@@ -212,3 +212,44 @@ async def test_heartbeat_does_not_pile_up_after_result_unknown(mock_lr_server, l
     assert alive == [bridge._heartbeat_task]
     await bridge.disconnect()
     assert bridge._heartbeat_task is None
+
+
+@pytest.mark.asyncio
+async def test_drop_during_resend_is_result_unknown(mock_lr_server, lost_after_send):
+    """送信前に切れていて再接続後に送り、その送信中に切れた場合も結果不明として返す"""
+    from lightroom_sdk.exceptions import ResultUnknownError
+
+    bridge = await _connected_bridge(mock_lr_server)
+    bridge._bridge._connected = False
+    lost_after_send.add("develop.setValue")
+
+    with pytest.raises(ResultUnknownError):
+        await bridge.send_command("develop.setValue", {"param": "Exposure", "value": 0.5})
+
+    assert mock_lr_server.received.count("develop.setValue") == 1
+    assert bridge.state == ConnectionState.DISCONNECTED
+    await bridge.disconnect()
+
+
+@pytest.mark.asyncio
+async def test_retry_safe_read_gives_up_after_second_drop(mock_lr_server, monkeypatch):
+    """読み取りでも再送は 1 回だけ。2 回目も切れたら接続エラーをそのまま返す"""
+    from lightroom_sdk.socket_bridge import SocketBridge
+
+    original = SocketBridge.send_command
+
+    async def always_lose(self, command, params=None, timeout=30.0, **kwargs):
+        response = await original(self, command, params, timeout, **kwargs)
+        if command == "develop.getSettings":
+            raise ConnectionResetError("lost again")
+        return response
+
+    monkeypatch.setattr(SocketBridge, "send_command", always_lose)
+    bridge = await _connected_bridge(mock_lr_server)
+
+    with pytest.raises(ConnectionResetError):
+        await bridge.send_command("develop.getSettings")
+
+    assert mock_lr_server.received.count("develop.getSettings") == 2
+    assert bridge.state == ConnectionState.DISCONNECTED
+    await bridge.disconnect()

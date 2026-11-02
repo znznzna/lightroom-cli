@@ -88,27 +88,35 @@ class ResilientSocketBridge:
         from .exceptions import ConnectionError as LRConnectionError
         from .exceptions import RequestNotSentError, ResultUnknownError
 
-        try:
-            return await self._bridge.send_command(command, params, timeout)
-        except asyncio.TimeoutError:
-            raise
-        except (ConnectionError, OSError, EOFError, LRConnectionError) as e:
-            # builtin ConnectionError is a subclass of OSError; LRConnectionError is the SDK's own
-            if self._state == ConnectionState.SHUTDOWN:
+        # At most two attempts. Every failure goes through the same classification, so a drop
+        # during the resend is still reported as RESULT_UNKNOWN for commands that are not retry-safe.
+        for attempt in range(2):
+            try:
+                return await self._bridge.send_command(command, params, timeout)
+            except asyncio.TimeoutError:
                 raise
-            if not (isinstance(e, RequestNotSentError) or _retry_safe(command)):
-                # The request may already have been applied; sending it again could apply it twice.
-                # Drop the connection so the next command starts from a fresh one.
-                logger.warning(f"Connection error on '{command}', not resending: {e}")
-                await self._drop_bridge()
-                raise ResultUnknownError(
-                    f"Connection lost while running '{command}'. It may or may not have been applied, "
-                    "so it was not resent. Check the result in Lightroom before running it again.",
-                    details={"command": command},
-                ) from e
-            logger.warning(f"Connection error on '{command}', reconnecting: {e}")
-            await self._reconnect()
-            return await self._bridge.send_command(command, params, timeout)
+            except (ConnectionError, OSError, EOFError, LRConnectionError) as e:
+                # builtin ConnectionError is a subclass of OSError; LRConnectionError is the SDK's own
+                if self._state == ConnectionState.SHUTDOWN:
+                    raise
+                not_sent = isinstance(e, RequestNotSentError)
+                if not (not_sent or _retry_safe(command)):
+                    # The request may already have been applied; sending it again could apply it twice.
+                    # Drop the connection so the next command starts from a fresh one.
+                    logger.warning(f"Connection error on '{command}', not resending: {e}")
+                    await self._drop_bridge()
+                    raise ResultUnknownError(
+                        f"Connection lost while running '{command}'. It may or may not have been applied, "
+                        "so it was not resent. Check the result in Lightroom before running it again.",
+                        details={"command": command},
+                    ) from e
+                if attempt == 1:
+                    # Nothing was applied (not sent) or resending is harmless; just report the failure
+                    await self._drop_bridge()
+                    raise
+                logger.warning(f"Connection error on '{command}', reconnecting: {e}")
+                await self._reconnect()
+        raise AssertionError("unreachable")
 
     async def _drop_bridge(self) -> None:
         """Close the current bridge; the next send_command reconnects from scratch"""
