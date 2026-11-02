@@ -42,7 +42,12 @@ function Config:init()
 end
 
 function Config:get(key)
-    return self.prefs[key] or defaults[key]
+    -- Only a missing value falls back to the default; an explicit false must stay false
+    local value = self.prefs[key]
+    if value == nil then
+        return defaults[key]
+    end
+    return value
 end
 
 function Config:set(key, value)
