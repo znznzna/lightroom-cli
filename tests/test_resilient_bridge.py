@@ -190,3 +190,25 @@ def test_cli_reports_result_unknown():
 
     assert result.exit_code == 3
     assert json.loads(result.stderr)["error"]["code"] == "RESULT_UNKNOWN"
+
+
+@pytest.mark.asyncio
+async def test_heartbeat_does_not_pile_up_after_result_unknown(mock_lr_server, lost_after_send):
+    """結果不明で接続を捨てて繋ぎ直しても、ハートビートは 1 本だけ"""
+    mock_lr_server.register_response("system.ping", {"status": "ok"})
+    bridge = ResilientSocketBridge(port_file=str(mock_lr_server.port_file), heartbeat_interval=0.05)
+    await bridge.connect()
+    first = bridge._heartbeat_task
+    lost_after_send.add("develop.setValue")
+
+    from lightroom_sdk.exceptions import ResultUnknownError
+
+    with pytest.raises(ResultUnknownError):
+        await bridge.send_command("develop.setValue", {"param": "Exposure", "value": 0.5})
+    await bridge.send_command("system.ping")
+
+    assert first.done()
+    alive = [t for t in asyncio.all_tasks() if t.get_coro().__qualname__.endswith("_heartbeat_loop")]
+    assert alive == [bridge._heartbeat_task]
+    await bridge.disconnect()
+    assert bridge._heartbeat_task is None

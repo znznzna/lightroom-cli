@@ -58,6 +58,7 @@ class ResilientSocketBridge:
         self._event_handlers[event_name].append(handler)
 
     async def connect(self) -> None:
+        await self._stop_heartbeat()
         self._state = ConnectionState.CONNECTING
         self._bridge = SocketBridge(self._host, self._port_file)
 
@@ -112,11 +113,22 @@ class ResilientSocketBridge:
     async def _drop_bridge(self) -> None:
         """Close the current bridge; the next send_command reconnects from scratch"""
         self._state = ConnectionState.DISCONNECTED
+        await self._stop_heartbeat()
         if self._bridge:
             try:
                 await self._bridge.disconnect()
             except Exception:
                 pass
+
+    async def _stop_heartbeat(self) -> None:
+        task, self._heartbeat_task = self._heartbeat_task, None
+        if task is None or task is asyncio.current_task():
+            return
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
 
     async def _reconnect(self) -> None:
         self._state = ConnectionState.RECONNECTING
@@ -155,12 +167,7 @@ class ResilientSocketBridge:
         self._state = ConnectionState.SHUTDOWN
 
     async def disconnect(self) -> None:
-        if self._heartbeat_task:
-            self._heartbeat_task.cancel()
-            try:
-                await self._heartbeat_task
-            except asyncio.CancelledError:
-                pass
+        await self._stop_heartbeat()
         if self._bridge:
             await self._bridge.disconnect()
         self._state = ConnectionState.DISCONNECTED
