@@ -272,6 +272,7 @@ Environment variables (`LR_PORT_FILE`, `LR_OUTPUT`, `LR_TIMEOUT`, etc.) and MCP 
 
 | Symptom | Cause | Recovery |
 |---------|-------|----------|
+| Exit code 3 / `RESULT_UNKNOWN` | Connection dropped while a command was running; it may or may not have been applied, so it was not resent | Read the current state first (`lr develop get-settings`, `lr selection get-*`, ...) and re-run only if it did not apply |
 | Exit code 3 / "Connection refused" | Lightroom not running or plugin disabled | 1. Verify Lightroom is running → 2. File > Plug-in Manager: check "Lightroom CLI Bridge" is enabled → 3. `lr system reconnect` |
 | "Port file not found" | Port file not generated | 1. Restart Lightroom → 2. Confirm plugin shows "Start CLI Bridge" → 3. `ls /tmp/lightroom_ports.txt` to verify |
 | "Connection timeout" after reconnect | Stale port info | 1. `rm /tmp/lightroom_ports.txt` → 2. In Lightroom: Stop plugin → Start plugin → 3. `lr system check-connection` |

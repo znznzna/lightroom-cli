@@ -41,6 +41,13 @@ class CommandSchema:
     response_fields: list[str] = field(default_factory=list)
     supports_dry_run: bool = False
     requires_confirm: bool = False
+    # False for read-only commands whose effect still stacks when sent twice (e.g. "next photo")
+    repeatable: bool = True
+
+    @property
+    def retry_safe(self) -> bool:
+        """Whether the command may be resent after the connection dropped mid-request"""
+        return not self.mutating and self.repeatable
 
     @property
     def risk_level(self) -> str:
@@ -460,7 +467,7 @@ _register(
         "Go to masking view",
         response_fields=["status"],
     ),
-    CommandSchema("develop.toggleOverlay", "develop.mask.toggle-overlay", "Toggle mask overlay"),
+    CommandSchema("develop.toggleOverlay", "develop.mask.toggle-overlay", "Toggle mask overlay", repeatable=False),
 )
 
 # --- develop.local ---
@@ -1508,12 +1515,14 @@ _register(
         "selection.next",
         "Move to next photo",
         response_fields=["status"],
+        repeatable=False,
     ),
     CommandSchema(
         "selection.previousPhoto",
         "selection.previous",
         "Move to previous photo",
         response_fields=["status"],
+        repeatable=False,
     ),
     CommandSchema(
         "selection.setColorLabel",

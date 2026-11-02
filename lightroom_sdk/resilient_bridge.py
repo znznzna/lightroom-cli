@@ -8,6 +8,14 @@ from .socket_bridge import SocketBridge
 logger = logging.getLogger(__name__)
 
 
+def _retry_safe(command: str) -> bool:
+    """Unknown commands count as unsafe: resending is opt-in per schema"""
+    from .schema import COMMAND_SCHEMAS
+
+    schema = COMMAND_SCHEMAS.get(command)
+    return schema is not None and schema.retry_safe
+
+
 class ConnectionState(enum.Enum):
     DISCONNECTED = "disconnected"
     CONNECTING = "connecting"
@@ -76,28 +84,39 @@ class ResilientSocketBridge:
         if self._state == ConnectionState.DISCONNECTED:
             await self.connect()
 
+        from .exceptions import ConnectionError as LRConnectionError
+        from .exceptions import RequestNotSentError, ResultUnknownError
+
         try:
-            return await self._bridge.send_command(command, params, timeout)
-        except (ConnectionError, OSError, EOFError) as e:
-            if self._state == ConnectionState.SHUTDOWN:
-                raise
-            logger.warning(f"Connection error on '{command}', reconnecting: {e}")
-            await self._reconnect()
             return await self._bridge.send_command(command, params, timeout)
         except asyncio.TimeoutError:
             raise
-        except Exception as e:
-            # Import here to avoid circular dependency
-            from .exceptions import ConnectionError as LRConnectionError
-
-            # Only retry on connection-related exceptions, not application errors
+        except (ConnectionError, OSError, EOFError, LRConnectionError) as e:
+            # builtin ConnectionError is a subclass of OSError; LRConnectionError is the SDK's own
             if self._state == ConnectionState.SHUTDOWN:
                 raise
-            if isinstance(e, LRConnectionError):
-                logger.warning(f"LR connection error on '{command}', reconnecting: {e}")
-                await self._reconnect()
-                return await self._bridge.send_command(command, params, timeout)
-            raise
+            if not (isinstance(e, RequestNotSentError) or _retry_safe(command)):
+                # The request may already have been applied; sending it again could apply it twice.
+                # Drop the connection so the next command starts from a fresh one.
+                logger.warning(f"Connection error on '{command}', not resending: {e}")
+                await self._drop_bridge()
+                raise ResultUnknownError(
+                    f"Connection lost while running '{command}'. It may or may not have been applied, "
+                    "so it was not resent. Check the result in Lightroom before running it again.",
+                    details={"command": command},
+                ) from e
+            logger.warning(f"Connection error on '{command}', reconnecting: {e}")
+            await self._reconnect()
+            return await self._bridge.send_command(command, params, timeout)
+
+    async def _drop_bridge(self) -> None:
+        """Close the current bridge; the next send_command reconnects from scratch"""
+        self._state = ConnectionState.DISCONNECTED
+        if self._bridge:
+            try:
+                await self._bridge.disconnect()
+            except Exception:
+                pass
 
     async def _reconnect(self) -> None:
         self._state = ConnectionState.RECONNECTING

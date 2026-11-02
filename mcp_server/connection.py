@@ -4,10 +4,9 @@ C2: LightroomClient.execute_command() 経由でコマンドを実行する。
     client._bridge 直アクセスは行わない（例外正規化を崩さないため）。
 C1: mutating=True のコマンドは再接続後に再送せずエラー返却する。
 
-NOTE: ResilientSocketBridge は send_command 内で接続断時に自動リトライ(1回)する。
-      mutating コマンドの二重送信リスクがあるが、ResilientSocketBridge に
-      retry_on_error=False オプションを追加する変更は本フェーズのスコープ外。
-      実機E2Eテストで確認し、必要なら後続タスクで対処する。
+NOTE: ResilientSocketBridge が再送するのは、送信前に切れていたときと、スキーマで
+      retry_safe（読み取り専用かつ二度送っても効果が重ならない）なコマンドだけ。
+      それ以外は ResultUnknownError になり、ここで RESULT_UNKNOWN として返す。
 """
 
 from __future__ import annotations
@@ -100,9 +99,19 @@ class ConnectionManager:
             }
         except Exception as e:
             from lightroom_sdk.exceptions import ConnectionError as LRConnectionError
-            from lightroom_sdk.exceptions import LightroomSDKError
+            from lightroom_sdk.exceptions import LightroomSDKError, ResultUnknownError
             from lightroom_sdk.exceptions import TimeoutError as LRTimeoutError
 
+            if isinstance(e, ResultUnknownError):
+                self._client = None
+                return {
+                    "isError": True,
+                    "code": "RESULT_UNKNOWN",
+                    "message": (
+                        "実行中に接続が切れたため、コマンドが反映されたかどうか分かりません。"
+                        "二重に実行しないよう再送はしていません。Lightroom で結果を確かめてから実行し直してください。"
+                    ),
+                }
             if isinstance(e, LRConnectionError):
                 self._client = None
                 if mutating:

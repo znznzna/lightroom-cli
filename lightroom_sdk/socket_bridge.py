@@ -253,9 +253,9 @@ class SocketBridge:
         events are collected and aggregated into the final response.
         """
         if not self._connected:
-            from .exceptions import ConnectionError as LRConnectionError
+            from .exceptions import RequestNotSentError
 
-            raise LRConnectionError("Not connected to Lightroom")
+            raise RequestNotSentError("Not connected to Lightroom")
 
         request_id = str(uuid.uuid4())
         request_params = dict(params or {})

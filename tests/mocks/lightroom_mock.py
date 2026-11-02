@@ -20,6 +20,7 @@ class MockLightroomServer:
         self._sender_port = 0
         self._receiver_port = 0
         self._handler_tasks: list[asyncio.Task] = []
+        self.received: list[str] = []  # commands in the order they arrived
 
     def register_response(self, command: str, result: Any) -> None:
         self._responses[command] = result
@@ -37,6 +38,7 @@ class MockLightroomServer:
                 while b"\n" in buffer:
                     line, buffer = buffer.split(b"\n", 1)
                     msg = json.loads(line)
+                    self.received.append(msg["command"])
                     result = self._responses.get(msg["command"], {})
                     if isinstance(result, dict) and "error" in result and "code" in result.get("error", {}):
                         resp = {"id": msg["id"], "success": False, "error": result["error"]}
