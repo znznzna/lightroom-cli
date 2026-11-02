@@ -109,6 +109,14 @@ local function startSocketServer()
         return
     end
 
+    -- Clear the shutdown flag left behind by a prior Stop (stopSocketServer) or
+    -- plugin shutdown. Without this, onSocketClosed/onSocketError early-return on
+    -- `shuttingDown` and the reconnect loop stays disabled, so after a Stop->Start
+    -- the plugin never reconnects to the CLI listener ("Failed to connect").
+    if _G.LightroomPythonBridge then
+        _G.LightroomPythonBridge.shuttingDown = false
+    end
+
     logger:info("Starting socket server with fixed ports")
 
     -- Read fixed ports from Config

@@ -1,3 +1,4 @@
+import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
@@ -13,12 +14,13 @@ class TestGetPortFile:
 
         assert get_port_file() == Path("/custom/path.txt")
 
-    def test_default_uses_tmp_on_macos(self, monkeypatch):
+    def test_default_uses_tempdir_on_macos(self, monkeypatch):
         monkeypatch.delenv("LR_PORT_FILE", raising=False)
         with patch("sys.platform", "darwin"):
             result = lightroom_sdk.paths.get_port_file()
-        # macOS/Linux では /tmp を使用（Lightroom SDK と一致）
-        assert result == Path("/tmp") / "lightroom_ports.txt"
+        # get_port_file() is platform-independent: always tempfile.gettempdir()
+        # (matches LrPathUtils "temp"). On macOS that's /var/folders/..., not /tmp.
+        assert result == Path(tempfile.gettempdir()) / "lightroom_ports.txt"
 
     def test_env_override_takes_priority(self, monkeypatch):
         monkeypatch.setenv("LR_PORT_FILE", "/override/ports.txt")
@@ -105,22 +107,17 @@ class TestSystemCommandUsesPathsModule:
         assert default is None
 
 
-import tempfile
-from unittest.mock import patch as stdlib_patch
-
-
-def test_get_port_file_macos_uses_tmp():
-    """macOS では /tmp を使用すること（Lightroom SDK と一致）"""
+def test_get_port_file_macos_uses_tempdir():
+    """macOS でも tempfile.gettempdir() を使用すること（/tmp ハードコードではない）"""
     import os
 
     from lightroom_sdk.paths import get_port_file
 
     with patch.dict("os.environ", {}, clear=True):
         os.environ.pop("LR_PORT_FILE", None)
-        with stdlib_patch("lightroom_sdk.paths.sys") as mock_sys:
-            mock_sys.platform = "darwin"
+        with patch("sys.platform", "darwin"):
             result = get_port_file()
-        assert result == Path("/tmp") / "lightroom_ports.txt"
+        assert result == Path(tempfile.gettempdir()) / "lightroom_ports.txt"
 
 
 def test_get_port_file_windows_uses_tempfile():
@@ -131,8 +128,7 @@ def test_get_port_file_windows_uses_tempfile():
 
     with patch.dict("os.environ", {}, clear=True):
         os.environ.pop("LR_PORT_FILE", None)
-        with stdlib_patch("lightroom_sdk.paths.sys") as mock_sys:
-            mock_sys.platform = "win32"
+        with patch("sys.platform", "win32"):
             result = get_port_file()
         assert result == Path(tempfile.gettempdir()) / "lightroom_ports.txt"
 
@@ -141,26 +137,21 @@ class TestWindowsPaths:
     def test_get_port_file_windows(self):
         """Windows でも tempfile.gettempdir() が使われること"""
         import os
-        import tempfile
-        from unittest.mock import patch as stdlib_patch
 
         with patch.dict("os.environ", {}, clear=True):
             os.environ.pop("LR_PORT_FILE", None)
-            with stdlib_patch("lightroom_sdk.paths.sys") as mock_sys:
-                mock_sys.platform = "win32"
+            with patch("sys.platform", "win32"):
                 result = lightroom_sdk.paths.get_port_file()
             assert result == Path(tempfile.gettempdir()) / "lightroom_ports.txt"
 
     def test_get_lightroom_modules_dir_windows(self):
         """Windows で APPDATA ベースのパスが返ること"""
         import os
-        from unittest.mock import patch as stdlib_patch
 
         with (
-            stdlib_patch("lightroom_sdk.paths.sys") as mock_sys,
+            patch("sys.platform", "win32"),
             patch.dict("os.environ", {"APPDATA": r"C:\Users\test\AppData\Roaming"}, clear=False),
         ):
-            mock_sys.platform = "win32"
             os.environ.pop("LR_PLUGIN_DIR", None)
             result = lightroom_sdk.paths.get_lightroom_modules_dir()
             assert "Adobe" in str(result)
