@@ -347,16 +347,40 @@ class SocketBridge:
             # Also runs on cancellation, so an abandoned request never stays registered
             self._pending_requests.pop(request_id, None)
             self._pending_streams.pop(request_id, None)
+            if wait_future.done() and not wait_future.cancelled():
+                wait_future.exception()  # failed by _fail_pending while nobody awaited it: mark as seen
 
     async def _write_and_wait(self, request: Dict[str, Any], wait_future: asyncio.Future) -> Dict[str, Any]:
         from .exceptions import ConnectionError as LRConnectionError
+        from .exceptions import RequestNotSentError
+
+        # Checked again here: on Python 3.10 wait_for() runs this as a separate task, so the
+        # receive loop may have seen EOF and dropped the sockets since send_command() checked.
+        writer = self._send_writer
+        if not self._connected or writer is None:
+            raise RequestNotSentError(f"Connection to Lightroom closed before '{request['command']}' was sent")
 
         try:
-            self._send_writer.write((json.dumps(request) + "\n").encode("utf-8"))
-            await self._send_writer.drain()
+            writer.write((json.dumps(request) + "\n").encode("utf-8"))
         except OSError as e:
-            # Wrapped so that a socket-level ETIMEDOUT is not mistaken for the command timeout
             raise LRConnectionError(f"Failed to send '{request['command']}' to Lightroom: {e}") from e
+
+        # Wait for the drain and the answer together: if the receive side closes while the send
+        # buffer is still full, the request fails right away instead of waiting for the timeout.
+        drain = asyncio.ensure_future(writer.drain())
+        try:
+            await asyncio.wait({drain, wait_future}, return_when=asyncio.FIRST_COMPLETED)
+        finally:
+            if not drain.done():
+                drain.cancel()
+        if not wait_future.done():
+            try:
+                drain.result()
+            except OSError as e:
+                # Wrapped so that a socket-level ETIMEDOUT is not mistaken for the command timeout
+                raise LRConnectionError(f"Failed to send '{request['command']}' to Lightroom: {e}") from e
+        elif not drain.cancelled() and drain.done():
+            drain.exception()  # the answer already decides the outcome; a late drain error is moot
         return await wait_future
 
     async def disconnect(self) -> None:

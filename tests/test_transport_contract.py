@@ -34,6 +34,11 @@ class ScriptedLightroom:
         sender_port = sender.sockets[0].getsockname()[1]
         self.port_file.write_text(f"{sender_port},{receiver_port}")
 
+    def close_senders(self):
+        """Lightroom closes its side of the receive channel (what the client reads from)"""
+        for writer in self._senders:
+            writer.close()
+
     async def stop(self):
         for writer in self._senders:
             writer.close()
@@ -95,6 +100,12 @@ async def bridge(lightroom):
     await bridge.disconnect()
 
 
+def _replace_send_writer(bridge, fake):
+    """Swap in a fake send socket; the real one is closed so the server's wait_closed() can finish"""
+    bridge._send_writer.close()
+    bridge._send_writer = fake
+
+
 def _assert_nothing_pending(bridge):
     assert bridge._pending_requests == {}
     assert bridge._pending_streams == {}
@@ -130,6 +141,26 @@ class TestReceiveLoopEnds:
             await bridge.send_command("system.ping", timeout=10)
         with pytest.raises(RequestNotSentError):
             await bridge.send_command("system.ping", timeout=10)
+
+    async def test_eof_while_drain_is_blocked_fails_immediately(self, lightroom, bridge):
+        _replace_send_writer(bridge, _StuckWriter())
+        pending = asyncio.create_task(bridge.send_command("develop.setValue", timeout=10))
+        await asyncio.sleep(0.1)
+        started = time.monotonic()
+        lightroom.close_senders()
+        with pytest.raises(LRConnectionError, match="lost"):
+            await pending
+        assert time.monotonic() - started < 2, "must not wait for the command timeout"
+        _assert_nothing_pending(bridge)
+
+    async def test_eof_between_check_and_write_is_not_sent(self, bridge):
+        """The receive loop dropped the sockets after send_command() checked the connection"""
+        from lightroom_sdk.exceptions import RequestNotSentError
+
+        _replace_send_writer(bridge, None)
+        with pytest.raises(RequestNotSentError):
+            await bridge.send_command("develop.setValue", timeout=5)
+        _assert_nothing_pending(bridge)
 
     async def test_disconnect_fails_waiting_request(self, lightroom, bridge):
         lightroom.on_request = lambda request: None  # never answers
@@ -226,7 +257,7 @@ class _StuckWriter:
 
 class TestTimeoutCoversTheRoundTrip:
     async def test_stuck_drain_times_out(self, bridge):
-        bridge._send_writer = _StuckWriter()
+        _replace_send_writer(bridge, _StuckWriter())
         started = time.monotonic()
         with pytest.raises(LRTimeoutError):
             await bridge.send_command("system.ping", timeout=0.2)
@@ -263,7 +294,7 @@ class TestTimeoutCoversTheRoundTrip:
             async def drain(self):
                 raise TimeoutError(60, "Operation timed out")  # ETIMEDOUT, an OSError
 
-        bridge._send_writer = BrokenWriter()
+        _replace_send_writer(bridge, BrokenWriter())
         with pytest.raises(LRConnectionError):
             await bridge.send_command("system.ping", timeout=5)
 
@@ -278,7 +309,7 @@ class TestTimeoutCoversTheRoundTrip:
             async def wait_closed(self):
                 await asyncio.Event().wait()
 
-        bridge._send_writer = NeverClosed()
+        _replace_send_writer(bridge, NeverClosed())
         started = time.monotonic()
         await bridge.disconnect()
         assert time.monotonic() - started < 5
