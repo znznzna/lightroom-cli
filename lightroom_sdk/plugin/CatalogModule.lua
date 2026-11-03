@@ -187,8 +187,8 @@ function CatalogModule.getPhotoMetadata(params, callback)
             -- hasAdjustments/hasCrop not available in all Lightroom versions
             
             -- Keywords and collections
-            keywords = {},
-            collections = {}
+            keywords = JsonArray(),
+            collections = JsonArray()
         }
         
         logger:debug("Metadata table rating: " .. tostring(metadata.rating))
@@ -248,7 +248,7 @@ function CatalogModule.getSelectedPhotos(params, callback)
         
         if not selectedSuccess or not selectedPhotos or #selectedPhotos == 0 then
             wrappedCallback(ErrorUtils.createSuccess({
-                photos = {},
+                photos = JsonArray(),
                 count = 0
             }, "No photos currently selected"))
             return
@@ -633,7 +633,7 @@ function CatalogModule.findPhotos(params, callback)
     if not allPhotos or #allPhotos == 0 then
         callback({
             result = {
-                photos = {},
+                photos = JsonArray(),
                 total = 0,
                 returned = 0,
                 offset = offset,
@@ -873,7 +873,7 @@ function CatalogModule.getFolders(params, callback)
                 depth = depth,
                 photoCount = #folder:getPhotos(false), -- Photos directly in this folder
                 totalPhotoCount = #folder:getPhotos(true), -- Photos including subfolders
-                subfolders = {}
+                subfolders = JsonArray()
             }
             
             -- Get parent folder info if available
@@ -985,7 +985,7 @@ function CatalogModule.batchGetFormattedMetadata(params, callback)
         if #photos == 0 then
             callback({
                 result = {
-                    metadata = {},
+                    metadata = JsonArray(),
                     requested = #photoIds,
                     found = 0
                 }

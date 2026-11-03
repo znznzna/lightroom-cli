@@ -3117,7 +3117,7 @@ function DevelopModule.batchAIMask(params, callback)
         if #photos == 0 then
             return {
                 total = 0, succeeded = 0, failed = 0,
-                results = {},
+                results = JsonArray(),
                 message = "No photos found to process",
             }
         end

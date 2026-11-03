@@ -465,6 +465,7 @@ class TestEmptyResultsAreArrays:
                 withReadAccessDo = function(self, func) func() end,
                 getChildCollections = function(self) return {} end,
                 getKeywords = function(self) return {} end,
+                getAllPhotos = function(self) return {} end,
             }
             local permissive_import = import
             function import(name)
@@ -484,11 +485,15 @@ class TestEmptyResultsAreArrays:
         return rt
 
     @pytest.mark.parametrize(
-        "handler, field",
-        [("getCollections", "collections"), ("getKeywords", "keywords")],
+        "handler, field, count_field",
+        [
+            ("getCollections", "collections", "count"),
+            ("getKeywords", "keywords", "count"),
+            ("findPhotos", "photos", "total"),
+        ],
     )
-    def test_empty_catalog_lists_encode_as_arrays(self, rt, handler, field):
+    def test_empty_catalog_lists_encode_as_arrays(self, rt, handler, field, count_field):
         rt.execute(f"require('CatalogModule').{handler}({{}}, RECORD)")
         encoded = json.loads(rt.eval("MP:_encodeJSON(RESPONSES[1])"))
         assert encoded["result"][field] == []
-        assert encoded["result"]["count"] == 0
+        assert encoded["result"][count_field] == 0
