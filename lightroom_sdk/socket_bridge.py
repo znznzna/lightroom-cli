@@ -1,12 +1,22 @@
 import asyncio
 import json
 import logging
+import math
 import uuid
 from asyncio import StreamReader, StreamWriter
 from pathlib import Path
 from typing import Any, Callable, Dict, Optional, Tuple
 
 logger = logging.getLogger(__name__)
+
+# Upper bounds for the parts of a round trip that are not covered by a command's own timeout
+CONNECT_TIMEOUT = 5.0
+CLOSE_TIMEOUT = 2.0
+
+
+def _check_timeout(timeout: Any) -> None:
+    if isinstance(timeout, bool) or not isinstance(timeout, (int, float)) or not math.isfinite(timeout) or timeout <= 0:
+        raise ValueError(f"timeout must be a positive finite number of seconds, got {timeout!r}")
 
 
 class StreamAggregator:
@@ -76,27 +86,27 @@ class SocketBridge:
                 logger.info(f"Found Lightroom bridge ports: {sender_port}, {receiver_port}")
 
                 # Connect to Lightroom's receiver (where we send)
-                _, self._send_writer = await asyncio.open_connection(self.host, receiver_port)
+                _, self._send_writer = await asyncio.wait_for(
+                    asyncio.open_connection(self.host, receiver_port), timeout=CONNECT_TIMEOUT
+                )
 
                 # Connect to Lightroom's sender (where we receive)
                 (
                     self._receive_reader,
                     self._receive_writer,
-                ) = await asyncio.open_connection(self.host, sender_port)
+                ) = await asyncio.wait_for(asyncio.open_connection(self.host, sender_port), timeout=CONNECT_TIMEOUT)
 
                 self._connected = True
                 self._receive_task = asyncio.create_task(self._receive_loop())
                 logger.info("✅ Connected to Lightroom bridge successfully!")
                 return
 
+            except asyncio.CancelledError:
+                self._abort_writers()
+                raise
             except Exception as e:
                 # 部分的に開いたソケットをクリーンアップ
-                for writer in [self._send_writer, self._receive_writer]:
-                    if writer:
-                        writer.close()
-                self._send_writer = None
-                self._receive_reader = None
-                self._receive_writer = None
+                self._abort_writers()
                 logger.warning(f"Connection attempt {attempt + 1}/{retry_attempts} failed: {e}")
                 if attempt < retry_attempts - 1:
                     delay = retry_delay * (2**attempt)
@@ -110,6 +120,15 @@ class SocketBridge:
                         f"Please ensure Lightroom Classic is running with the plugin active."
                     )
                     raise LRConnectionError(error_msg)
+
+    def _abort_writers(self) -> None:
+        """Close both sockets without waiting (used when a connection attempt is abandoned)"""
+        for writer in [self._send_writer, self._receive_writer]:
+            if writer:
+                writer.close()
+        self._send_writer = None
+        self._receive_reader = None
+        self._receive_writer = None
 
     async def _wait_for_port_file(self, timeout: float = 10.0, poll_interval: float = 0.5) -> None:
         """Wait for port file to appear with polling"""
@@ -137,10 +156,15 @@ class SocketBridge:
             return None
 
     async def _receive_loop(self) -> None:
-        """Background task to receive messages from Lightroom"""
+        """Background task to receive messages from Lightroom.
+
+        However the loop ends (EOF, read error, disconnect), every request still waiting for an
+        answer fails right away with a connection error instead of sitting until its timeout.
+        """
         buffer = b""
-        while self._connected:
-            try:
+        reason = "connection closed by Lightroom"
+        try:
+            while self._connected:
                 chunk = await self._receive_reader.read(8192)
                 if not chunk:
                     logger.warning("Connection closed by Lightroom")
@@ -151,17 +175,47 @@ class SocketBridge:
                 # Process complete messages
                 while b"\n" in buffer:
                     line, buffer = buffer.split(b"\n", 1)
-                    try:
-                        message = json.loads(line.decode("utf-8"))
-                        await self._handle_message(message)
-                    except json.JSONDecodeError as e:
-                        logger.error(f"Invalid JSON received: {e}")
+                    await self._dispatch_line(line)
+        except asyncio.CancelledError:
+            reason = "disconnected"
+            raise
+        except Exception as e:
+            reason = f"receive error: {e}"
+            logger.error(f"Receive loop error: {e}")
+        finally:
+            self._connected = False
+            self._fail_pending(reason)
+            if reason != "disconnected":
+                # disconnect() closes the sockets itself; here nobody else will
+                self._abort_writers()
 
-            except Exception as e:
-                logger.error(f"Receive loop error: {e}")
-                break
+    async def _dispatch_line(self, line: bytes) -> None:
+        """Decode and route one NDJSON line. A bad line is logged and skipped, never fatal."""
+        if not line.strip():
+            return
+        try:
+            message = json.loads(line.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as e:
+            logger.error(f"Undecodable message from Lightroom ({len(line)} bytes), skipped: {e}")
+            return
+        if not isinstance(message, dict):
+            logger.error(f"Message from Lightroom is not a JSON object, skipped: {type(message).__name__}")
+            return
+        try:
+            await self._handle_message(message)
+        except Exception:
+            logger.exception("Failed to handle message from Lightroom")
 
-        self._connected = False
+    def _fail_pending(self, reason: str) -> None:
+        """Fail every request and stream still waiting for an answer"""
+        from .exceptions import ConnectionError as LRConnectionError
+
+        requests, self._pending_requests = self._pending_requests, {}
+        streams, self._pending_streams = self._pending_streams, {}
+        futures = [*requests.values(), *(stream.future for stream in streams.values())]
+        for future in futures:
+            if not future.done():
+                future.set_exception(LRConnectionError(f"Connection to Lightroom lost ({reason})"))
 
     async def _handle_message(self, message: Dict[str, Any]) -> None:
         """Route received messages to appropriate handlers"""
@@ -181,12 +235,17 @@ class SocketBridge:
                     logger.error(f"Event handler error for {event_name}: {e}")
             return
 
-        # Handle responses
+        # Handle responses. A streaming request can also end with a plain response: Lua answers
+        # that way for an empty result, a parameter error or a handler error.
         request_id = message.get("id")
-        if request_id and request_id in self._pending_requests:
+        if request_id in self._pending_requests:
             future = self._pending_requests.pop(request_id)
-            if not future.cancelled():
-                future.set_result(message)
+        elif request_id in self._pending_streams:
+            future = self._pending_streams.pop(request_id).future
+        else:
+            return
+        if not future.done():
+            future.set_result(message)
 
     async def _handle_stream_event(self, message: Dict[str, Any]) -> None:
         """Handle NDJSON streaming event"""
@@ -212,7 +271,7 @@ class SocketBridge:
         elif event_type == "final":
             stream.final = payload
             # Resolve the future with aggregated result
-            if not stream.future.cancelled():
+            if not stream.future.done():
                 result = self._aggregate_stream(stream)
                 stream.future.set_result(result)
             # Cleanup completed stream
@@ -251,7 +310,10 @@ class SocketBridge:
 
         If stream=True, registers a StreamAggregator so that NDJSON streaming
         events are collected and aggregated into the final response.
+
+        `timeout` covers the whole round trip: writing the request, draining it and the answer.
         """
+        _check_timeout(timeout)
         if not self._connected:
             from .exceptions import RequestNotSentError
 
@@ -276,25 +338,26 @@ class SocketBridge:
             wait_future = future
 
         try:
-            # Send request
-            request_json = json.dumps(request) + "\n"
-            self._send_writer.write(request_json.encode("utf-8"))
-            await self._send_writer.drain()
-
-            # Wait for response
-            response = await asyncio.wait_for(wait_future, timeout=timeout)
-            return response
-
+            return await asyncio.wait_for(self._write_and_wait(request, wait_future), timeout=timeout)
         except asyncio.TimeoutError:
-            self._pending_requests.pop(request_id, None)
-            self._pending_streams.pop(request_id, None)
             from .exceptions import TimeoutError as LRTimeoutError
 
-            raise LRTimeoutError(f"Command '{command}' timed out after {timeout}s")
-        except Exception:
+            raise LRTimeoutError(f"Command '{command}' timed out after {timeout}s") from None
+        finally:
+            # Also runs on cancellation, so an abandoned request never stays registered
             self._pending_requests.pop(request_id, None)
             self._pending_streams.pop(request_id, None)
-            raise
+
+    async def _write_and_wait(self, request: Dict[str, Any], wait_future: asyncio.Future) -> Dict[str, Any]:
+        from .exceptions import ConnectionError as LRConnectionError
+
+        try:
+            self._send_writer.write((json.dumps(request) + "\n").encode("utf-8"))
+            await self._send_writer.drain()
+        except OSError as e:
+            # Wrapped so that a socket-level ETIMEDOUT is not mistaken for the command timeout
+            raise LRConnectionError(f"Failed to send '{request['command']}' to Lightroom: {e}") from e
+        return await wait_future
 
     async def disconnect(self) -> None:
         """Close connections gracefully"""
@@ -307,9 +370,18 @@ class SocketBridge:
             except asyncio.CancelledError:
                 pass
 
-        for writer in [self._send_writer, self._receive_writer]:
+        self._fail_pending("disconnected")
+
+        writers = [self._send_writer, self._receive_writer]
+        self._send_writer = None
+        self._receive_reader = None
+        self._receive_writer = None
+        for writer in writers:
             if writer:
                 writer.close()
-                await writer.wait_closed()
+                try:
+                    await asyncio.wait_for(writer.wait_closed(), timeout=CLOSE_TIMEOUT)
+                except (asyncio.TimeoutError, OSError):
+                    logger.warning("Socket did not close cleanly")
 
         logger.info("Disconnected from Lightroom bridge")
