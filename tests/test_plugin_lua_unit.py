@@ -190,3 +190,83 @@ class TestConfigGet:
         rt.execute("PREFS.enableDevelopSync = false; (require('Config')):init()")
         assert rt.eval("PREFS.enableDevelopSync") is False
         assert rt.eval("PREFS.serverPort") == 54321
+
+
+class TestWriteAccess:
+    """withWriteAccessDo returning "aborted" must not be reported as success (codex-overall #19)."""
+
+    @pytest.fixture
+    def rt(self):
+        rt = _make_runtime()
+        rt.execute(
+            """
+            -- A catalog whose write lock is either free ("executed") or held elsewhere ("aborted").
+            -- withWriteAccessDo only runs the function when it gets the lock, like Lightroom does.
+            WRITE_STATUS = "executed"
+            WRITES = {}
+            PHOTO = { setRawMetadata = function(self, key, value) WRITES[#WRITES + 1] = key end }
+            CATALOG = {
+                withWriteAccessDo = function(self, name, func, timeoutParams)
+                    if WRITE_STATUS == "aborted" then return "aborted" end
+                    func()
+                    return "executed"
+                end,
+                getPhotoByLocalId = function(self, id) return PHOTO end,
+                removePhoto = function(self, photo) WRITES[#WRITES + 1] = "removed" end,
+            }
+            local permissive_import = import
+            function import(name)
+                if name == 'LrApplication' then
+                    return { activeCatalog = function() return CATALOG end }
+                end
+                if name == 'LrTasks' then
+                    return { pcall = pcall, startAsyncTask = function(f) f() end, yield = function() end }
+                end
+                return permissive_import(name)
+            end
+            RESPONSES = {}
+            function RECORD(response) RESPONSES[#RESPONSES + 1] = response end
+            """
+        )
+        return rt
+
+    def test_run_raises_when_aborted(self, rt):
+        rt.execute("WRITE_STATUS = 'aborted'")
+        ok, err = rt.eval(
+            "(function() local W = require('WriteAccess'); "
+            "return pcall(W.run, CATALOG, 'Set Rating', function() WRITES[1] = 'x' end, { timeout = 10 }) end)()"
+        )
+        assert ok is False
+        assert err.startswith("WRITE_ACCESS_BLOCKED")
+        assert rt.eval("#WRITES") == 0
+
+    def test_run_returns_status_when_executed(self, rt):
+        assert rt.eval("(require('WriteAccess').run(CATALOG, 'Set Rating', function() end, { timeout = 10 }))") == (
+            "executed"
+        )
+
+    def test_set_rating_reports_error_when_aborted(self, rt):
+        rt.execute("WRITE_STATUS = 'aborted'")
+        rt.execute("require('CatalogModule').setRating({ photoId = '1', rating = 3 }, RECORD)")
+        assert rt.eval("#RESPONSES") == 1
+        assert rt.eval("RESPONSES[1].error ~= nil")
+        assert "WRITE_ACCESS_BLOCKED" in rt.eval("RESPONSES[1].error.message")
+        assert rt.eval("#WRITES") == 0
+
+    def test_set_rating_succeeds_when_executed(self, rt):
+        rt.execute("require('CatalogModule').setRating({ photoId = '1', rating = 3 }, RECORD)")
+        assert rt.eval("#RESPONSES") == 1
+        assert rt.eval("RESPONSES[1].error == nil")
+        assert rt.eval("WRITES[1]") == "rating"
+
+    def test_remove_from_catalog_raises_instead_of_never_answering(self, rt):
+        """コールバックを書き込み関数の中だけで呼ぶ実装は、aborted だと応答しなかった。
+        いまは例外になり、CommandRouter の pcall が HANDLER_ERROR として 1 回だけ応答する"""
+        rt.execute("WRITE_STATUS = 'aborted'")
+        ok, err = rt.eval(
+            "(function() return pcall(require('CatalogModule').removeFromCatalog, { photoId = '1' }, RECORD) end)()"
+        )
+        assert ok is False
+        assert "WRITE_ACCESS_BLOCKED" in err
+        assert rt.eval("#RESPONSES") == 0
+        assert rt.eval("#WRITES") == 0
