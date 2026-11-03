@@ -122,10 +122,14 @@ class SocketBridge:
                     raise LRConnectionError(error_msg)
 
     def _abort_writers(self) -> None:
-        """Close both sockets without waiting (used when a connection attempt is abandoned)"""
+        """Drop both sockets at once, discarding unsent data (the connection is being abandoned).
+
+        close() would keep the socket open until its send buffer drains, which never happens
+        when Lightroom has stopped reading.
+        """
         for writer in [self._send_writer, self._receive_writer]:
             if writer:
-                writer.close()
+                writer.transport.abort()
         self._send_writer = None
         self._receive_reader = None
         self._receive_writer = None
@@ -406,6 +410,8 @@ class SocketBridge:
                 try:
                     await asyncio.wait_for(writer.wait_closed(), timeout=CLOSE_TIMEOUT)
                 except (asyncio.TimeoutError, OSError):
-                    logger.warning("Socket did not close cleanly")
+                    # close() waits for unsent data to go out; if Lightroom is not reading, force it
+                    logger.warning("Socket did not close cleanly, aborting it")
+                    writer.transport.abort()
 
         logger.info("Disconnected from Lightroom bridge")

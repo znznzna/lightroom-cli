@@ -23,8 +23,11 @@ class ScriptedLightroom:
         self.port_file = port_file
         self.on_request = lambda request: [_ok(request)]
         self._senders: list[asyncio.StreamWriter] = []
+        self._receivers: list[asyncio.StreamWriter] = []
+        self._stopped = False
         self._servers: list[asyncio.Server] = []
         self.sender_connected = asyncio.Event()
+        self.reading = True  # False: stop reading requests, so the client's send buffer fills up
 
     async def start(self):
         receiver = await asyncio.start_server(self._handle_receiver, "localhost", 0)
@@ -40,8 +43,9 @@ class ScriptedLightroom:
             writer.close()
 
     async def stop(self):
-        for writer in self._senders:
-            writer.close()
+        self._stopped = True
+        for writer in self._senders + self._receivers:
+            writer.transport.abort()
         for server in self._servers:
             server.close()
             await server.wait_closed()
@@ -57,8 +61,15 @@ class ScriptedLightroom:
             writer.close()  # Server.wait_closed() waits for every accepted connection to close
 
     async def _handle_receiver(self, reader, writer):
+        self._receivers.append(writer)
         try:
-            async for line in reader:
+            while not self._stopped:
+                if not self.reading:
+                    await asyncio.sleep(0.05)
+                    continue
+                line = await reader.readline()
+                if not line:
+                    break
                 reply = self.on_request(json.loads(line))
                 await self.sender_connected.wait()
                 if reply == "close":
@@ -236,11 +247,20 @@ class TestStreamingRequestGetsPlainResponse:
         assert response["result"]["total"] == 2
 
 
+class _FakeTransport:
+    def __init__(self):
+        self.aborted = False
+
+    def abort(self):
+        self.aborted = True
+
+
 class _StuckWriter:
     """A send socket whose peer stopped reading: drain() never returns"""
 
     def __init__(self):
         self.written = []
+        self.transport = _FakeTransport()
 
     def write(self, data):
         self.written.append(data)
@@ -309,10 +329,28 @@ class TestTimeoutCoversTheRoundTrip:
             async def wait_closed(self):
                 await asyncio.Event().wait()
 
-        _replace_send_writer(bridge, NeverClosed())
+        writer = NeverClosed()
+        _replace_send_writer(bridge, writer)
         started = time.monotonic()
         await bridge.disconnect()
         assert time.monotonic() - started < 5
+        assert writer.transport.aborted, "a socket that would not close must be aborted"
+
+    async def test_disconnect_aborts_socket_with_unsent_data(self, lightroom, monkeypatch):
+        """Lightroom stops reading: close() alone would keep the socket and its buffer alive"""
+        import lightroom_sdk.socket_bridge as socket_bridge
+
+        monkeypatch.setattr(socket_bridge, "CLOSE_TIMEOUT", 0.2)
+        lightroom.reading = False  # before connecting, so the server never starts a read
+        bridge = SocketBridge(port_file=str(lightroom.port_file))
+        await bridge.connect(retry_attempts=1)
+        writer = bridge._send_writer
+        writer.write(b"x" * (64 * 1024 * 1024))  # far more than the kernel buffers can take
+        await asyncio.sleep(0.1)
+        assert writer.transport.get_write_buffer_size() > 0
+        await bridge.disconnect()
+        assert writer.transport.get_write_buffer_size() == 0
+        assert writer.transport.is_closing()
 
 
 class TestMcpConnectionManager:
