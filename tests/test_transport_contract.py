@@ -345,12 +345,18 @@ class TestTimeoutCoversTheRoundTrip:
         bridge = SocketBridge(port_file=str(lightroom.port_file))
         await bridge.connect(retry_attempts=1)
         writer = bridge._send_writer
-        writer.write(b"x" * (64 * 1024 * 1024))  # far more than the kernel buffers can take
+        sock = writer.transport.get_extra_info("socket")
+        # Far more than the kernel buffers can take. Where it waits differs by event loop
+        # (selector: the transport's buffer, proactor: a pending overlapped send), so the test
+        # checks the outcome that matters on both: the socket is really closed afterwards.
+        writer.write(b"x" * (64 * 1024 * 1024))
         await asyncio.sleep(0.1)
-        assert writer.transport.get_write_buffer_size() > 0
         await bridge.disconnect()
-        assert writer.transport.get_write_buffer_size() == 0
-        assert writer.transport.is_closing()
+        for _ in range(20):  # connection_lost runs a few loop iterations after abort()
+            if sock.fileno() == -1:
+                break
+            await asyncio.sleep(0.01)
+        assert sock.fileno() == -1, "the socket must be closed even though Lightroom never read the data"
 
 
 class TestMcpConnectionManager:
