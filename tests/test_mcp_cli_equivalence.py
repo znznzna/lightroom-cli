@@ -78,6 +78,8 @@ async def _call_mcp_tool(server, tool: str, arguments: dict):
     from fastmcp import Client
 
     async with Client(server) as client:
+        # An unknown tool is also an error result: make sure a rejection is about the input
+        assert tool in {t.name for t in await client.list_tools()}, f"{tool} is not registered"
         return await client.call_tool(tool, arguments, raise_on_error=False)
 
 
@@ -139,20 +141,42 @@ class TestSameInputSameOutcome:
         assert _mcp_rejected(mcp_result), mcp_result
         assert command not in mock_lr_server.received, "invalid input must not reach Lightroom"
 
-    async def test_valid_input_reaches_lightroom_identically(self, mock_lr_server, mcp_server, monkeypatch):
-        """Including the coercion of "3" to 3: both send exactly the same params"""
+    @pytest.mark.parametrize(
+        "command, tool, cli_path, params, sent",
+        [
+            # "3" is coerced to 3 by both entry points
+            (
+                "catalog.setRating",
+                "lr_catalog_set_rating",
+                ["catalog", "set-rating", "1", "0"],
+                {"photoId": "1", "rating": "3"},
+                {"photoId": "1", "rating": 3},
+            ),
+            (
+                "catalog.setColorLabel",
+                "lr_catalog_set_color_label",
+                ["catalog", "set-color-label", "1", "red"],
+                {"photoId": "1", "label": "blue"},
+                {"photoId": "1", "label": "blue"},
+            ),
+        ],
+        ids=["set-rating", "set-color-label"],
+    )
+    async def test_valid_input_reaches_lightroom_identically(
+        self, mock_lr_server, mcp_server, monkeypatch, command, tool, cli_path, params, sent
+    ):
+        """Every tool used by the rejection cases also works with valid input, so those cases cannot
+        pass just because the tool or the CLI command is broken"""
         import asyncio
         import json
 
-        mock_lr_server.register_response("catalog.setRating", {"ok": True})
+        mock_lr_server.register_response(command, {"ok": True})
         monkeypatch.setenv("LR_PORT_FILE", str(mock_lr_server.port_file))
-        params = {"photoId": "1", "rating": "3"}
 
-        cli_result = await asyncio.to_thread(_cli, ["catalog", "set-rating", "1", "0", "--json", json.dumps(params)])
+        cli_result = await asyncio.to_thread(_cli, [*cli_path, "--json", json.dumps(params)])
         assert cli_result.exit_code == 0, cli_result.output
-        mcp_result = await _call_mcp_tool(mcp_server, "lr_catalog_set_rating", params)
+        mcp_result = await _call_mcp_tool(mcp_server, tool, params)
         assert not mcp_result.is_error, mcp_result
         assert (mcp_result.structured_content or {}).get("result") == {"ok": True}
 
-        sent = [r["params"] for r in mock_lr_server.requests if r["command"] == "catalog.setRating"]
-        assert sent == [{"photoId": "1", "rating": 3}, {"photoId": "1", "rating": 3}]
+        assert [r["params"] for r in mock_lr_server.requests if r["command"] == command] == [sent, sent]
