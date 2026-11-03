@@ -5,6 +5,7 @@
 -- Lazy imports to avoid loading issues
 local LrApplication = nil
 local LrTasks = import 'LrTasks'
+local JsonArray = require('MessageProtocol').array -- an empty one is sent as [] (not {})
 local WriteAccess = require 'WriteAccess'
 local LrDate = nil
 local LrProgressScope = nil
@@ -186,8 +187,8 @@ function CatalogModule.getPhotoMetadata(params, callback)
             -- hasAdjustments/hasCrop not available in all Lightroom versions
             
             -- Keywords and collections
-            keywords = {},
-            collections = {}
+            keywords = JsonArray(),
+            collections = JsonArray()
         }
         
         logger:debug("Metadata table rating: " .. tostring(metadata.rating))
@@ -247,13 +248,13 @@ function CatalogModule.getSelectedPhotos(params, callback)
         
         if not selectedSuccess or not selectedPhotos or #selectedPhotos == 0 then
             wrappedCallback(ErrorUtils.createSuccess({
-                photos = {},
+                photos = JsonArray(),
                 count = 0
             }, "No photos currently selected"))
             return
         end
         
-        local results = {}
+        local results = JsonArray()
         
         for i, photo in ipairs(selectedPhotos) do
             local photoData = {
@@ -309,7 +310,7 @@ function CatalogModule.setSelectedPhotos(params, callback)
     local writeSuccess, writeError = ErrorUtils.safeCall(function()
         WriteAccess.run(catalog, "Set Photo Selection", function()
             local photos = {}
-            local notFound = {}
+            local notFound = JsonArray()
 
             -- Find all photos by localIdentifier
             for _, photoId in ipairs(photoIds) do
@@ -380,7 +381,7 @@ function CatalogModule.getAllPhotos(params, callback)
         -- Apply pagination
         local startIndex = offset + 1
         local endIndex = math.min(startIndex + limit - 1, #allPhotos)
-        local pagedPhotos = {}
+        local pagedPhotos = JsonArray()
         
         for i = startIndex, endIndex do
             local photo = allPhotos[i]
@@ -596,7 +597,7 @@ function CatalogModule.findPhotos(params, callback)
     logger:debug("Finding photos with search criteria")
 
     -- Validate: check for unknown filter keys
-    local warnings = {}
+    local warnings = JsonArray()
     for key, _ in pairs(searchDesc) do
         if not KNOWN_FILTER_KEYS[key] then
             table.insert(warnings, "Unknown filter key: " .. tostring(key))
@@ -615,7 +616,7 @@ function CatalogModule.findPhotos(params, callback)
     end
 
     local catalog = LrApplication.activeCatalog()
-    local partialErrors = {}
+    local partialErrors = JsonArray()
     local aborted = false
     local abortReason = nil
     local requestId = params._requestId
@@ -632,7 +633,7 @@ function CatalogModule.findPhotos(params, callback)
     if not allPhotos or #allPhotos == 0 then
         callback({
             result = {
-                photos = {},
+                photos = JsonArray(),
                 total = 0,
                 returned = 0,
                 offset = offset,
@@ -682,7 +683,7 @@ function CatalogModule.findPhotos(params, callback)
     end
 
     -- Step 4: Build metadata in chunks (with optional NDJSON streaming)
-    local resultPhotos = {}
+    local resultPhotos = JsonArray()
     local streamedCount = 0
     if not aborted then
         for chunkStart = 1, #pagedPhotos, METADATA_CHUNK_SIZE do
@@ -693,7 +694,7 @@ function CatalogModule.findPhotos(params, callback)
                 break
             end
             local chunkEnd = math.min(chunkStart + METADATA_CHUNK_SIZE - 1, #pagedPhotos)
-            local chunkPhotos = {}
+            local chunkPhotos = JsonArray()
             local chunkOk, chunkErr = LrTasks.pcall(function()
                 catalog:withReadAccessDo(function()
                     for i = chunkStart, chunkEnd do
@@ -789,7 +790,7 @@ function CatalogModule.getCollections(params, callback)
         collections = catalog:getChildCollections()
     end)
 
-    local resultCollections = {}
+    local resultCollections = JsonArray()
     local COLLECTION_CHUNK_SIZE = 50
     for chunkStart = 1, #collections, COLLECTION_CHUNK_SIZE do
         local chunkEnd = math.min(chunkStart + COLLECTION_CHUNK_SIZE - 1, #collections)
@@ -830,7 +831,7 @@ function CatalogModule.getKeywords(params, callback)
     catalog:withReadAccessDo(function()
         local keywords = catalog:getKeywords()
         
-        local resultKeywords = {}
+        local resultKeywords = JsonArray()
         for _, keyword in ipairs(keywords) do
             table.insert(resultKeywords, {
                 id = keyword.localIdentifier,
@@ -872,7 +873,7 @@ function CatalogModule.getFolders(params, callback)
                 depth = depth,
                 photoCount = #folder:getPhotos(false), -- Photos directly in this folder
                 totalPhotoCount = #folder:getPhotos(true), -- Photos including subfolders
-                subfolders = {}
+                subfolders = JsonArray()
             }
             
             -- Get parent folder info if available
@@ -895,7 +896,7 @@ function CatalogModule.getFolders(params, callback)
             return folderData
         end
         
-        local resultFolders = {}
+        local resultFolders = JsonArray()
         for _, folder in ipairs(rootFolders) do
             table.insert(resultFolders, buildFolderTree(folder))
         end
@@ -984,7 +985,7 @@ function CatalogModule.batchGetFormattedMetadata(params, callback)
         if #photos == 0 then
             callback({
                 result = {
-                    metadata = {},
+                    metadata = JsonArray(),
                     requested = #photoIds,
                     found = 0
                 }
@@ -995,7 +996,7 @@ function CatalogModule.batchGetFormattedMetadata(params, callback)
         -- Use batch API for efficiency
         local batchResults = catalog:batchGetFormattedMetadata(photos, keys)
         
-        local results = {}
+        local results = JsonArray()
         for _, photo in ipairs(photos) do
             local metadata = {}
             local photoMeta = batchResults[photo]
@@ -1071,7 +1072,7 @@ function CatalogModule.addKeywords(params, callback)
     end
 
     local catalog = LrApplication.activeCatalog()
-    local addedKeywords = {}
+    local addedKeywords = JsonArray()
     local writeSuccess, writeError = ErrorUtils.safeCall(function()
         WriteAccess.run(catalog, "Add Keywords", function()
             local photo = catalog:getPhotoByLocalId(tonumber(photoId))
@@ -1739,7 +1740,7 @@ function CatalogModule.getCollectionPhotos(params, callback)
     -- Apply pagination
     local startIdx = offset + 1
     local endIdx = math.min(startIdx + limit - 1, total)
-    local resultPhotos = {}
+    local resultPhotos = JsonArray()
 
     local CHUNK_SIZE = METADATA_CHUNK_SIZE
     for chunkStart = startIdx, endIdx, CHUNK_SIZE do
@@ -1779,7 +1780,7 @@ function CatalogModule.getDevelopPresets(params, callback)
     logger:debug("Getting develop presets" .. (searchQuery and (", query: " .. searchQuery) or ""))
 
     local folders = LrApplication.developPresetFolders()
-    local resultPresets = {}
+    local resultPresets = JsonArray()
 
     for _, folder in ipairs(folders) do
         local folderName = folder:getName()
