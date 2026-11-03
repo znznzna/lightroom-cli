@@ -164,10 +164,11 @@ class TestCreateToolFunction:
 
 class TestToolCount:
     def test_plugin_commands_excluded(self):
-        """plugin.* コマンドは MCP ツールから除外される"""
+        """plugin.* コマンドは cli_only なので MCP ツールから除外される"""
         from lightroom_sdk.schema import COMMAND_SCHEMAS
 
-        non_plugin = {k: v for k, v in COMMAND_SCHEMAS.items() if not k.startswith("plugin.")}
-        assert len(non_plugin) > 100
-        plugin_count = sum(1 for k in COMMAND_SCHEMAS if k.startswith("plugin."))
-        assert plugin_count == 3
+        bridge_commands = {k: v for k, v in COMMAND_SCHEMAS.items() if not v.cli_only}
+        assert len(bridge_commands) > 100
+        plugin = [v for k, v in COMMAND_SCHEMAS.items() if k.startswith("plugin.")]
+        assert len(plugin) == 3
+        assert all(v.cli_only for v in plugin)

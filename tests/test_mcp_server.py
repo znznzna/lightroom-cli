@@ -28,10 +28,10 @@ def mcp_app(mock_lr_server):
 
 class TestMcpServerToolCount:
     def test_registered_tool_count(self, mcp_app):
-        """plugin.* を除いた全コマンドが登録されること"""
+        """cli_only を除いた全コマンドが登録されること"""
         server, _ = mcp_app
-        non_plugin = sum(1 for k in COMMAND_SCHEMAS if not k.startswith("plugin."))
-        assert non_plugin >= 100
+        bridge_commands = sum(1 for schema in COMMAND_SCHEMAS.values() if not schema.cli_only)
+        assert bridge_commands >= 100
 
 
 class TestMcpServerViaTestClient:

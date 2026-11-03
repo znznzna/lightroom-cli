@@ -43,6 +43,9 @@ class CommandSchema:
     requires_confirm: bool = False
     # False for read-only commands whose effect still stacks when sent twice (e.g. "next photo")
     repeatable: bool = True
+    # True when Lightroom has no command by this name: the CLI handles it locally or translates it
+    # into another bridge command. Such commands are not exposed as MCP tools.
+    cli_only: bool = False
 
     @property
     def retry_safe(self) -> bool:
@@ -94,6 +97,7 @@ _register(
         "Force reconnection to Lightroom",
         timeout=10.0,
         response_fields=["status"],
+        cli_only=True,
     ),
     CommandSchema(
         "system.checkConnection",
@@ -108,6 +112,7 @@ _register(
         ],
         timeout=5.0,
         response_fields=["status", "reason"],
+        cli_only=True,
     ),
 )
 
@@ -849,6 +854,7 @@ for _ai_type in _AI_TYPES:
             mutating=True,
             timeout=60.0,
             supports_dry_run=True,
+            cli_only=True,  # sent as develop.createAIMaskWithAdjustments
         ),
     )
 
@@ -893,6 +899,7 @@ _register(
         "develop.ai.presets",
         "List available adjustment presets",
         response_fields=["presets"],
+        cli_only=True,  # the presets live in the CLI
     ),
     CommandSchema(
         "develop.ai.reset",
@@ -901,12 +908,14 @@ _register(
         mutating=True,
         supports_dry_run=True,
         requires_confirm=True,
+        cli_only=True,  # sent as develop.resetMasking
     ),
     CommandSchema(
         "develop.ai.list",
         "develop.ai.list",
         "List all masks on the current photo",
         response_fields=["masks", "count"],
+        cli_only=True,  # sent as develop.getAllMasks
     ),
     CommandSchema(
         "develop.batchAIMask",
@@ -1786,18 +1795,21 @@ _register(
             ),
         ],
         mutating=True,
+        cli_only=True,
     ),
     CommandSchema(
         "plugin.uninstall",
         "plugin.uninstall",
         "Uninstall the Lightroom plugin",
         mutating=True,
+        cli_only=True,
     ),
     CommandSchema(
         "plugin.status",
         "plugin.status",
         "Show plugin installation status",
         response_fields=["source", "target", "status"],
+        cli_only=True,
     ),
 )
 
