@@ -1,6 +1,12 @@
 name: Test
 
-on: [push, pull_request]
+# push is limited to main: a PR already runs via pull_request, and running both doubles the
+# macOS jobs, which then fail with "not acquired by Runner" when hosted macOS capacity is short
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
 
 jobs:
   lint:
