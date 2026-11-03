@@ -25,6 +25,7 @@ All tool names use the `lr_` prefix with snake_case (e.g., `lr_system_ping`, `lr
 | RESULT_UNKNOWN | Dropped mid-command; may or may not have applied | Read the current state before re-running. |
 | TIMEOUT_ERROR | Command took too long | Retry with a longer timeout or check if Lightroom is busy. |
 | VALIDATION_ERROR | Invalid parameters | Check the error message for details and suggestions. |
+| CONFIRMATION_REQUIRED | Destructive tool without `confirm=true` | Nothing changed. Ask the user, then retry. |
 
 ## Key Workflows
 
@@ -54,7 +55,8 @@ All tool names use the `lr_` prefix with snake_case (e.g., `lr_system_ping`, `lr
 ## Safety
 
 - **Mutating commands** modify photos/catalog. Check `[mutating]` in tool description.
-- **Destructive commands** require explicit confirmation. Check `[destructive, requires_confirm]`.
+- **Destructive commands** require explicit confirmation. Check `[destructive, requires_confirm]` and pass
+  `confirm=true`; without it they return `CONFIRMATION_REQUIRED` and change nothing.
 - **Use `dry_run=true`** parameter on mutating commands to preview changes without applying them.
 - Read-only commands are always safe to call.
 

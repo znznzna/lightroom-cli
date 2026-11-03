@@ -619,10 +619,16 @@ def reset_brush(ctx, dry_run, **kwargs):
 
 
 @develop.command("reset-masking")
+@click.option(
+    "--confirm",
+    is_flag=True,
+    default=False,
+    help="Required confirmation flag (removes all masks)",
+)
 @click.option("--dry-run", is_flag=True, default=False, help="Preview without executing")
 @json_input_options
 @click.pass_context
-def reset_masking(ctx, dry_run, **kwargs):
+def reset_masking(ctx, confirm, dry_run, **kwargs):
     """Reset masking (DEPRECATED: use 'lr develop ai reset')"""
     click.echo(
         "Warning: 'lr develop reset-masking' is deprecated. Use 'lr develop ai reset' instead.",

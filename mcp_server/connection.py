@@ -33,8 +33,22 @@ class ConnectionManager:
         params: dict[str, Any],
         timeout: float,
         mutating: bool,
+        confirmed: bool = False,
     ) -> dict[str, Any]:
         """Execute a command with validation, locking, and error handling."""
+        # 0. 確認が要る破壊的操作は confirm なしでは送らない
+        from lightroom_sdk.validation import ConfirmationRequiredError, check_confirmation
+
+        try:
+            check_confirmation(command, confirmed)
+        except ConfirmationRequiredError as e:
+            return {
+                "isError": True,
+                "code": e.code,
+                "message": str(e),
+                "suggestions": ["Call the tool again with confirm=true", "Use dry_run=true first to preview"],
+            }
+
         # 1. Validation
         from lightroom_sdk.validation import ValidationError, validate_params
 

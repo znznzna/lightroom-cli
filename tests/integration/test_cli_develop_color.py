@@ -76,6 +76,6 @@ def test_develop_reset_masking(mock_get_bridge, runner):
     mock_bridge = AsyncMock()
     mock_bridge.send_command.return_value = {"id": "7", "success": True, "result": {}}
     mock_get_bridge.return_value = mock_bridge
-    result = runner.invoke(cli, ["develop", "reset-masking"])
+    result = runner.invoke(cli, ["develop", "reset-masking", "--confirm"])
     assert result.exit_code == 0
     mock_bridge.send_command.assert_called_once_with("develop.resetMasking", {}, timeout=30.0)

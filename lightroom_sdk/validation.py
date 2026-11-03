@@ -24,6 +24,29 @@ class ValidationError(Exception):
         self.suggestions = suggestions or []
 
 
+class ConfirmationRequiredError(Exception):
+    """A destructive command was called without explicit confirmation; nothing was sent"""
+
+    code = "CONFIRMATION_REQUIRED"
+
+    def __init__(self, command: str):
+        super().__init__(f"'{command}' is destructive and needs explicit confirmation. Nothing was changed.")
+        self.command = command
+
+
+def check_confirmation(command: str, confirmed: bool) -> None:
+    """Refuse a requires_confirm command unless the caller confirmed it.
+
+    Every entry point (CLI execute_command, MCP ConnectionManager) calls this, so the
+    confirmation cannot be skipped by using another command name or the other entry point.
+    """
+    from lightroom_sdk.schema import COMMAND_SCHEMAS
+
+    schema = COMMAND_SCHEMAS.get(command)
+    if schema is not None and schema.requires_confirm and not confirmed:
+        raise ConfirmationRequiredError(command)
+
+
 def validate_params(command: str, params: dict) -> dict:
     """コマンドのパラメータをスキーマに基づいてバリデーション。
 
