@@ -21,9 +21,36 @@ class MockLightroomServer:
         self._receiver_port = 0
         self._handler_tasks: list[asyncio.Task] = []
         self.received: list[str] = []  # commands in the order they arrived
+        self.requests: list[dict] = []  # the full requests (command and params), in the same order
+        self._held: dict[str, asyncio.Event] = {}  # command -> answer only once the event is set
+        self.request_arrived = asyncio.Event()  # set (and cleared by the test) on every request
 
     def register_response(self, command: str, result: Any) -> None:
         self._responses[command] = result
+
+    def hold(self, command: str) -> asyncio.Event:
+        """Delay answers to `command` until the returned event is set; other requests are still read"""
+        self._held[command] = asyncio.Event()
+        return self._held[command]
+
+    async def _answer(self, resp: dict, hold: Optional[asyncio.Event]) -> None:
+        if hold is not None:
+            await hold.wait()
+        # A client connects its send side first and its receive side right after, so a request can
+        # arrive before that receive side is accepted. Wait until every client has both, otherwise
+        # the answer is lost (seen on slow Windows runners).
+        for _ in range(100):
+            if len(self._sender_writers) >= len(self._receiver_writers):
+                break
+            await asyncio.sleep(0.05)
+        for w in list(self._sender_writers):
+            if w.is_closing():
+                continue  # a client that just disconnected
+            try:
+                w.write(json.dumps(resp).encode() + b"\n")
+                await w.drain()
+            except ConnectionError:
+                pass
 
     async def _handle_receiver(self, reader, writer):
         """Python→LRチャネル: コマンド受信→レスポンス送信（sender経由）"""
@@ -39,14 +66,18 @@ class MockLightroomServer:
                     line, buffer = buffer.split(b"\n", 1)
                     msg = json.loads(line)
                     self.received.append(msg["command"])
+                    self.requests.append(msg)
+                    self.request_arrived.set()
                     result = self._responses.get(msg["command"], {})
                     if isinstance(result, dict) and "error" in result and "code" in result.get("error", {}):
                         resp = {"id": msg["id"], "success": False, "error": result["error"]}
                     else:
                         resp = {"id": msg["id"], "success": True, "result": result}
-                    for w in self._sender_writers:
-                        w.write(json.dumps(resp).encode() + b"\n")
-                        await w.drain()
+                    hold = self._held.get(msg["command"])
+                    if hold is None:
+                        await self._answer(resp, None)
+                    else:
+                        self._handler_tasks.append(asyncio.create_task(self._answer(resp, hold)))
         except (asyncio.CancelledError, ConnectionResetError):
             pass
         finally:
