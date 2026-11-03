@@ -100,6 +100,27 @@ def execute_command(ctx, command: str, params: dict, *, timeout: float | None = 
         click.echo(OutputFormatter.format(preview, fmt))
         return
 
+    # 確認が要る破壊的操作（schema の requires_confirm）は --confirm なしでは送らない
+    from lightroom_sdk.validation import ConfirmationRequiredError, check_confirmation
+
+    try:
+        check_confirmation(command, bool(getattr(ctx, "params", {}).get("confirm", False)))
+    except ConfirmationRequiredError as e:
+        click.echo(
+            OutputFormatter.format_error(
+                str(e),
+                fmt,
+                code=e.code,
+                suggestions=[
+                    f"Add --confirm flag: {ctx.command_path} --confirm",
+                    f"Use --dry-run first to preview: {ctx.command_path} --dry-run",
+                ],
+            ),
+            err=True,
+        )
+        ctx.exit(2)
+        return
+
     async def _run():
         # バリデーション（スキーマ未定義コマンドはスキップ）
         from lightroom_sdk.validation import ValidationError, validate_params

@@ -395,6 +395,6 @@ def test_deprecated_reset_masking_shows_warning(mock_get_bridge, runner):
         "result": {"message": "Reset"},
     }
     mock_get_bridge.return_value = mock_bridge
-    result = runner.invoke(cli, ["develop", "reset-masking"])
+    result = runner.invoke(cli, ["develop", "reset-masking", "--confirm"])
     assert result.exit_code == 0
     assert "deprecated" in result.output.lower() or "lr develop ai reset" in result.output

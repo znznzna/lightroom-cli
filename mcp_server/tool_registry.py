@@ -155,6 +155,18 @@ def create_tool_function(schema: CommandSchema, connection: "ConnectionManager |
         )
         param_annotations["dry_run"] = bool
 
+    # 確認が要る破壊的操作には confirm を追加（ConnectionManager が強制する）
+    if schema.requires_confirm:
+        sig_params.append(
+            inspect.Parameter(
+                name="confirm",
+                kind=inspect.Parameter.KEYWORD_ONLY,
+                default=False,
+                annotation=bool,
+            )
+        )
+        param_annotations["confirm"] = bool
+
     sig = inspect.Signature(parameters=sig_params)
 
     # クロージャで schema と connection をキャプチャ
@@ -166,6 +178,7 @@ def create_tool_function(schema: CommandSchema, connection: "ConnectionManager |
             return {"error": "No connection manager configured"}
 
         dry_run = kwargs.pop("dry_run", False)
+        confirm = kwargs.pop("confirm", False)
         if dry_run and _schema.mutating:
             return {
                 "dry_run": True,
@@ -183,6 +196,7 @@ def create_tool_function(schema: CommandSchema, connection: "ConnectionManager |
             params=filtered,
             timeout=_schema.timeout,
             mutating=_schema.mutating,
+            confirmed=confirm,
         )
 
     tool_fn.__name__ = tool_name
