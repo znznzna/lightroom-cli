@@ -7,6 +7,7 @@ local LrDevelopController = nil
 local LrApplication = nil
 local LrApplicationView = nil
 local LrTasks = import 'LrTasks'
+local WriteAccess = require 'WriteAccess'
 local LrProgressScope = nil
 local LrUndo = nil
 
@@ -490,7 +491,7 @@ function DevelopModule.applySettings(params, callback)
 
     local catalog = LrApplication.activeCatalog()
 
-    catalog:withWriteAccessDo("Apply Develop Settings", function()
+    WriteAccess.run(catalog, "Apply Develop Settings", function()
         local photo = catalog:getPhotoByLocalId(tonumber(photoId))
 
         if not photo then
@@ -688,7 +689,7 @@ function DevelopModule.batchApplySettings(params, callback)
     local results = {}
     local succeeded = 0
 
-    catalog:withWriteAccessDo("Batch Apply Develop Settings", function()
+    WriteAccess.run(catalog, "Batch Apply Develop Settings", function()
         for _, photoId in ipairs(photoIds) do
             local photo = catalog:getPhotoByLocalId(tonumber(photoId))
 
@@ -827,7 +828,7 @@ function DevelopModule.batchSetValue(params, callback)
     local results = {}
     local succeeded = 0
 
-    catalog:withWriteAccessDo("Batch Set Value: " .. param, function()
+    WriteAccess.run(catalog, "Batch Set Value: " .. param, function()
         for _, photoId in ipairs(photoIds) do
             local photo = catalog:getPhotoByLocalId(tonumber(photoId))
 
@@ -1036,7 +1037,7 @@ function DevelopModule.setValue(params, callback)
     
     -- Use withWriteAccessDo with timeout to prevent blocking
     local writeSuccess, writeError = ErrorUtils.safeCall(function()
-        catalog:withWriteAccessDo("Set Develop Parameter", function()
+        WriteAccess.run(catalog, "Set Develop Parameter", function()
             LrDevelopController.setValue(param, value)
         end, { timeout = 10 })  -- 10 second timeout
     end)
@@ -1180,7 +1181,7 @@ function DevelopModule.resetToDefault(params, callback)
     logger:debug("Resetting develop parameter to default: " .. param)
     
     local catalog = LrApplication.activeCatalog()
-    catalog:withWriteAccessDo("Reset Develop Parameter", function()
+    WriteAccess.run(catalog, "Reset Develop Parameter", function()
         local success, error = ErrorUtils.safeCall(function()
             LrDevelopController.resetToDefault(param)
         end)
@@ -1221,7 +1222,7 @@ function DevelopModule.setAutoTone(params, callback)
     logger:debug("Applying Auto Tone")
     
     local catalog = LrApplication.activeCatalog()
-    catalog:withWriteAccessDo("Auto Tone", function()
+    WriteAccess.run(catalog, "Auto Tone", function()
         local success, error = ErrorUtils.safeCall(function()
             LrDevelopController.setAutoTone()
         end)
@@ -1255,7 +1256,7 @@ function DevelopModule.setAutoWhiteBalance(params, callback)
     logger:debug("Applying Auto White Balance")
     
     local catalog = LrApplication.activeCatalog()
-    catalog:withWriteAccessDo("Auto White Balance", function()
+    WriteAccess.run(catalog, "Auto White Balance", function()
         local success, error = ErrorUtils.safeCall(function()
             LrDevelopController.setAutoWhiteBalance()
         end)
@@ -1319,7 +1320,7 @@ function DevelopModule.setProcessVersion(params, callback)
     logger:debug("Setting process version: " .. version)
     
     local catalog = LrApplication.activeCatalog()
-    catalog:withWriteAccessDo("Set Process Version", function()
+    WriteAccess.run(catalog, "Set Process Version", function()
         local success, error = ErrorUtils.safeCall(function()
             LrDevelopController.setProcessVersion(version)
         end)
@@ -1351,7 +1352,7 @@ function DevelopModule.resetAllDevelopAdjustments(params, callback)
     logger:debug("Resetting all develop adjustments")
     
     local catalog = LrApplication.activeCatalog()
-    catalog:withWriteAccessDo("Reset All Develop Adjustments", function()
+    WriteAccess.run(catalog, "Reset All Develop Adjustments", function()
         local success, error = ErrorUtils.safeCall(function()
             LrDevelopController.resetAllDevelopAdjustments()
         end)
@@ -1596,7 +1597,7 @@ function DevelopModule.setCurvePoints(params, callback)
     logger:debug("Setting curve points for " .. param .. ": " .. #points .. " points")
     
     local catalog = LrApplication.activeCatalog()
-    catalog:withWriteAccessDo("Set Curve Points", function()
+    WriteAccess.run(catalog, "Set Curve Points", function()
         local success, error = ErrorUtils.safeCall(function()
             LrDevelopController.setValue(param, curveArray)
         end)

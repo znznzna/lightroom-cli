@@ -5,6 +5,7 @@
 -- Lazy imports to avoid loading issues
 local LrApplication = nil
 local LrTasks = import 'LrTasks'
+local WriteAccess = require 'WriteAccess'
 local LrDate = nil
 local LrProgressScope = nil
 
@@ -306,7 +307,7 @@ function CatalogModule.setSelectedPhotos(params, callback)
     -- Use withWriteAccessDo with timeout to prevent blocking
     local selectResult = nil
     local writeSuccess, writeError = ErrorUtils.safeCall(function()
-        catalog:withWriteAccessDo("Set Photo Selection", function()
+        WriteAccess.run(catalog, "Set Photo Selection", function()
             local photos = {}
             local notFound = {}
 
@@ -1036,7 +1037,7 @@ function CatalogModule.setRating(params, callback)
 
     local catalog = LrApplication.activeCatalog()
     local writeSuccess, writeError = ErrorUtils.safeCall(function()
-        catalog:withWriteAccessDo("Set Rating", function()
+        WriteAccess.run(catalog, "Set Rating", function()
             local photo = catalog:getPhotoByLocalId(tonumber(photoId))
             if not photo then error("Photo not found: " .. tostring(photoId)) end
             -- LR API: setRawMetadata("rating", 0) throws; use nil for unrated
@@ -1072,7 +1073,7 @@ function CatalogModule.addKeywords(params, callback)
     local catalog = LrApplication.activeCatalog()
     local addedKeywords = {}
     local writeSuccess, writeError = ErrorUtils.safeCall(function()
-        catalog:withWriteAccessDo("Add Keywords", function()
+        WriteAccess.run(catalog, "Add Keywords", function()
             local photo = catalog:getPhotoByLocalId(tonumber(photoId))
             if not photo then error("Photo not found: " .. tostring(photoId)) end
             for _, kwName in ipairs(keywords) do
@@ -1111,7 +1112,7 @@ function CatalogModule.setFlag(params, callback)
 
     local catalog = LrApplication.activeCatalog()
     local writeSuccess, writeError = ErrorUtils.safeCall(function()
-        catalog:withWriteAccessDo("Set Flag", function()
+        WriteAccess.run(catalog, "Set Flag", function()
             local photo = catalog:getPhotoByLocalId(tonumber(photoId))
             if not photo then
                 error("Photo not found: " .. tostring(photoId))
@@ -1183,7 +1184,7 @@ function CatalogModule.setTitle(params, callback)
 
     local catalog = LrApplication.activeCatalog()
     local writeSuccess, writeError = ErrorUtils.safeCall(function()
-        catalog:withWriteAccessDo("Set Title", function()
+        WriteAccess.run(catalog, "Set Title", function()
             local photo = catalog:getPhotoByLocalId(tonumber(photoId))
             if not photo then error("Photo not found: " .. tostring(photoId)) end
             photo:setRawMetadata("title", title)
@@ -1214,7 +1215,7 @@ function CatalogModule.setCaption(params, callback)
 
     local catalog = LrApplication.activeCatalog()
     local writeSuccess, writeError = ErrorUtils.safeCall(function()
-        catalog:withWriteAccessDo("Set Caption", function()
+        WriteAccess.run(catalog, "Set Caption", function()
             local photo = catalog:getPhotoByLocalId(tonumber(photoId))
             if not photo then error("Photo not found: " .. tostring(photoId)) end
             photo:setRawMetadata("caption", caption)
@@ -1245,7 +1246,7 @@ function CatalogModule.setColorLabel(params, callback)
 
     local catalog = LrApplication.activeCatalog()
     local writeSuccess, writeError = ErrorUtils.safeCall(function()
-        catalog:withWriteAccessDo("Set Color Label", function()
+        WriteAccess.run(catalog, "Set Color Label", function()
             local photo = catalog:getPhotoByLocalId(tonumber(photoId))
             if not photo then error("Photo not found: " .. tostring(photoId)) end
             photo:setRawMetadata("colorNameForLabel", label)
@@ -1300,7 +1301,7 @@ function CatalogModule.applyDevelopPreset(params, callback)
     end
 
     local writeSuccess, writeError = ErrorUtils.safeCall(function()
-        catalog:withWriteAccessDo("Apply Develop Preset", function()
+        WriteAccess.run(catalog, "Apply Develop Preset", function()
             photo:applyDevelopPreset(targetPreset)
         end, { timeout = 10 })
     end)
@@ -1338,7 +1339,7 @@ function CatalogModule.createDevelopSnapshot(params, callback)
     end
 
     local writeSuccess, writeError = ErrorUtils.safeCall(function()
-        catalog:withWriteAccessDo("Create Develop Snapshot", function()
+        WriteAccess.run(catalog, "Create Develop Snapshot", function()
             photo:createDevelopSnapshot(name)
         end, { timeout = 10 })
     end)
@@ -1397,7 +1398,7 @@ function CatalogModule.pasteSettings(params, callback)
     end
 
     local writeSuccess, writeError = ErrorUtils.safeCall(function()
-        catalog:withWriteAccessDo("Paste Develop Settings", function()
+        WriteAccess.run(catalog, "Paste Develop Settings", function()
             photo:pasteSettings()
         end, { timeout = 10 })
     end)
@@ -1422,7 +1423,7 @@ function CatalogModule.rotateLeft(params, callback)
         return
     end
     local success, err = ErrorUtils.safeCall(function()
-        catalog:withWriteAccessDo("Rotate Left", function()
+        WriteAccess.run(catalog, "Rotate Left", function()
             photo:rotateLeft()
         end, { timeout = 10 })
     end)
@@ -1442,7 +1443,7 @@ function CatalogModule.rotateRight(params, callback)
         return
     end
     local success, err = ErrorUtils.safeCall(function()
-        catalog:withWriteAccessDo("Rotate Right", function()
+        WriteAccess.run(catalog, "Rotate Right", function()
             photo:rotateRight()
         end, { timeout = 10 })
     end)
@@ -1462,7 +1463,7 @@ function CatalogModule.createVirtualCopy(params, callback)
         return
     end
     local success, err = ErrorUtils.safeCall(function()
-        catalog:withWriteAccessDo("Create Virtual Copy", function()
+        WriteAccess.run(catalog, "Create Virtual Copy", function()
             photo:createVirtualCopy()
         end, { timeout = 10 })
     end)
@@ -1489,7 +1490,7 @@ function CatalogModule.setMetadata(params, callback)
     end
 
     local catalog = LrApplication.activeCatalog()
-    catalog:withWriteAccessDo("Set Metadata", function()
+    WriteAccess.run(catalog, "Set Metadata", function()
         local photo = catalog:getPhotoByLocalId(tonumber(photoId))
         if not photo then
             callback(ErrorUtils.createError("PHOTO_NOT_FOUND", "Photo with ID " .. photoId .. " not found"))
@@ -1515,7 +1516,7 @@ function CatalogModule.createCollection(params, callback)
     end
     local catalog = LrApplication.activeCatalog()
     local success, err = ErrorUtils.safeCall(function()
-        catalog:withWriteAccessDo("Create Collection", function()
+        WriteAccess.run(catalog, "Create Collection", function()
             catalog:createCollection(name, nil, true)
         end, { timeout = 10 })
     end)
@@ -1536,7 +1537,7 @@ function CatalogModule.createSmartCollection(params, callback)
     local searchDesc = params.searchDesc or {}
     local catalog = LrApplication.activeCatalog()
     local success, err = ErrorUtils.safeCall(function()
-        catalog:withWriteAccessDo("Create Smart Collection", function()
+        WriteAccess.run(catalog, "Create Smart Collection", function()
             catalog:createSmartCollection(name, searchDesc, nil, true)
         end, { timeout = 10 })
     end)
@@ -1556,7 +1557,7 @@ function CatalogModule.createCollectionSet(params, callback)
     end
     local catalog = LrApplication.activeCatalog()
     local success, err = ErrorUtils.safeCall(function()
-        catalog:withWriteAccessDo("Create Collection Set", function()
+        WriteAccess.run(catalog, "Create Collection Set", function()
             catalog:createCollectionSet(name, nil, true)
         end, { timeout = 10 })
     end)
@@ -1576,7 +1577,7 @@ function CatalogModule.createKeyword(params, callback)
     end
     local catalog = LrApplication.activeCatalog()
     local success, err = ErrorUtils.safeCall(function()
-        catalog:withWriteAccessDo("Create Keyword", function()
+        WriteAccess.run(catalog, "Create Keyword", function()
             catalog:createKeyword(keyword, {}, true, nil, true)
         end, { timeout = 10 })
     end)
@@ -1599,7 +1600,7 @@ function CatalogModule.removeKeyword(params, callback)
     local opResult = nil
     local opError = nil
     local writeSuccess, writeErr = ErrorUtils.safeCall(function()
-        catalog:withWriteAccessDo("Remove Keyword", function()
+        WriteAccess.run(catalog, "Remove Keyword", function()
             local photo = catalog:getPhotoByLocalId(tonumber(photoId))
             if not photo then
                 opError = { code = "PHOTO_NOT_FOUND", message = "Photo not found" }
@@ -1669,7 +1670,7 @@ function CatalogModule.removeFromCatalog(params, callback)
         return
     end
     local catalog = LrApplication.activeCatalog()
-    catalog:withWriteAccessDo("Remove From Catalog", function()
+    WriteAccess.run(catalog, "Remove From Catalog", function()
         local photo = catalog:getPhotoByLocalId(tonumber(photoId))
         if not photo then
             callback(ErrorUtils.createError("PHOTO_NOT_FOUND", "Photo not found"))
