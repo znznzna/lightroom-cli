@@ -150,3 +150,43 @@ class TestSocketBridgeShutdownReset:
         _load(rt, "SimpleSocketBridge")
         rt.execute("pcall(require('SimpleSocketBridge').start)")
         assert rt.eval("_G.LightroomPythonBridge.shuttingDown") is True
+
+
+class TestConfigGet:
+    """Config:get must keep an explicit false instead of falling back to the default."""
+
+    @pytest.fixture
+    def config(self):
+        rt = _make_runtime()
+        rt.execute(
+            """
+            PREFS = {}
+            local permissive_import = import
+            function import(name)
+                if name == 'LrPrefs' then
+                    return { prefsForPlugin = function() return PREFS end }
+                end
+                return permissive_import(name)
+            end
+            """
+        )
+        cfg = _load(rt, "Config")
+        rt.eval("(require('Config')):init()")
+        return rt, cfg
+
+    def test_explicit_false_is_kept(self, config):
+        rt, _ = config
+        rt.execute("PREFS.autoStart = false")
+        assert rt.eval("(require('Config')):get('autoStart')") is False
+        assert rt.eval("(require('Config')):getAll().autoStart") is False
+
+    def test_missing_value_uses_default(self, config):
+        rt, _ = config
+        rt.execute("PREFS.autoStart = nil")
+        assert rt.eval("(require('Config')):get('autoStart')") is True
+
+    def test_init_fills_defaults_but_keeps_false(self, config):
+        rt, _ = config
+        rt.execute("PREFS.enableDevelopSync = false; (require('Config')):init()")
+        assert rt.eval("PREFS.enableDevelopSync") is False
+        assert rt.eval("PREFS.serverPort") == 54321
