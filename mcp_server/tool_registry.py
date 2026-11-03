@@ -194,10 +194,14 @@ def create_tool_function(schema: CommandSchema, connection: "ConnectionManager |
 
 
 def register_all_tools(mcp: "FastMCP", connection: "ConnectionManager") -> int:
-    """Register all COMMAND_SCHEMAS as MCP tools. Returns count of registered tools."""
+    """Register every command Lightroom can run as an MCP tool. Returns count of registered tools.
+
+    cli_only commands (local CLI work, or CLI aliases that are translated to another command)
+    are skipped: sent as-is, Lightroom would answer UNKNOWN_COMMAND.
+    """
     count = 0
     for name, schema in COMMAND_SCHEMAS.items():
-        if name.startswith("plugin."):
+        if schema.cli_only:
             continue
 
         tool_fn = create_tool_function(schema, connection)
