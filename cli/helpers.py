@@ -12,6 +12,13 @@ def _is_connection_error(e: Exception) -> bool:
     return isinstance(e, (ConnectionError, SDKConnectionError))
 
 
+def _connection_error_code(e: Exception) -> str:
+    """RESULT_UNKNOWN when the command may already have run (it is not resent), else CONNECTION_ERROR"""
+    from lightroom_sdk.exceptions import ResultUnknownError
+
+    return "RESULT_UNKNOWN" if isinstance(e, ResultUnknownError) else "CONNECTION_ERROR"
+
+
 def _is_timeout_error(e: Exception) -> bool:
     """ビルトイン TimeoutError と SDK TimeoutError の両方を判定"""
     from lightroom_sdk.exceptions import TimeoutError as SDKTimeoutError
@@ -137,7 +144,7 @@ def execute_command(ctx, command: str, params: dict, *, timeout: float | None = 
         except Exception as e:
             if _is_connection_error(e):
                 click.echo(
-                    OutputFormatter.format_error(str(e), fmt, code="CONNECTION_ERROR"),
+                    OutputFormatter.format_error(str(e), fmt, code=_connection_error_code(e)),
                     err=True,
                 )
                 ctx.exit(3)
@@ -164,7 +171,7 @@ def handle_error(ctx, error: Exception, fmt: str = "text"):
     """共通エラーハンドリング（execute_command を使わないコマンド用）"""
     if _is_connection_error(error):
         click.echo(
-            OutputFormatter.format_error(str(error), fmt, code="CONNECTION_ERROR"),
+            OutputFormatter.format_error(str(error), fmt, code=_connection_error_code(error)),
             err=True,
         )
         ctx.exit(3)

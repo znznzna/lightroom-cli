@@ -8,6 +8,14 @@ from .socket_bridge import SocketBridge
 logger = logging.getLogger(__name__)
 
 
+def _retry_safe(command: str) -> bool:
+    """Unknown commands count as unsafe: resending is opt-in per schema"""
+    from .schema import COMMAND_SCHEMAS
+
+    schema = COMMAND_SCHEMAS.get(command)
+    return schema is not None and schema.retry_safe
+
+
 class ConnectionState(enum.Enum):
     DISCONNECTED = "disconnected"
     CONNECTING = "connecting"
@@ -50,6 +58,7 @@ class ResilientSocketBridge:
         self._event_handlers[event_name].append(handler)
 
     async def connect(self) -> None:
+        await self._stop_heartbeat()
         self._state = ConnectionState.CONNECTING
         self._bridge = SocketBridge(self._host, self._port_file)
 
@@ -76,28 +85,62 @@ class ResilientSocketBridge:
         if self._state == ConnectionState.DISCONNECTED:
             await self.connect()
 
-        try:
-            return await self._bridge.send_command(command, params, timeout)
-        except (ConnectionError, OSError, EOFError) as e:
-            if self._state == ConnectionState.SHUTDOWN:
-                raise
-            logger.warning(f"Connection error on '{command}', reconnecting: {e}")
-            await self._reconnect()
-            return await self._bridge.send_command(command, params, timeout)
-        except asyncio.TimeoutError:
-            raise
-        except Exception as e:
-            # Import here to avoid circular dependency
-            from .exceptions import ConnectionError as LRConnectionError
+        from .exceptions import ConnectionError as LRConnectionError
+        from .exceptions import RequestNotSentError, ResultUnknownError
 
-            # Only retry on connection-related exceptions, not application errors
-            if self._state == ConnectionState.SHUTDOWN:
-                raise
-            if isinstance(e, LRConnectionError):
-                logger.warning(f"LR connection error on '{command}', reconnecting: {e}")
-                await self._reconnect()
+        # At most two attempts. Every failure goes through the same classification, so a drop
+        # during the resend is still reported as RESULT_UNKNOWN for commands that are not retry-safe.
+        for attempt in range(2):
+            try:
                 return await self._bridge.send_command(command, params, timeout)
-            raise
+            except asyncio.TimeoutError:
+                raise
+            except (ConnectionError, OSError, EOFError, LRConnectionError) as e:
+                # builtin ConnectionError is a subclass of OSError; LRConnectionError is the SDK's own
+                if self._state == ConnectionState.SHUTDOWN:
+                    raise
+                not_sent = isinstance(e, RequestNotSentError)
+                if not (not_sent or _retry_safe(command)):
+                    # The request may already have been applied; sending it again could apply it twice.
+                    # Drop the connection so the next command starts from a fresh one.
+                    logger.warning(f"Connection error on '{command}', not resending: {e}")
+                    await self._drop_bridge()
+                    raise ResultUnknownError(
+                        f"Connection lost while running '{command}'. It may or may not have been applied, "
+                        "so it was not resent. Check the result in Lightroom before running it again.",
+                        details={"command": command},
+                    ) from e
+                if attempt == 1:
+                    # Nothing was applied (not sent) or resending is harmless; just report the failure
+                    await self._drop_bridge()
+                    raise
+                logger.warning(f"Connection error on '{command}', reconnecting: {e}")
+                await self._reconnect()
+        raise AssertionError("unreachable")
+
+    async def _drop_bridge(self) -> None:
+        """Close the current bridge; the next send_command reconnects from scratch"""
+        # Detach synchronously, before the first await: a concurrent send_command may reconnect
+        # meanwhile, and its new bridge must not be the one closed here. Forgetting the reference
+        # also keeps later cleanup (CLI finally / __aexit__) from closing the dead bridge a second time.
+        self._state = ConnectionState.DISCONNECTED
+        bridge, self._bridge = self._bridge, None
+        await self._stop_heartbeat()
+        if bridge:
+            try:
+                await bridge.disconnect()
+            except Exception:
+                pass
+
+    async def _stop_heartbeat(self) -> None:
+        task, self._heartbeat_task = self._heartbeat_task, None
+        if task is None or task is asyncio.current_task():
+            return
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
 
     async def _reconnect(self) -> None:
         self._state = ConnectionState.RECONNECTING
@@ -127,6 +170,7 @@ class ResilientSocketBridge:
                 await asyncio.sleep(delay)
                 delay = min(delay * 2, 30.0)
         self._state = ConnectionState.DISCONNECTED
+        self._bridge = None  # already closed above
         from .exceptions import ConnectionError as LRConnectionError
 
         raise LRConnectionError("Reconnection failed")
@@ -136,12 +180,7 @@ class ResilientSocketBridge:
         self._state = ConnectionState.SHUTDOWN
 
     async def disconnect(self) -> None:
-        if self._heartbeat_task:
-            self._heartbeat_task.cancel()
-            try:
-                await self._heartbeat_task
-            except asyncio.CancelledError:
-                pass
+        await self._stop_heartbeat()
         if self._bridge:
             await self._bridge.disconnect()
         self._state = ConnectionState.DISCONNECTED

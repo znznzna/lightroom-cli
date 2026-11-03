@@ -22,6 +22,7 @@ All tool names use the `lr_` prefix with snake_case (e.g., `lr_system_ping`, `lr
 | Error Code | Meaning | Action |
 |------------|---------|--------|
 | CONNECTION_ERROR | Cannot reach Lightroom | Ensure LR Classic is running with CLI Bridge active. |
+| RESULT_UNKNOWN | Dropped mid-command; may or may not have applied | Read the current state before re-running. |
 | TIMEOUT_ERROR | Command took too long | Retry with a longer timeout or check if Lightroom is busy. |
 | VALIDATION_ERROR | Invalid parameters | Check the error message for details and suggestions. |
 

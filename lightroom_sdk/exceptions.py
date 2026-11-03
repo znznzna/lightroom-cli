@@ -21,6 +21,27 @@ class ConnectionError(LightroomSDKError):
     pass
 
 
+class RequestNotSentError(ConnectionError):
+    """The connection was down before the request was written, so it is safe to resend"""
+
+    pass
+
+
+class ResultUnknownError(ConnectionError):
+    """The connection dropped after the request may have reached Lightroom.
+
+    The command is not resent automatically: it may or may not have been applied.
+    """
+
+    def __init__(
+        self,
+        message: str,
+        code: Optional[str] = None,
+        details: Optional[Dict[str, Any]] = None,
+    ):
+        super().__init__(message, code=code or "RESULT_UNKNOWN", details=details)
+
+
 class TimeoutError(LightroomSDKError):
     """Command timeout errors"""
 
