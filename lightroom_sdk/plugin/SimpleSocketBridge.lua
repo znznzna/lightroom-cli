@@ -16,6 +16,18 @@ local bothSocketsReady = false
 local messageQueue = {}
 local restartPending = false
 
+-- Sockets of the current server, kept at module level so shutdown can close
+-- them directly instead of relying on the keep-alive loop waking up.
+local activeSender = nil
+local activeReceiver = nil
+
+-- Each start gets a new generation. Loops from an older generation (socket
+-- keep-alive, request cleanup) see the mismatch and exit on their own.
+local serverGeneration = 0
+
+-- Number of keep-alive loops still alive (used by shutdown to wait for them).
+local activeLoops = 0
+
 -- Fixed ports from Config
 local SENDER_PORT = nil   -- set in startSocketServer
 local RECEIVER_PORT = nil -- set in startSocketServer
@@ -76,6 +88,27 @@ local function writePortFile(senderPort, receiverPort)
     if not success then
         logger:error("Error writing port file: " .. tostring(err))
     end
+end
+
+local function isShuttingDown()
+    local bridge = _G.LightroomPythonBridge
+    return bridge ~= nil and bridge.shuttingDown == true
+end
+
+local function closeSocket(socket)
+    if socket then
+        pcall(function() socket:close() end)
+    end
+end
+
+local function removePortFile()
+    pcall(function()
+        local LrFileUtils = import 'LrFileUtils'
+        local portFile = PlatformPaths.getPortFilePath()
+        if LrFileUtils.exists(portFile) then
+            LrFileUtils.delete(portFile)
+        end
+    end)
 end
 
 -- Socket callbacks: request deferred restart on close, self-reconnect on timeout
@@ -146,9 +179,13 @@ local function startSocketServer()
         logger:error("Phase 3 modules not available")
     end
 
+    serverGeneration = serverGeneration + 1
+    local myGeneration = serverGeneration
+    _G.LightroomPythonBridge.serverGeneration = myGeneration
+
     LrTasks.startAsyncTask(function()
         LrFunctionContext.callWithContext('lightroom_python_bridge', function(context)
-            logger:info("Socket context created")
+            logger:info("Socket context created (generation " .. myGeneration .. ")")
 
             local sender, receiver
 
@@ -259,6 +296,19 @@ local function startSocketServer()
                 end
             }
 
+            -- Shutdown (or a newer start) may have happened while the sockets were
+            -- being bound. Do not overwrite socketServerRunning in that case,
+            -- otherwise the keep-alive loop below would never end.
+            if isShuttingDown() or myGeneration ~= serverGeneration then
+                logger:info("Shutdown or newer start detected during bind - closing sockets")
+                closeSocket(sender)
+                closeSocket(receiver)
+                return
+            end
+
+            activeSender = sender
+            activeReceiver = receiver
+
             -- Write port file with fixed ports
             writePortFile(SENDER_PORT, RECEIVER_PORT)
 
@@ -267,30 +317,31 @@ local function startSocketServer()
             _G.LightroomPythonBridge.socketServerRunning = true
 
             if commandRouter then
-                commandRouter:startCleanupTask()
+                commandRouter:startCleanupTask(myGeneration)
             end
 
-            while _G.LightroomPythonBridge.socketServerRunning do
+            activeLoops = activeLoops + 1
+            while _G.LightroomPythonBridge.socketServerRunning
+                and not isShuttingDown()
+                and myGeneration == serverGeneration do
                 LrTasks.sleep(0.2)
             end
+            activeLoops = activeLoops - 1
 
             logger:info("Socket server loop ended - cleaning up")
 
-            if sender then sender:close() end
-            if receiver then receiver:close() end
+            closeSocket(sender)
+            closeSocket(receiver)
+            if activeSender == sender then activeSender = nil end
+            if activeReceiver == receiver then activeReceiver = nil end
 
             -- Only remove port file on actual shutdown, not on restart
-            local bridge = _G.LightroomPythonBridge
-            if bridge and bridge.shuttingDown then
-                pcall(function()
-                    local LrFileUtils = import 'LrFileUtils'
-                    local portFile = PlatformPaths.getPortFilePath()
-                    if LrFileUtils.exists(portFile) then
-                        LrFileUtils.delete(portFile)
-                    end
-                end)
+            if isShuttingDown() then
+                removePortFile()
                 logger:info("Socket server stopped (shutdown)")
-                LrDialogs.showBezel("CLI Bridge Disconnected", 2)
+                if not _G.LightroomPythonBridge.appQuitting then
+                    LrDialogs.showBezel("CLI Bridge Disconnected", 2)
+                end
             else
                 logger:info("Socket server stopped (restart pending)")
             end
@@ -349,7 +400,12 @@ requestRestart = function(reason)
     end)
 end
 
-local function stopSocketServer()
+-- Stop the socket server.
+-- options.notifyClient: send "server.shutdown" to the CLI first (Stop menu).
+--   Skipped when Lightroom itself is quitting, so nothing can block the quit.
+-- Safe to call outside an async task: it never sleeps or waits.
+local function stopSocketServer(options)
+    options = options or {}
     local logger = getLogger()
     logger:info("Stopping socket server")
 
@@ -357,14 +413,24 @@ local function stopSocketServer()
     if _G.LightroomPythonBridge then
         _G.LightroomPythonBridge.shuttingDown = true
         _G.LightroomPythonBridge.socketServerRunning = false
+        if options.appQuitting then
+            _G.LightroomPythonBridge.appQuitting = true
+        end
     end
 
     -- Best-effort shutdown event (no sleep/wait)
-    if commandRouter and commandRouter.socketBridge then
+    if options.notifyClient ~= false and commandRouter and commandRouter.socketBridge then
         pcall(function()
             commandRouter:sendEvent("server.shutdown", { reason = "Lightroom closing" })
         end)
     end
+
+    -- Close the sockets right away instead of waiting for the keep-alive loop
+    -- to wake up; during app quit that loop may never be scheduled again.
+    closeSocket(activeSender)
+    closeSocket(activeReceiver)
+    activeSender = nil
+    activeReceiver = nil
 
     -- Reset state immediately
     bothSocketsReady = false
@@ -374,16 +440,21 @@ local function stopSocketServer()
     senderSocket = nil
     commandRouter = nil
 
-    -- Remove port file
-    pcall(function()
-        local LrFileUtils = import 'LrFileUtils'
-        local portFile = PlatformPaths.getPortFilePath()
-        if LrFileUtils.exists(portFile) then
-            LrFileUtils.delete(portFile)
-        end
-    end)
+    removePortFile()
 
     logger:info("Socket server stopped")
+end
+
+-- Wait (inside an async task) until every keep-alive loop has exited, or the
+-- timeout passes. Returns true if all loops ended.
+local function waitForStop(timeoutSeconds)
+    timeoutSeconds = timeoutSeconds or 2
+    local waited = 0
+    while activeLoops > 0 and waited < timeoutSeconds do
+        LrTasks.sleep(0.1)
+        waited = waited + 0.1
+    end
+    return activeLoops == 0
 end
 
 local function isRunning()
@@ -405,6 +476,7 @@ end
 return {
     start = startSocketServer,
     stop = stopSocketServer,
+    waitForStop = waitForStop,
     isRunning = isRunning,
     getRouter = getCommandRouter,
     send = sendMessage

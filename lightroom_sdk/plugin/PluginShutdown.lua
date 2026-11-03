@@ -1,9 +1,6 @@
--- PluginShutdown.lua
--- Handles plugin shutdown — must complete quickly to avoid timeout dialog
+-- PluginShutdown.lua (LrShutdownPlugin)
+-- Stops the CLI bridge when the plugin is disabled, reloaded or removed.
+-- Sockets are closed immediately; LrShutdownFunction then waits briefly and
+-- always calls doneFunction.
 
-local bridge = _G.LightroomPythonBridge
-if bridge then
-    bridge.shuttingDown = true
-    bridge.socketServerRunning = false
-    bridge.running = false
-end
+return require('BridgeShutdown').begin("plugin")

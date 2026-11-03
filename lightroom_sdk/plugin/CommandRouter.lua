@@ -558,17 +558,31 @@ function CommandRouter:getStats()
 end
 
 -- Start periodic cleanup task
-function CommandRouter:startCleanupTask()
+-- generation: the socket server generation this task belongs to. When the
+-- server restarts (new generation) or shuts down, this task exits, so old
+-- cleanup tasks do not pile up across restarts.
+function CommandRouter:startCleanupTask(generation)
     local logger = getLogger()
-    logger:info("Starting request cleanup task")
+    logger:info("Starting request cleanup task (generation " .. tostring(generation) .. ")")
+
+    local function shouldRun()
+        local bridge = _G.LightroomPythonBridge
+        if not bridge or not bridge.socketServerRunning or bridge.shuttingDown then
+            return false
+        end
+        if generation ~= nil and bridge.serverGeneration ~= generation then
+            return false
+        end
+        return true
+    end
 
     LrTasks.startAsyncTask(function()
-        while _G.LightroomPythonBridge and _G.LightroomPythonBridge.socketServerRunning do
+        while shouldRun() do
             self:_cleanupExpiredRequests()
             -- Sleep in small increments for faster shutdown response
             -- 20 x 0.5s = 10 seconds total, but can exit within 500ms during shutdown
             for i = 1, 20 do
-                if not (_G.LightroomPythonBridge and _G.LightroomPythonBridge.socketServerRunning) then
+                if not shouldRun() then
                     break
                 end
                 LrTasks.sleep(0.5)
@@ -578,4 +592,4 @@ function CommandRouter:startCleanupTask()
     end)
 end
 
-return CommandRouter
+return CommandRouter
