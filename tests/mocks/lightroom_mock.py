@@ -36,9 +36,21 @@ class MockLightroomServer:
     async def _answer(self, resp: dict, hold: Optional[asyncio.Event]) -> None:
         if hold is not None:
             await hold.wait()
-        for w in self._sender_writers:
-            w.write(json.dumps(resp).encode() + b"\n")
-            await w.drain()
+        # A client connects its send side first and its receive side right after, so a request can
+        # arrive before that receive side is accepted. Wait until every client has both, otherwise
+        # the answer is lost (seen on slow Windows runners).
+        for _ in range(100):
+            if len(self._sender_writers) >= len(self._receiver_writers):
+                break
+            await asyncio.sleep(0.05)
+        for w in list(self._sender_writers):
+            if w.is_closing():
+                continue  # a client that just disconnected
+            try:
+                w.write(json.dumps(resp).encode() + b"\n")
+                await w.drain()
+            except ConnectionError:
+                pass
 
     async def _handle_receiver(self, reader, writer):
         """Python→LRチャネル: コマンド受信→レスポンス送信（sender経由）"""
