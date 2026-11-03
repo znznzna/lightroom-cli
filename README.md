@@ -333,8 +333,16 @@ lr --version            # Show version
 git clone https://github.com/znznzna/lightroom-cli.git
 cd lightroom-cli
 pip install -e ".[dev]"
-lr plugin install --dev
+lr plugin install
 ```
+
+`lr plugin install` copies the plugin into Lightroom's Modules folder. After editing the Lua files
+under `lightroom_sdk/plugin/`, run it again and reload the plugin (**File > Plug-in Manager**, or
+restart Lightroom Classic).
+
+> `lr plugin install --dev` installs a symlink instead of a copy, but Lightroom Classic did not load
+> the symlinked plugin on macOS when we tried it (2026-11). If the plugin does not show up in the
+> Plug-in Manager, use the copy install above.
 
 ```bash
 # Run tests
