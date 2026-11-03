@@ -366,10 +366,13 @@ class TestMcpConnectionManager:
         lightroom.on_request = lambda request: None if request["command"] == "system.status" else [_ok(request)]
         manager = ConnectionManager(port_file=str(lightroom.port_file))
         try:
+            # Connect first: the timeout under test is a slow command on a healthy connection
+            # (connecting to localhost alone can take longer than 0.3s on Windows)
+            assert "result" in await manager.execute("system.ping", {}, timeout=10, mutating=False)
+            client = manager._client
             result = await manager.execute("system.status", {}, timeout=0.3, mutating=False)
             assert result["code"] == "TIMEOUT_ERROR"
-            client = manager._client
-            assert client is not None
+            assert manager._client is client
             assert manager._reconnected is False
             # The same connection still works and nothing from the timed-out request is left behind
             assert (await manager.execute("system.ping", {}, timeout=5, mutating=False)) == {
