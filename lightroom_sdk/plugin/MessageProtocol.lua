@@ -1,12 +1,5 @@
 -- MessageProtocol.lua
--- JSON-like message encoding/decoding using Lightroom's native capabilities
-
--- Safe import of LrTableUtils
-local LrTableUtils = nil
-local success, tableUtils = pcall(import, 'LrTableUtils')
-if success then
-    LrTableUtils = tableUtils
-end
+-- JSON message encoding/decoding (plain Lua 5.1, no Lightroom dependency)
 
 -- Get logger from global state (defensive)
 local function getLogger()
@@ -69,51 +62,96 @@ function MessageProtocol:encode(message)
     return result
 end
 
--- Simple JSON encoder for basic types
-function MessageProtocol:_encodeJSON(obj)
-    local t = type(obj)
-    
-    if t == "string" then
-        -- Escape special characters (backslash FIRST, else we corrupt our own escapes)
-        local escaped = obj
-            :gsub('\\', '\\\\')
-            :gsub('"', '\\"')
-            :gsub('\n', '\\n')
-            :gsub('\r', '\\r')
-            :gsub('\t', '\\t')
-        return '"' .. escaped .. '"'
-    elseif t == "number" then
-        return tostring(obj)
-    elseif t == "boolean" then
-        return obj and "true" or "false"
-    elseif t == "table" then
-        -- Check if it's an array or object
-        local isArray = #obj > 0
-        local parts = {}
-        
-        if isArray then
-            -- Encode as array
-            for i = 1, #obj do
-                table.insert(parts, self:_encodeJSON(obj[i]))
-            end
-            return "[" .. table.concat(parts, ",") .. "]"
-        else
-            -- Encode as object
-            for k, v in pairs(obj) do
-                local key = self:_encodeJSON(tostring(k))
-                local value = self:_encodeJSON(v)
-                table.insert(parts, key .. ":" .. value)
-            end
-            return "{" .. table.concat(parts, ",") .. "}"
-        end
-    elseif obj == nil then
-        return "null"
-    else
-        error("Cannot encode type: " .. t)
-    end
+-- JSON arrays. Lua cannot tell an empty array from an empty object, so a table that must be
+-- sent as an array even when it is empty carries this metatable (see MessageProtocol.array).
+local ARRAY_MT = { __jsonArray = true }
+local MAX_DEPTH = 200
+
+-- Mark a table (or a new one) as a JSON array, so an empty one encodes as [] instead of {}
+function MessageProtocol.array(t)
+    return setmetatable(t or {}, ARRAY_MT)
 end
 
--- Decode JSON string to Lua table using loadstring (for JSON from Python)
+local STRING_ESCAPES = {
+    ['"'] = '\\"', ['\\'] = '\\\\', ['\b'] = '\\b', ['\f'] = '\\f',
+    ['\n'] = '\\n', ['\r'] = '\\r', ['\t'] = '\\t',
+}
+
+local function escapeChar(c)
+    return STRING_ESCAPES[c] or string.format("\\u%04x", string.byte(c))
+end
+
+local function encodeString(s)
+    -- Every C0 control character must be escaped; %z is NUL in Lua 5.1 patterns
+    return '"' .. (s:gsub('[%z\1-\31"\\]', escapeChar)) .. '"'
+end
+
+local function encodeNumber(n)
+    if n ~= n or n == math.huge or n == -math.huge then
+        return "null" -- JSON has no NaN or Infinity
+    end
+    if n == math.floor(n) and n >= -2^53 and n <= 2^53 then
+        return string.format("%d", n)
+    end
+    -- Shortest form that reads back as the same number
+    for precision = 14, 17 do
+        local text = string.format("%." .. precision .. "g", n)
+        if tonumber(text) == n then
+            return text
+        end
+    end
+    return string.format("%.17g", n)
+end
+
+-- A table is encoded as an array when its keys are exactly 1..#t and it is non-empty or
+-- marked. Any other key makes it an object, even when marked, so no field is ever dropped.
+local function isArray(t)
+    local n = #t
+    local count = 0
+    for _ in pairs(t) do
+        count = count + 1
+    end
+    if count ~= n then
+        return false
+    end
+    return n > 0 or getmetatable(t) == ARRAY_MT
+end
+
+local function encodeValue(obj, depth)
+    local t = type(obj)
+    if t == "string" then
+        return encodeString(obj)
+    elseif t == "number" then
+        return encodeNumber(obj)
+    elseif t == "boolean" then
+        return obj and "true" or "false"
+    elseif obj == nil then
+        return "null"
+    elseif t ~= "table" then
+        error("Cannot encode type: " .. t)
+    end
+
+    if depth > MAX_DEPTH then
+        error("Cannot encode: nested deeper than " .. MAX_DEPTH .. " levels (cyclic table?)")
+    end
+    local parts = {}
+    if isArray(obj) then
+        for i = 1, #obj do
+            parts[i] = encodeValue(obj[i], depth + 1)
+        end
+        return "[" .. table.concat(parts, ",") .. "]"
+    end
+    for k, v in pairs(obj) do
+        parts[#parts + 1] = encodeString(tostring(k)) .. ":" .. encodeValue(v, depth + 1)
+    end
+    return "{" .. table.concat(parts, ",") .. "}"
+end
+
+function MessageProtocol:_encodeJSON(obj)
+    return encodeValue(obj, 0)
+end
+
+-- Decode a JSON message (an object) from Python
 function MessageProtocol:decode(jsonString)
     local logger = getLogger()
     
@@ -122,15 +160,14 @@ function MessageProtocol:decode(jsonString)
         return nil
     end
     
-    -- Remove any trailing whitespace/newlines
-    jsonString = jsonString:gsub("%s+$", "")
-    
-    -- This is JSON from Python, so we need to handle JSON format
-    -- Use improved JSON parser for nested objects and arrays
-    local success, message = pcall(self._parseSimpleJSON, self, jsonString)
+    local success, message = pcall(self._decodeJSON, self, jsonString)
     if not success then
         logger:error("MessageProtocol:decode - JSON parsing failed: " .. tostring(message))
         logger:debug("Failed JSON string: " .. jsonString)
+        return nil
+    end
+    if type(message) ~= "table" or getmetatable(message) == ARRAY_MT then
+        logger:error("MessageProtocol:decode - message must be a JSON object")
         return nil
     end
     
@@ -151,175 +188,211 @@ function MessageProtocol:decode(jsonString)
     return message
 end
 
--- Simple JSON parser for basic cases (handles the messages we're sending)
-function MessageProtocol:_parseSimpleJSON(jsonStr)
-    -- Very basic JSON parsing for our specific message format
-    -- This handles: {"id": "...", "command": "...", "params": {...}, "timestamp": 123}
-    
-    local result = {}
-    
-    -- Remove outer braces
-    jsonStr = jsonStr:gsub("^%s*{%s*", ""):gsub("%s*}%s*$", "")
-    
-    -- Simple state machine for proper comma splitting
-    local fields = {}
-    local current = ""
-    local braceDepth = 0
-    local bracketDepth = 0  -- Track square brackets for arrays
-    local inString = false
-    local escapeNext = false
-    
-    for i = 1, #jsonStr do
-        local char = jsonStr:sub(i, i)
-        
-        if escapeNext then
-            current = current .. char
-            escapeNext = false
-        elseif char == '\\' and inString then
-            current = current .. char
-            escapeNext = true
-        elseif char == '"' then
-            current = current .. char
-            inString = not inString
-        elseif not inString then
-            if char == '{' then
-                braceDepth = braceDepth + 1
-                current = current .. char
-            elseif char == '}' then
-                braceDepth = braceDepth - 1
-                current = current .. char
-            elseif char == '[' then
-                bracketDepth = bracketDepth + 1
-                current = current .. char
-            elseif char == ']' then
-                bracketDepth = bracketDepth - 1
-                current = current .. char
-            elseif char == ',' and braceDepth == 0 and bracketDepth == 0 then
-                -- Top-level comma - split here (not inside braces or brackets)
-                table.insert(fields, current)
-                current = ""
-            else
-                current = current .. char
-            end
-        else
-            current = current .. char
+-- JSON decoder following the JSON grammar (RFC 8259). Errors carry the byte position.
+-- null decodes to nil: an object key with null is absent, an array keeps its other indices.
+local STRING_UNESCAPES = {
+    ['"'] = '"', ['\\'] = '\\', ['/'] = '/', b = '\b', f = '\f', n = '\n', r = '\r', t = '\t',
+}
+
+local function decodeError(pos, message)
+    error(string.format("invalid JSON at byte %d: %s", pos, message), 0)
+end
+
+local function skipWhitespace(str, pos)
+    local _, last = str:find("^[ \t\r\n]*", pos)
+    return last + 1
+end
+
+-- UTF-8 bytes for a code point (no bit operations: Lua 5.1)
+local function utf8Char(cp)
+    if cp < 0x80 then
+        return string.char(cp)
+    elseif cp < 0x800 then
+        return string.char(0xC0 + math.floor(cp / 0x40), 0x80 + cp % 0x40)
+    elseif cp < 0x10000 then
+        return string.char(0xE0 + math.floor(cp / 0x1000), 0x80 + math.floor(cp / 0x40) % 0x40, 0x80 + cp % 0x40)
+    end
+    return string.char(
+        0xF0 + math.floor(cp / 0x40000),
+        0x80 + math.floor(cp / 0x1000) % 0x40,
+        0x80 + math.floor(cp / 0x40) % 0x40,
+        0x80 + cp % 0x40
+    )
+end
+
+local function decodeString(str, pos)
+    -- pos is at the opening quote
+    local parts = {}
+    local p = pos + 1
+    while true do
+        local special = str:find('[%z\1-\31"\\]', p)
+        if not special then
+            decodeError(pos, "unterminated string")
         end
-    end
-    
-    -- Add the last field
-    if current ~= "" then
-        table.insert(fields, current)
-    end
-    
-    -- Parse each field
-    for _, field in ipairs(fields) do
-        field = field:gsub("^%s+", ""):gsub("%s+$", "")
-        
-        -- Extract key-value pairs
-        local key, value = field:match('"([^"]+)"%s*:%s*(.+)')
-        if key and value then
-            value = value:gsub("^%s+", ""):gsub("%s+$", "")
-            
-            if value:match('^".*"$') then
-                -- String value
-                result[key] = value:gsub('^"', ''):gsub('"$', '')
-            elseif value:match('^%d+$') then
-                -- Number value
-                result[key] = tonumber(value)
-            elseif value:match('^{.*}$') then
-                -- Object value - parse nested object recursively
-                result[key] = self:_parseSimpleJSON(value)
-            elseif value:match('^%[.*%]$') then
-                -- Array value - improved array parsing
-                local arrayContent = value:gsub("^%[%s*", ""):gsub("%s*%]$", "")
-                local arrayResult = {}
-                -- logger:debug("Parsing array content: [" .. arrayContent .. "]")  -- Temporarily disabled
-                if arrayContent ~= "" then
-                    -- Better array parsing that handles nested structures
-                    local items = {}
-                    local current = ""
-                    local depth = 0
-                    local inString = false
-                    local escapeNext = false
-                    
-                    for i = 1, #arrayContent do
-                        local char = arrayContent:sub(i, i)
-                        
-                        if escapeNext then
-                            current = current .. char
-                            escapeNext = false
-                        elseif char == '\\' and inString then
-                            current = current .. char
-                            escapeNext = true
-                        elseif char == '"' then
-                            current = current .. char
-                            inString = not inString
-                        elseif not inString then
-                            if char == '{' or char == '[' then
-                                depth = depth + 1
-                                current = current .. char
-                            elseif char == '}' or char == ']' then
-                                depth = depth - 1
-                                current = current .. char
-                            elseif char == ',' and depth == 0 then
-                                table.insert(items, current)
-                                current = ""
-                            else
-                                current = current .. char
-                            end
-                        else
-                            current = current .. char
-                        end
-                    end
-                    
-                    if current ~= "" then
-                        table.insert(items, current)
-                    end
-                    
-                    -- logger:debug("Array items found: " .. #items)
-                    -- for i, item in ipairs(items) do
-                    --     logger:debug("  item[" .. i .. "] = '" .. item .. "'")
-                    -- end
-                    
-                    -- Parse each item
-                    for _, item in ipairs(items) do
-                        item = item:gsub("^%s+", ""):gsub("%s+$", "")
-                        -- logger:debug("  parsing item: '" .. item .. "'")
-                        if item:match('^".*"$') then
-                            local stringValue = item:gsub('^"', ''):gsub('"$', '')
-                            table.insert(arrayResult, stringValue)
-                            -- logger:debug("    -> string: '" .. stringValue .. "'")
-                        elseif item:match('^%d+$') then
-                            local numValue = tonumber(item)
-                            table.insert(arrayResult, numValue)
-                            -- logger:debug("    -> number: " .. numValue)
-                        elseif item:match('^{.*}$') then
-                            local objValue = self:_parseSimpleJSON(item)
-                            table.insert(arrayResult, objValue)
-                            -- logger:debug("    -> object")
-                        else
-                            table.insert(arrayResult, item)
-                            -- logger:debug("    -> other: '" .. item .. "'")
-                        end
-                    end
+        if special > p then
+            parts[#parts + 1] = str:sub(p, special - 1)
+        end
+        local c = str:sub(special, special)
+        if c == '"' then
+            return table.concat(parts), special + 1
+        elseif c ~= "\\" then
+            decodeError(special, "unescaped control character in string")
+        end
+        local esc = str:sub(special + 1, special + 1)
+        if STRING_UNESCAPES[esc] then
+            parts[#parts + 1] = STRING_UNESCAPES[esc]
+            p = special + 2
+        elseif esc == "u" then
+            local hex = str:match("^%x%x%x%x", special + 2)
+            if not hex then
+                decodeError(special, "invalid \\u escape")
+            end
+            local cp = tonumber(hex, 16)
+            p = special + 6
+            if cp >= 0xD800 and cp <= 0xDBFF then
+                local low = str:match("^\\u(%x%x%x%x)", p)
+                local lowCp = low and tonumber(low, 16)
+                if lowCp and lowCp >= 0xDC00 and lowCp <= 0xDFFF then
+                    cp = 0x10000 + (cp - 0xD800) * 0x400 + (lowCp - 0xDC00)
+                    p = p + 6
+                else
+                    cp = 0xFFFD -- lone high surrogate
                 end
-                -- logger:debug("Final array result for '" .. key .. "': length=" .. #arrayResult)
-                result[key] = arrayResult
-            elseif value == "true" then
-                result[key] = true
-            elseif value == "false" then
-                result[key] = false
-            elseif value == "null" then
-                result[key] = nil
-            else
-                -- Try as number, fallback to string
-                local num = tonumber(value)
-                result[key] = num or value
+            elseif cp >= 0xDC00 and cp <= 0xDFFF then
+                cp = 0xFFFD -- lone low surrogate
             end
+            parts[#parts + 1] = utf8Char(cp)
+        else
+            decodeError(special, "invalid escape \\" .. esc)
         end
     end
-    
-    return result
+end
+
+local function decodeNumber(str, pos)
+    local p = pos
+    if str:sub(p, p) == "-" then
+        p = p + 1
+    end
+    local int = str:match("^%d+", p)
+    if not int then
+        decodeError(pos, "invalid number")
+    end
+    if #int > 1 and int:sub(1, 1) == "0" then
+        decodeError(pos, "leading zero in number")
+    end
+    p = p + #int
+    if str:sub(p, p) == "." then
+        local frac = str:match("^%d+", p + 1)
+        if not frac then
+            decodeError(p, "digits expected after decimal point")
+        end
+        p = p + 1 + #frac
+    end
+    local e = str:sub(p, p)
+    if e == "e" or e == "E" then
+        p = p + 1
+        local sign = str:sub(p, p)
+        if sign == "+" or sign == "-" then
+            p = p + 1
+        end
+        local exp = str:match("^%d+", p)
+        if not exp then
+            decodeError(p, "digits expected in exponent")
+        end
+        p = p + #exp
+    end
+    return tonumber(str:sub(pos, p - 1)), p
+end
+
+local LITERALS = { ["true"] = true, ["false"] = false, ["null"] = nil }
+
+local decodeValue
+
+local function decodeArray(str, pos, depth)
+    local result = MessageProtocol.array()
+    local n = 0
+    local p = skipWhitespace(str, pos + 1)
+    if str:sub(p, p) == "]" then
+        return result, p + 1
+    end
+    while true do
+        local value
+        value, p = decodeValue(str, p, depth + 1)
+        n = n + 1
+        result[n] = value
+        p = skipWhitespace(str, p)
+        local c = str:sub(p, p)
+        if c == "]" then
+            return result, p + 1
+        elseif c ~= "," then
+            decodeError(p, "',' or ']' expected in array")
+        end
+        p = skipWhitespace(str, p + 1)
+    end
+end
+
+local function decodeObject(str, pos, depth)
+    local result = {}
+    local p = skipWhitespace(str, pos + 1)
+    if str:sub(p, p) == "}" then
+        return result, p + 1
+    end
+    while true do
+        if str:sub(p, p) ~= '"' then
+            decodeError(p, "string key expected in object")
+        end
+        local key
+        key, p = decodeString(str, p)
+        p = skipWhitespace(str, p)
+        if str:sub(p, p) ~= ":" then
+            decodeError(p, "':' expected after object key")
+        end
+        local value
+        value, p = decodeValue(str, skipWhitespace(str, p + 1), depth + 1)
+        result[key] = value
+        p = skipWhitespace(str, p)
+        local c = str:sub(p, p)
+        if c == "}" then
+            return result, p + 1
+        elseif c ~= "," then
+            decodeError(p, "',' or '}' expected in object")
+        end
+        p = skipWhitespace(str, p + 1)
+    end
+end
+
+decodeValue = function(str, pos, depth)
+    if depth > MAX_DEPTH then
+        decodeError(pos, "nested deeper than " .. MAX_DEPTH .. " levels")
+    end
+    local c = str:sub(pos, pos)
+    if c == "{" then
+        return decodeObject(str, pos, depth)
+    elseif c == "[" then
+        return decodeArray(str, pos, depth)
+    elseif c == '"' then
+        return decodeString(str, pos)
+    elseif c == "-" or c:match("%d") then
+        return decodeNumber(str, pos)
+    end
+    for word in pairs({ ["true"] = 1, ["false"] = 1, ["null"] = 1 }) do
+        if str:sub(pos, pos + #word - 1) == word then
+            return LITERALS[word], pos + #word
+        end
+    end
+    if c == "" then
+        decodeError(pos, "unexpected end of input")
+    end
+    decodeError(pos, "unexpected character '" .. c .. "'")
+end
+
+function MessageProtocol:_decodeJSON(str)
+    local value, pos = decodeValue(str, skipWhitespace(str, 1), 0)
+    pos = skipWhitespace(str, pos)
+    if pos <= #str then
+        decodeError(pos, "unexpected data after the JSON value")
+    end
+    return value
 end
 
 -- Create request message

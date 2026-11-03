@@ -7,6 +7,7 @@ local LrDevelopController = nil
 local LrApplication = nil
 local LrApplicationView = nil
 local LrTasks = import 'LrTasks'
+local JsonArray = require('MessageProtocol').array -- an empty one is sent as [] (not {})
 local WriteAccess = require 'WriteAccess'
 local LrProgressScope = nil
 local LrUndo = nil
@@ -686,7 +687,7 @@ function DevelopModule.batchApplySettings(params, callback)
         end
     end
 
-    local results = {}
+    local results = JsonArray()
     local succeeded = 0
 
     WriteAccess.run(catalog, "Batch Apply Develop Settings", function()
@@ -825,7 +826,7 @@ function DevelopModule.batchSetValue(params, callback)
         end
     end
 
-    local results = {}
+    local results = JsonArray()
     local succeeded = 0
 
     WriteAccess.run(catalog, "Batch Set Value: " .. param, function()
@@ -1451,7 +1452,7 @@ local function parseCurvePoints(curveArray)
         return {}
     end
     
-    local points = {}
+    local points = JsonArray()
     for i = 1, #curveArray, 2 do
         table.insert(points, {x = curveArray[i], y = curveArray[i + 1]})
     end
@@ -3121,7 +3122,7 @@ function DevelopModule.batchAIMask(params, callback)
             }
         end
 
-        local results = {}
+        local results = JsonArray()
         local succeeded = 0
         local failed = 0
 
@@ -3247,8 +3248,8 @@ function DevelopModule.createComplexMask(params, callback)
     local workflow = params.workflow or "subject_with_luminance"
     
     local success, result = ErrorUtils.safeCall(function()
-        local maskIds = {}
-        local operations = {}
+        local maskIds = JsonArray()
+        local operations = JsonArray()
         
         if workflow == "subject_with_luminance" then
             -- Create AI subject selection
@@ -3564,8 +3565,8 @@ function DevelopModule.getAvailableLocalParameters(params, callback)
             "local_Grain"
         }
         
-        local availableParams = {}
-        local unavailableParams = {}
+        local availableParams = JsonArray()
+        local unavailableParams = JsonArray()
         
         for _, param in ipairs(potentialParams) do
             local paramSuccess, paramResult = ErrorUtils.safeCall(function()
@@ -3684,9 +3685,9 @@ function DevelopModule.dumpLrDevelopController(params, callback)
     local logger = getLogger()
     
     local success, result = ErrorUtils.safeCall(function()
-        local functions = {}
-        local properties = {}
-        local unknownItems = {}
+        local functions = JsonArray()
+        local properties = JsonArray()
+        local unknownItems = JsonArray()
         
         -- Iterate through all items in LrDevelopController
         for key, value in pairs(LrDevelopController) do
@@ -3787,8 +3788,8 @@ function DevelopModule.discoverGradientParameters(params, callback)
             "maskTransformX", "maskTransformY", "maskTransformAngle"
         }
         
-        local availableParams = {}
-        local unavailableParams = {}
+        local availableParams = JsonArray()
+        local unavailableParams = JsonArray()
         
         for _, param in ipairs(gradientParams) do
             local paramSuccess, paramValue = ErrorUtils.safeCall(function()
@@ -3902,11 +3903,11 @@ function DevelopModule.probeAllDevelopParameters(params, callback)
     local logger = getLogger()
     
     local success, result = ErrorUtils.safeCall(function()
-        local allParams = {}
-        local errorParams = {}
+        local allParams = JsonArray()
+        local errorParams = JsonArray()
         
         -- Generate comprehensive list of parameter patterns to test
-        local parameterPatterns = {}
+        local parameterPatterns = JsonArray()
         
         -- Basic parameter variations
         local baseNames = {"gradient", "Gradient", "linear", "Linear", "mask", "Mask", "tool", "Tool"}

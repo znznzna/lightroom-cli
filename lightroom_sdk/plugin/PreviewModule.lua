@@ -4,6 +4,7 @@
 -- Lazy imports to avoid loading issues
 local LrApplication = nil
 local LrTasks = import 'LrTasks'
+local JsonArray = require('MessageProtocol').array -- an empty one is sent as [] (not {})
 local LrProgressScope = nil
 local LrStringUtils = nil
 
@@ -290,7 +291,7 @@ function PreviewModule.generateBatchPreviews(params, callback)
         local catalog = LrApplication.activeCatalog()
         
         catalog:withReadAccessDo(function()
-            local results = {}
+            local results = JsonArray()
         
             -- Determine pixel size
         local pixelSize
