@@ -18,16 +18,21 @@ Covers two Windows-only bugs found during live CLI testing (2026-06-07):
      and the plugin never reconnected to the CLI listener. Fix: reset the flag on
      start.
 
-The whole module is skipped if ``lupa`` is not installed (e.g. a minimal CI image),
-so it never blocks the existing suite.
+Locally the whole module is skipped if ``lupa`` is not installed. On CI (``CI`` is set,
+as GitHub Actions does) a missing ``lupa`` is a collection error instead: it is part of
+``.[dev]``, so a skip there would silently drop these checks.
 """
 
 import json
+import os
 from pathlib import Path
 
 import pytest
 
-lupa = pytest.importorskip("lupa")
+if os.environ.get("CI"):
+    import lupa  # noqa: F401  # must fail loudly on CI
+else:
+    lupa = pytest.importorskip("lupa")
 from lupa import LuaRuntime  # noqa: E402
 
 PLUGIN_DIR = Path(__file__).resolve().parent.parent / "lightroom_sdk" / "plugin"
