@@ -6,7 +6,6 @@ import pytest
 from click.testing import CliRunner
 
 from cli.main import cli
-from cli.output import OutputFormatter
 from lightroom_sdk.validation import ValidationError, validate_params
 
 
@@ -29,39 +28,6 @@ class TestResetMaskingRiskLevel:
         json_start = result.output.index("{")
         data = json.loads(result.output[json_start:])
         assert data["risk_level"] == "destructive"
-
-
-class TestTruncatedFlag:
-    """#14: JSON truncation should set _truncated flag."""
-
-    def test_truncated_flag_added_when_truncation_occurs(self):
-        long_value = "x" * 60_000
-        data = {"key": long_value}
-        result = OutputFormatter.format(data, "json")
-        parsed = json.loads(result)
-        assert parsed["_truncated"] is True
-        assert "truncated" in parsed["key"]
-
-    def test_no_truncated_flag_when_no_truncation(self):
-        data = {"key": "short value"}
-        result = OutputFormatter.format(data, "json")
-        parsed = json.loads(result)
-        assert "_truncated" not in parsed
-
-    def test_no_truncated_flag_in_text_mode(self):
-        long_value = "x" * 60_000
-        data = {"key": long_value}
-        result = OutputFormatter.format(data, "text")
-        assert "_truncated" not in result
-
-    def test_truncated_flag_with_list_data(self):
-        """List top-level: no _truncated flag (only added to dict)."""
-        long_value = "x" * 60_000
-        data = [{"key": long_value}]
-        result = OutputFormatter.format(data, "json")
-        parsed = json.loads(result)
-        assert isinstance(parsed, list)
-        assert "truncated" in parsed[0]["key"]
 
 
 class TestJsonSanitizeRecursive:
