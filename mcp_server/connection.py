@@ -69,9 +69,17 @@ class ConnectionManager:
 
             result = await asyncio.wait_for(_execute(), timeout=timeout)
             return {"result": result}
+        except (asyncio.TimeoutError, TimeoutError):
+            # Checked before OSError: the builtin TimeoutError is an OSError subclass.
+            # The connection itself is fine, so it is kept; the bridge already forgot the request.
+            return {
+                "isError": True,
+                "code": "TIMEOUT_ERROR",
+                "message": f"コマンドがタイムアウトしました ({timeout}秒)。",
+            }
         except (ConnectionError, OSError) as e:
             logger.warning(f"Connection error on '{command}': {e}")
-            self._client = None
+            await self._discard_client()
             if mutating:
                 # mutating コマンドは再送しない。_reconnected はセットしない（次回は新規接続扱い）
                 return {
@@ -91,19 +99,13 @@ class ConnectionManager:
                     "CLI Bridge プラグインが有効であることを確認してください。"
                 ),
             }
-        except (asyncio.TimeoutError, TimeoutError):
-            return {
-                "isError": True,
-                "code": "TIMEOUT_ERROR",
-                "message": f"コマンドがタイムアウトしました ({timeout}秒)。",
-            }
         except Exception as e:
             from lightroom_sdk.exceptions import ConnectionError as LRConnectionError
             from lightroom_sdk.exceptions import LightroomSDKError, ResultUnknownError
             from lightroom_sdk.exceptions import TimeoutError as LRTimeoutError
 
             if isinstance(e, ResultUnknownError):
-                self._client = None
+                await self._discard_client()
                 return {
                     "isError": True,
                     "code": "RESULT_UNKNOWN",
@@ -113,7 +115,7 @@ class ConnectionManager:
                     ),
                 }
             if isinstance(e, LRConnectionError):
-                self._client = None
+                await self._discard_client()
                 if mutating:
                     return {
                         "isError": True,
@@ -156,9 +158,28 @@ class ConnectionManager:
         if self._client is None:
             from lightroom_sdk.client import LightroomClient
 
-            self._client = LightroomClient(port_file=self._port_file)
-            await self._client.connect()
+            client = LightroomClient(port_file=self._port_file)
+            try:
+                await client.connect()
+            except BaseException:
+                # Failed or cancelled (e.g. by the timeout) halfway: close what was opened
+                await self._close(client)
+                raise
+            self._client = client
         return self._client
+
+    async def _discard_client(self) -> None:
+        """Forget the current client and close its sockets, so the next command connects afresh"""
+        client, self._client = self._client, None
+        if client:
+            await self._close(client)
+
+    @staticmethod
+    async def _close(client) -> None:
+        try:
+            await client.disconnect()
+        except Exception:
+            logger.debug("Error while closing a discarded Lightroom client", exc_info=True)
 
     async def get_status(self) -> str:
         """Get connection status for MCP resource (JSON string).
@@ -174,9 +195,4 @@ class ConnectionManager:
 
     async def shutdown(self) -> None:
         """Clean shutdown."""
-        if self._client:
-            try:
-                await self._client.disconnect()
-            except Exception:
-                pass
-            self._client = None
+        await self._discard_client()
