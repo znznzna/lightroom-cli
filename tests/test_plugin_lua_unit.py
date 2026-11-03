@@ -175,13 +175,31 @@ class TestMessageProtocolJSON:
         text = ' \t\r\n{ "a" : [ 1 , 2 ] ,\n "b" : { } , "c" : [ ] } \n'
         assert json.loads(rt.globals().ROUNDTRIP(text)) == {"a": [1, 2], "b": {}, "c": []}
 
-    def test_null_drops_key_and_keeps_array_positions(self, mp):
+    def test_null_drops_object_key(self, mp):
         rt, _ = mp
-        rt.execute('DECODED = MP:_decodeJSON(\'{"a": null, "b": 1, "arr": [1, null, 3]}\')')
+        rt.execute('DECODED = MP:_decodeJSON(\'{"a": null, "b": 1}\')')
         assert rt.eval("DECODED.a == nil")
         assert rt.eval("DECODED.b") == 1
-        assert rt.eval("DECODED.arr[1]") == 1 and rt.eval("DECODED.arr[3]") == 3
-        assert rt.eval("DECODED.arr[2] == nil")
+
+    def test_null_in_array_keeps_length_and_order(self, mp):
+        rt, _ = mp
+        rt.execute("DECODED = MP:_decodeJSON('[1, null, 3]')")
+        assert rt.eval("#DECODED") == 3
+        assert rt.eval("DECODED[2] == MP.null")
+        assert rt.eval("(function() local n = 0; for _ in ipairs(DECODED) do n = n + 1 end; return n end)()") == 3
+
+    @pytest.mark.parametrize(
+        "text, expected",
+        [
+            ("[1,null,3]", [1, None, 3]),
+            ("[null]", [None]),
+            ("[null,null]", [None, None]),
+            ('{"a":[null,{"b":null}]}', {"a": [None, {}]}),  # null in an object drops the key
+        ],
+    )
+    def test_null_in_array_roundtrips(self, mp, text, expected):
+        rt, _ = mp
+        assert json.loads(rt.globals().ROUNDTRIP(text)) == expected
 
     def test_surrogate_pair_decodes_to_utf8(self, mp):
         rt, _ = mp

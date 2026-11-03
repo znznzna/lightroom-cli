@@ -72,6 +72,10 @@ function MessageProtocol.array(t)
     return setmetatable(t or {}, ARRAY_MT)
 end
 
+-- JSON null inside an array. nil would leave a hole that ipairs and # stop at, so arrays keep
+-- this value in its place. (In an object, null just leaves the key out.)
+MessageProtocol.null = setmetatable({}, { __tostring = function() return "null" end })
+
 local STRING_ESCAPES = {
     ['"'] = '\\"', ['\\'] = '\\\\', ['\b'] = '\\b', ['\f'] = '\\f',
     ['\n'] = '\\n', ['\r'] = '\\r', ['\t'] = '\\t',
@@ -91,7 +95,8 @@ local function encodeNumber(n)
         return "null" -- JSON has no NaN or Infinity
     end
     if n == math.floor(n) and n >= -2^53 and n <= 2^53 then
-        return string.format("%d", n)
+        -- %.0f, not %d: %d goes through a C long, which is 32-bit on Windows
+        return string.format("%.0f", n)
     end
     -- Shortest form that reads back as the same number
     for precision = 14, 17 do
@@ -125,7 +130,7 @@ local function encodeValue(obj, depth)
         return encodeNumber(obj)
     elseif t == "boolean" then
         return obj and "true" or "false"
-    elseif obj == nil then
+    elseif obj == nil or obj == MessageProtocol.null then
         return "null"
     elseif t ~= "table" then
         error("Cannot encode type: " .. t)
@@ -189,7 +194,7 @@ function MessageProtocol:decode(jsonString)
 end
 
 -- JSON decoder following the JSON grammar (RFC 8259). Errors carry the byte position.
--- null decodes to nil: an object key with null is absent, an array keeps its other indices.
+-- null decodes to nil in an object (the key is absent) and to MessageProtocol.null in an array.
 local STRING_UNESCAPES = {
     ['"'] = '"', ['\\'] = '\\', ['/'] = '/', b = '\b', f = '\f', n = '\n', r = '\r', t = '\t',
 }
@@ -319,6 +324,9 @@ local function decodeArray(str, pos, depth)
         local value
         value, p = decodeValue(str, p, depth + 1)
         n = n + 1
+        if value == nil then
+            value = MessageProtocol.null
+        end
         result[n] = value
         p = skipWhitespace(str, p)
         local c = str:sub(p, p)
